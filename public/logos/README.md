@@ -1,18 +1,8 @@
-# Logo artwork for the intro constellations
+# Logo artwork
 
-Drop your real logos here and the intro slides will render them as star clusters:
+`syntax.svg`, `sentry.svg`, and `qr.svg` are rendered into the terminal canvas by
+`src/terminal/assets.js` and `src/terminal/paint.js`.
 
-- `syntax.png` — the Syntax.fm logo
-- `sentry.png` — the Sentry logo
-
-Tips for the best-looking constellation:
-
-- **White (or light) shape on a transparent background.** The sampler scatters
-  stars across opaque pixels; the per-star color comes from the slide, not the
-  image, so a solid white silhouette works best.
-- Roughly square or 2:1 artwork, a few hundred px on the long edge is plenty.
-- Bolder, chunkier shapes read better as a constellation than thin line art.
-
-Until these files exist, the slides fall back to text ("Syntax" / "Sentry").
-Swap them in `src/slides/index.js` via the `LogoConstellation` `src` prop, or by
-keeping these filenames.
+They are loaded locally before the first screen paint, rasterized once, and
+tinted to the shared phosphor hue. The harness presents each file as a decoded
+local asset rather than as a DOM overlay or conventional full-colour logo slide.

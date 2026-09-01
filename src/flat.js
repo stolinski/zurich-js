@@ -1,6 +1,17 @@
-// Battery-saver mode. Add `?flat` to the URL to drop the entire WebGL universe
-// (the R3F <Canvas>: planets, galaxy, bloom, custom shaders) and render just the
-// DOM deck over a flat background — for editing content without the GPU/battery
-// hit. All slides, demos, code blocks and keyboard nav work unchanged; what you
-// lose is scene-only: the camera fly-throughs and the 3D browser-support coins.
-export const FLAT = new URLSearchParams(location.search).has('flat')
+/**
+ * `?flat` — author the talk without booting the 3D.
+ *
+ * The screen's content is a 2D canvas, and in flat mode that canvas is painted
+ * straight to the page: no Three, no R3F, no WebGL context, no shader compile,
+ * no fans. Same sessions, same painter, same fonts, same keyboard nav — so what
+ * you write here is exactly what ends up on the glass.
+ *
+ * What you DON'T get is the tube (curvature, raster, phosphor mask, halation)
+ * or any camera move, because those are the 3D. Flat mode is for working on
+ * what the screen SAYS; the deck is for what it looks like.
+ *
+ * It doubles as a stage fallback: if WebGL dies on the projector, `?flat` still
+ * gets the cold open on screen, which is the part that has to be legible.
+ */
+export const FLAT =
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('flat')

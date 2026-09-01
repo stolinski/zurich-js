@@ -1,79 +1,95 @@
+<!-- BEGIN swamp managed section - DO NOT EDIT -->
+# Project
+
+This repository is managed with [swamp](https://github.com/swamp-club/swamp).
+
+## Rules
+
+1. **Search before you build.** When automating AWS, APIs, or any external service: (a) search community extensions with `swamp extension search <query>` — prefer `@swamp/*` official extensions first, (b) search local/installed types with `swamp model type search <query>`, (c) if a community extension exists, install it with `swamp extension pull <package>` instead of building from scratch, (d) extend an existing type if it covers the domain but lacks the method you need, (e) only create a custom extension model in `extensions/models/` as a last resort. Use the `swamp` skill for guidance. The `command/shell` model is ONLY for ad-hoc one-off shell commands, NEVER for wrapping CLI tools or building integrations.
+2. **Extend, don't be clever.** When a model covers the domain but lacks the method you need, extend it with `export const extension` — don't bypass it with shell scripts, CLI tools, or multi-step hacks. One method, one purpose. Use `swamp model type describe <type> --json` to check available methods.
+3. **Use the data model.** Once data exists in a model (via `lookup`, `start`, `sync`, etc.), reference it with CEL expressions. Don't re-fetch data that's already available.
+4. **CEL expressions everywhere.** Wire models together with CEL expressions. Always prefer `data.latest("<name>", "<dataName>").attributes.<field>` over the deprecated `model.<name>.resource.<spec>.<instance>.attributes.<field>` pattern.
+5. **Verify before destructive operations.** Always `swamp model get <name> --json` and verify resource IDs before running delete/stop/destroy methods.
+6. **Prefer fan-out methods over loops.** When operating on multiple targets, use a single method that handles all targets internally (factory pattern) rather than looping N separate `swamp model method run` calls against the same model. Multiple parallel calls against the same model contend on the per-model lock, causing timeouts. A single fan-out method acquires the lock once and produces all outputs in one execution. Check `swamp model type describe` for methods that accept filters or produce multiple outputs.
+7. **Extension npm deps are bundled, not lockfile-tracked.** Swamp's bundler inlines all npm packages (except zod) into extension bundles at bundle time. `deno.lock` and `package.json` do NOT cover extension model dependencies — this is by design. Always pin explicit versions in `npm:` import specifiers (e.g., `npm:lodash-es@4.17.21`).
+8. **Reports for reusable data pipelines.** When the task involves building a repeatable pipeline to transform, aggregate, or analyze model output (security reports, cost analysis, compliance checks, summaries), create a report extension. Use the `swamp` skill for guidance.
+9. **"Workflow" means a swamp workflow.** In this repository the word "workflow" (and "create/run/execute/validate/debug workflow", "automate", "orchestrate", "automated/nightly job") refers to a swamp workflow — a declarative YAML DAG of model-method steps authored via `swamp workflow create`. Load and follow the `swamp` skill for these requests. Do NOT interpret these as a request to build an agent task list, spin up worktrees, or schedule a cron/remote agent. Only use those orchestration mechanisms when the user explicitly names one (e.g. "task list", "subagent", "worktree", "cron", "remote agent") or explicitly asks you to do the work yourself step by step rather than author a swamp workflow.
+10. **Use swamp, don't bypass it.** Always work through swamp commands — don't go around them with raw shell tools. Use `swamp data query` to find data, not `grep`/`find` on `.swamp/` files. Use model methods to interact with resources, not `curl`/`aws`/`gcloud`/`kubectl` when a model type already wraps that API — check with `swamp model type search`. Use `swamp help` for CLI discovery, not guesswork. Composing with swamp output is fine (e.g. piping `--json` through `jq`) — the anti-pattern is bypassing swamp entirely.
+11. **Inspect reports after failures.** When a model method or workflow run fails, inspect its generated reports before retrying or changing definitions. Reports run even on failure and capture structured diagnostics — error messages, execution status, arguments, and data output pointers. Use `swamp report get @swamp/method-summary --model <model> --json` for method failures or `swamp report get @swamp/workflow-summary --workflow <workflow> --json` for workflow failures. Run `swamp help report get` to confirm current retrieval syntax.
+
+## Skills
+
+**IMPORTANT:** Always load swamp skills, even when in plan mode. The skills provide
+essential context for working with this repository.
+
+- `swamp` - Swamp CLI — models, workflows, data, vaults, extensions, publishing, repos, reports, issues, and troubleshooting
+- `swamp-getting-started` - Interactive onboarding for new swamp users
+
+## Getting Started
+
+**IMPORTANT:** At the start of every conversation, run
+`swamp model search --json`. If no models are returned (empty result), you MUST
+immediately invoke the `swamp-getting-started` skill before doing anything else.
+This walks new users through an interactive onboarding tutorial.
+
+If models already exist, start by using the `swamp` skill to work with
+swamp models.
+
+## Commands
+
+Use `swamp --help` to see available commands. For a machine-readable JSON
+schema of the CLI (commands, options, arguments) intended for agent
+consumption, run `swamp help [<command>...]` — e.g. `swamp help` returns
+the full tree, and `swamp help model method run` scopes to a subtree.
+<!-- END swamp managed section -->
+
 # CLAUDE.md
 
 ## What this is
 
-A conference talk **rendered as an interactive 3D universe** — the slides *are* a
-Three.js scene you fly through. Talk title: **"This Component Could Have Been A
-Div"** by Scott Tolinski. Thesis: React abstracts the DOM so much that devs forget
-how capable the raw web platform is — so the talk tours the "world outside React"
-(native HTML, CSS, Web APIs) as planets in a solar system, then pulls back to reveal
-that whole system is one speck in a galaxy (the web).
+A conference talk — **"The True Cost of AI Coding"** by Scott Tolinski, on what
+AI coding tools do to developers' mental health — rendered as one continuous
+camera move through four scales.
 
-The medium is the message: it's a graphics-heavy presentation built on the web
-platform itself.
+It opens on a pixel-flat screen reading **“the true cost of ai coding.”** Syntax,
+Sentry, and the talk QR load as monochrome local assets, then the screen becomes
+an **AI coding agent harness**: Scott taps, a user turn types, an agent thinks, a
+tool runs, an answer streams back, and a vector chart plots the result. No DOM
+slide chrome or perspective. Then the camera moves for the first time and the
+screen turns out to be a **cathode ray tube** in a room, and the room turns out
+to be full of them, and then you go **into the glass** and the phosphor triads
+become the material everything after is built from.
 
-## Talk direction & voice
+**Read `PLAN.md`, `NARRATIVE.md`, `ART-DIRECTION.md`, `PRESENTATION-SYSTEM.md`,
+`CONTEXT.md`, then `QUALITY.md`.** PLAN protects the trick; NARRATIVE is what
+the talk actually argues and where every number lands; ART-DIRECTION defines the
+photographic corporate-recursion target and explicit anti-patterns;
+PRESENTATION-SYSTEM protects future slide ideas from one-off scene hacks;
+CONTEXT defines the shared authoring language; QUALITY has the measurable gates.
+This file is the working reference; PLAN.md is the intent and QUALITY.md decides
+whether a visual pass is actually done.
 
-The decisions driving content (keep copy and demos coherent with these):
+Run production quality evidence through `swamp workflow validate talk-quality`
+and `swamp workflow run talk-quality`; do not treat direct
+`scripts/quality/*.mjs` invocations as acceptance runs. Swamp stores the typed
+result, logs, and capture archive, while visual approval remains manual.
 
-- **Thesis: the fundamentals *moved*.** Not "relearn the basics" — there's a 2026
-  platform baseline (`:has()`, anchor positioning, view transitions, container
-  queries, scroll-driven animation, html-in-canvas) that React devs were
-  insulated from. Sympathetic, not scoldy: the ground shifted; the audience is
-  the hero leveling up.
-- **Emotional engine: shock.** Each demo is a magic trick — the shock lives in the
-  *setup* (let them feel the heavy JS/library version in their head), the reveal
-  is tiny platform code. Pick demos by *known pain*: did the room bleed doing this
-  the old way (carousel, masonry, drawer/`vaul`, scroll-anim/GSAP)?
-- **AI is a SECTION just before the finale** (was "undercurrent" — Scott
-  expanded it). The slides `ai-intro … ai-close` sit **before** the galaxy, not
-  after: the galaxy pull-back is the big visual payoff and must stay the very
-  last beat with nothing parked on top of it (and parking the AI slides at the
-  galaxy vista also *spoiled* the reveal). The AI section is parked at the
-  whole-system vista (`pos [70,95,250] target [0,0,0]` — a rhyme with the early
-  `system` slide; galaxy is still just a faint band from there). It's the payoff
-  argument, not an "AI talk": agents default to the *average* of their training
-  data (div-soup), so your platform knowledge is the ceiling on what they ship —
-  and a vote on the next corpus. **Supply chain is the load-bearing middle**:
-  writing it by hand used to be the expensive part that justified the dependency;
-  AI removes that excuse, so you can *delete* deps (less code, no stranger's JS
-  shipped to users) — but pointed at nothing it installs (and slopsquats), so
-  knowledge is the steering. Two built artifacts: the side-by-side
-  `DependencyContrastDemo` and the `.cursorrules`/CLAUDE.md "defaults" code slide.
-  **All section copy is placeholder — Scott rewrites it (he dislikes cheesy
-  copy).** Final sign-off (socials) lives on the galaxy slide.
-- **Structure: the 3 planets are clusters**, escalating *outward* = more
-  bleeding-edge: Native HTML → CSS → Web APIs → (future, e.g. html-in-canvas) →
-  galaxy pull-back ("the web"). Flying between planets = the cluster breaks/breathers.
-- **Graffiti** (Scott's shadcn competitor, HTML/CSS only) is the credibility
-  payoff: "this isn't toys — here's a whole reliable library." Lean on it.
-- **Planned, not yet built:** cross-document view transitions, zero-JS menu
-  (popover + anchor positioning + invokers), `:has()` as state, html-in-canvas
-  finale; plus a **browser-reactions Baseline badge** (per-engine 🟢/💦 faces,
-  Safari sweating, driven by the `web-features` package) as the compat indicator
-  on each demo.
-- **Cut: masonry.** Native CSS masonry (`grid-template-rows: masonry`,
-  `display: masonry`, `item-pack`) does **not** render in the Chrome 148
-  presentation browser — a live demo would be a dud on stage. Don't reintroduce
-  it. (Confirmed-live in Chrome 148 and safe to lean on: scroll-snap, scroll-driven
-  animation + `timeline-scope`, container `scroll-state`, `sibling-index()`,
-  anchor positioning + `position-try`, popover, view transitions, `allow-discrete`,
-  `field-sizing`, `interpolate-size`/`calc-size`, `appearance: base-select`.)
+Backed by a survey of 3,593 developers (<https://ai-health.syntax.fm>) and the
+[video](https://www.youtube.com/watch?v=iPUn1Fnfn0k).
 
-### Demo verification
-
-The live dev server is at https://outside-react.robo.online/ (HMR). Drive it with
-the chrome-devtools tools: keys **0–9 jump to a slide**, → / ← step. When
-checking a **scroll-driven** demo, note that setting `scrollTop` from a script
-lags one frame before the animation samples — wait two `requestAnimationFrame`s
-(or read `getComputedStyle`) before trusting a screenshot.
+> This repo began as a copy of the *This Component Could Have Been A Div* deck.
+> That talk's entire world — solar system, planets, galaxy, demos — was removed.
+> If you find a reference to planets or a galaxy anywhere, it's a leftover; it's
+> all in git at `e1e782b`.
 
 ## Stack
 
 - **Vite** + **React 18**
 - **React Three Fiber 8** (`@react-three/fiber`) + **drei** + **`@react-three/postprocessing`**
-- **zustand** for slide state (shared across the `<Canvas>` boundary)
-- Package manager: **pnpm** (not npm)
+- **zustand** for slide + session-step state (shared across the `<Canvas>` boundary)
+- **`@chenglou/pretext`** for text measurement/layout without DOM reflow
+- **`@fontsource/jetbrains-mono`** self-hosted (offline-safe)
+- Package manager: **pnpm**
 
 ```bash
 pnpm install
@@ -81,160 +97,264 @@ pnpm dev      # http://localhost:5173
 pnpm build
 ```
 
-> The live dev server is hosted at **https://outside-react.robo.online/** (HMR
-> on). Use that URL to view and verify changes — no need to run `pnpm dev`
-> locally.
+## The rules that protect the trick
+
+Breaking one of these costs the cold open, and the cold open is the whole talk.
+Full list in PLAN.md §2; the ones that bite while coding:
+
+1. **The cold open is pixel-flat.** All post-processing zeroes on a `fillScreen`
+   slide and camera input is disabled. One sliver of background in frame and the
+   audience knows they're looking at an object.
+2. **Everything is drawn. No DOM, anywhere.** Text goes onto the screen's canvas
+   texture. Never an HTML overlay, never `getBoundingClientRect` (it reflows the
+   page mid-talk) — measure with pretext.
+3. **One hue on the glass, hierarchy is intensity.** Phosphor drives harder or
+   softer; it never changes colour. Alerts are brighter amber, not red.
+4. **No bitmap/pixel fonts.** The period feel comes from the tube material, never
+   the letterforms.
+5. **Every procedural lattice needs a Nyquist guard** (see below).
+6. **Calm motion.** Slow drift or nothing. No per-frame churn.
+7. **Deterministic.** Seeded randomness — what you rehearse is what the room sees.
+8. **Offline-safe.** No runtime CDN fetches.
 
 ## How it works
 
-Each slide is a plain config object. A slide declares where the **camera** flies
-(`{ pos, target, smoothTime? }`) and, optionally, a **planet**, a **logo
-constellation**, and DOM **content** (title/body/code/demo/socials). Navigating
-tweens the camera between waypoints; all readable text/code/demos are real DOM
-layered over the WebGL canvas (crisp on a projector, and itself a proof of the
-thesis).
-
 ### The one file you usually edit
 
-**`src/slides/index.js`** — the entire talk: order, copy, camera waypoints,
-planets, code samples, demos. Start here.
+**`src/slides/index.js`** — the whole talk: order, camera waypoints, tube params,
+which fake-agent session plays. Start here.
 
-### Scene (`src/scene/`)
+A slide declares where the camera flies, what the tube looks like, and
+optionally a `session`. Navigating tweens the camera and damps the tube
+parameters toward the new slide's values, so a change between slides plays as a
+physical transition rather than a cut.
 
-- `layout.js` — scale constants. **Key idea: scale separation.** The solar system
-  is tiny and local (sun at origin, planets within ~130 units); the galaxy is huge
-  and far (`GALAXY.center` ~15k units away, radius 26k). From inside, the galaxy is
-  just a faint star band; its true scale stays hidden until the final pull-back.
-- `Universe.jsx` — assembles everything; maps planet-bearing slides to `<Planet>`s;
-  shows the intro `LogoConstellation`s. They **fade** in/out via a `show` prop —
-  don't toggle `visible`, that pops.
-- `Galaxy.jsx` — procedural spiral galaxy (static points, soft additive discs, very
-  slow drift, glowing core). No per-point animation — that caused flicker.
-- `Planet.jsx` — custom-shader planet: fbm surface + two-scale bump, half-Lambert
-  terminator, warm sun / cool night, atmospheric limb crescent, ocean specular,
-  thin fresnel atmosphere shell. Plus a **slow sun-lit cloud deck** (separate
-  sphere at 1.02×, patchy fbm, fades on the night side, rotates ~1.35× the
-  surface for parallax — mesh rotation only, no per-frame noise = no flicker) and
-  a **day/night atmosphere rim** (the fresnel shell brightens on the sunlit limb
-  via `uLightDir`, instead of a flat ring). Lit from the sun (`SUN_POSITION`).
-- `Sandworm.jsx` — a **Shai-Hulud** that ORBITS the React planet and burrows in
-  and out of it during the supply-chain beat ("deps burrowing through your
-  project"). The geometry is a straight canonical worm (`buildWorm` bakes
-  per-vertex `aU` length, `aOff` ring offset, `aTheta`; with geometric ring
-  ridges + tapered tail + flared toothed **maw**). The **vertex shader bends it
-  onto an animated path** — `pathPos(s)` spirals around the planet at an
-  oscillating radius, so the worm weaves above/below the surface (the opaque
-  planet occludes the buried stretches) and **swims forward** as `uTime` advances
-  (head leads, body follows). The **fragment shader** gives it life/texture:
-  fbm-bump normal perturbation + ring-plate shading + wet specular + rim, lit by
-  a fixed key light — reads as a textured creature, not a flat tube. `uAmp` (eased
-  from `show`) grows the breach + radius from inside so it surfaces on arrival;
-  `DoubleSide` for the maw gullet; `frustumCulled={false}` (real positions are
-  shader-computed). Shown via the slide `worm: true` flag; `ai-excuse`/
-  `ai-other-edge` fly **close** to the React planet (`ai-supply-chain` keeps its
-  contrast card at the vista; `ai-defaults` eases back). Tune in-file: `profile`
-  (thickness/maw), breach amp + freq + swim speed in `pathPos`/`head`, `ARC`,
-  ridge freq, sand color.
-- `BrowserSupport.jsx` — the **3D browser-support readout** (replaces the planned
-  emoji Baseline badge — Scott rejected emoji). Three **embossed logo coins** in a
-  right-margin vertical column (placement Scott liked), camera-anchored (clears the
-  centered cards, tuned for 16:9). Each coin **bump-maps its browser logo** into
-  the face: the logo texture's luminance drives a relief normal (object-space lit,
-  stable on screen), so it reads instantly as that browser AND has 3D emboss.
-  **Three tiers** carry the state: shipped → full glow; behind a flag → half-lit;
-  unsupported → dark, desaturated dead coin. **Hover a coin** for a tinted tooltip
-  (drei `<Html>`) with the version/flag detail. Driven by each slide's `support`
-  field (omit to hide); per-engine value is `true | false | 'partial' |
-  { since:'125' } | { since, flag:true }`. Logos are **simpleicons white glyphs**
-  in `public/logos/` (`chrome/safari/firefox.svg`, via
-  `cdn.simpleicons.org/<slug>/white`) — swap in official/full-color art by
-  replacing those files. Easy dials: brand tints, emboss depth (`* 9.5` in
-  `discFrag`), off-darkness (`0.09` — lower = darker dead coins) and
-  off-desaturation (`0.22 + 0.78`). Tooltip
-  wording is scaffold; the version/flag data on each slide is factual placeholder
-  for Scott to verify.
-- `Sun.jsx` — core sphere + a **two-layer corona** (inner + wide faint outer) and
-  an **anamorphic horizontal lens streak**, all camera-facing sprites at the sun
-  so the flare only shows when the sun is on screen (no global wash).
-  `Nebula.jsx` (colored backdrop sphere), `LogoConstellation.jsx`
-  (samples an SVG/image — or text fallback — into a star cloud; fades via a
-  `uOpacity` uniform damped toward its `show` prop in `useFrame`).
-- `CameraRig.jsx` — flies to the active slide's waypoint; per-slide `smoothTime`
-  (lower = faster; hops ~1.0, reveal ~2.2).
-- `Effects.jsx` — restrained bloom + vignette. Bloom is what makes it premium.
+### `src/terminal/` — the fake agent harness
 
-### UI / state
+Everything drawn onto the glass.
 
-- `src/ui/Overlay.jsx` — the DOM card (eyebrow/title/body/socials/code/demo) + HUD.
-  Any slide with `code` is a **"code-hero" slide**: the card centers, the code is
-  enlarged, and the planet drops to a backdrop glow behind the frosted glass. A
-  slide can also set **`center: true`** to use the centered stage *without* code
-  (gets `.card--wide`) — for a wide centerpiece demo (see `ai-supply-chain`). The
-  card is **keyed by slide id** so its `rise` fade-in replays on every change (a
-  0.35s delay lands it as the camera arrives, not mid-flight); the card's
-  children then **stagger in** (`rise-in`, eyebrow→title→body→code/demo, focusing
-  from a soft blur).
-- **Per-scene accent.** `Overlay.accentFor(slide)` resolves `slide.accent ||
-  slide.planet.atmosphere || SCENE_ACCENT[kicker] || #38bdf8` and sets `--accent`
-  on `.overlay`. `--accent` is a **registered `@property` `<color>`** with a 0.6s
-  transition, so it **cross-fades** between scenes; eyebrow, buttons, demo
-  accents and the card's colored halo all inherit it. Add `accent: '#…'` to a
-  slide to override; keep `SCENE_ACCENT` (in `Overlay.jsx`) matched to the planet
-  atmospheres so parked demos match their planet.
-- `src/ui/CodeBlock.jsx` — **zero-dependency** syntax highlighter (~20-line
-  tokenizer; comments/strings/tags/numbers only). Intentionally not Shiki:
-  synchronous (no flash on slide change), offline-safe, on-brand for a no-install
-  talk. Token colors are `.tok-*` classes in `index.css`.
-- `src/state/useStore.js` — zustand slide index; `next/prev` are **throttled**
-  (300ms) and key auto-repeat is ignored so a double-fired key can't skip a slide.
-- `src/state/useKeyboardNav.js` — → / Space / PageDown = next, ← = prev, **0–9 jump
-  to a slide** (great for Q&A), `f` = fullscreen.
+- `theme.js` — the phosphor ladder (glass `#0b0a06` → ghost → dim → phosphor
+  `#ffd54a` → hot `#fff2cd`), screen metrics, font loading. AMBER, matched to
+  the survey site's accent (ai-health.syntax.fm) — see ART-DIRECTION. The
+  ladder discipline and
+  one-hue discipline are lifted from the `crt-terminal` Pack in
+  `../../../properties/gfx-computer`.
+- `session.js` — the script model. A session is a list of Enter-driven steps
+  (`user`, `say`, `think`, `tool`, `note`, `gap`), and
+  `buildFrame(script, step, progress, time)` turns one into display lines.
+  Session performance state never changes the slide index. Wrapping goes
+  through pretext. `COLD_OPEN` lives here.
+- `playback.js` — which session is showing and how far through, shared by the
+  3D tube and the `?flat` renderer so the two can't drift. Also owns the
+  **content sweep**: slide navigation never cuts the glass — the old content
+  DECAYS behind the beam like phosphor (luminous trail, then dark) and the new
+  content draws in behind a second sweep with a soft-shouldered ghost preview
+  and an additive ignition band (charts grow their bars, the title and
+  statements type themselves, stats count up). Enter-driven steps never sweep;
+  typing is already that transition. Deep links initialize settled, keeping
+  direct and navigated arrival pixel-identical.
+- `visuals.js` — the closed catalog of full-screen forms: `title`, `asset`,
+  `chart`, `statement` (bare glass, lines of driven phosphor), and `stat` (one
+  enormous odometer number + label). The three glass-filling threshold slides
+  carry `statement`/`stat` **act markers** that the held-forward rule keeps on
+  the glass through the beats they introduce. Numbers come only from
+  `data/survey.js` (single source of truth, n = 3,593 from the Aug 28 export;
+  the video's older ~1,300-response figures must never be quoted on stage).
+- `hover.js` — which chart row the pointer is over, shared by both renderers so
+  one pointer can only ever light one row. The chart painters record their row
+  rectangles as a byproduct of drawing, so hit-testing can never drift from the
+  layout on screen. Hovering moves every element of that row up exactly one rung
+  of the phosphor ladder — the one-hue rule applies to interaction too.
+- `paint.js` — the Canvas 2D painter. Depth is **glow**, never a shadow (a
+  shadow implies an object above paper; a screen has neither). Edges are hard.
 
-### Assets
+The agent is scripted, not live — the screen is a texture in a 3D scene, and a
+talk needs the same beat to land the same way at every rehearsal.
 
-- `public/logos/*.svg` — Syntax (yellow) and Sentry (purple) logos sampled into the
-  intro constellations. White-on-transparent artwork samples best.
-- `public/fonts/Newake.*` — **Newake**, the display face for all headings
-  (`.card h1`), self-hosted via `@font-face` in `src/index.css` so it works
-  offline. woff2 preferred; see `public/fonts/README.md`.
-- `src/shaders/snoise.js` — shared GLSL simplex noise + fbm.
+### `src/scene/`
 
-## Extending it
+- `CRTScreen.jsx` — the monitor. One plane, one shader, one canvas texture.
+  Owns the session clock, repaints the canvas each frame, and damps the tube
+  uniforms toward the slide's `crt` target. On a deep link it initializes at the
+  target directly; navigated transitions snap exactly at the slide duration.
+- `CameraRig.jsx` — flies to each slide's waypoint. `camera.fillScreen` solves
+  the distance at which the screen plane exactly *covers* the viewport at any
+  window aspect (no letterbox, no pillarbox) and disables input. CameraControls'
+  response constant is not treated as duration: each flight is bounded and
+  lands exactly where the slide declared.
+- `Stages.jsx` — home, cubicle, monitor wall, and phosphor contexts. Every set
+  stays mounted and its GPU programs are compiled before presentation; a shift
+  is only a visibility change, never an asset load.
+- `Effects.jsx` — restrained bloom, vignette, explicit ACES filmic tone mapping,
+  FXAA, and banding dither. **All of it zeroes on a `fillScreen` slide.**
+  EffectComposer forces the renderer to `NoToneMapping`, so ACES must live in
+  this chain or bright office values clip directly to display white. Screen-space
+  AO, depth of field, chromatic aberration, and SMAA were removed because large
+  scene/depth changes produced block flashes and contributed more game-render
+  look than realism.
 
-- **New topic planet:** add a slide with `planet: { position, radius, color,
-  colorDeep, atmosphere, freq }` and a `camera` aimed at it. Keep positions within
-  the solar-system scale (~tens of units from origin).
-- **New "could have been a div" demo:** drop a self-contained component in
-  `src/slides/demos/` that uses only the platform (see `DialogDemo.jsx`,
-  `DrawerDemo.jsx`, `ScrollScrubDemo.jsx`), then set `demo: TheComponent` on a
-  slide. It renders live in the card. Conventions for demo slides:
-  - **Code is the star.** Give the slide a tight `code` block and **no `body`
-    explainer** — you narrate over it. Don't name the library you're replacing on
-    the slide; say it out loud instead.
-  - **Stay parked.** Reuse the cluster's arrival-slide `camera` waypoint so the
-    camera doesn't fly — within a planet, demos rapid-fire as card swaps. Only fly
-    when you change planets.
-  - **Drop the metaphor from the copy.** The 3D universe carries the
-    planet/galaxy metaphor; titles stay direct and about the feature
-    ("Scroll-driven animation"), never "Planet of X" / "first neighbor".
-- **Tuning knobs:** bloom in `Effects.jsx`; galaxy color/size/`uSize` in
-  `Galaxy.jsx`; per-planet `specular`; transition speed via `smoothTime`.
+### `src/shaders/crt.js` — the tube
+
+A GLSL port of the `crt-tube` effect from `gfx-computer`
+(`src/lib/pipelines/effects/crt-tube`, TypeGPU/WGSL). Same physics, same
+constants: gaussian-beam scanlines with peak normalization, three phosphor mask
+modes each normalized to its analytic mean transmission, halation with a
+luminance knee, barrel curvature, rounded-rect tube SDF, vignette.
+
+**`uTube` is the master dial.** At 0 the shader is a bit-exact passthrough of
+the canvas — a flat screen recording. At 1 it's a cathode ray tube. Animating
+that one uniform IS the reveal.
+
+**`uEmissiveGain` keeps the glass emissive under ACES.** The canvas is LDR, so
+without HDR headroom the composer's tone map rolls the screen to mid-gray and
+the "only light source in the room" reads dimmer than its own spill. Each stage
+declares `screenGain` in its look preset (environment.js); flat slides force 1
+so the cold open stays a bit-exact canvas, and the phosphor stage stays at 1 so
+the measured shader/geometry handoff parity survives. Exposure targets are
+gated numerically in QUALITY.md §Q5b — brightness is a gate, not taste.
+
+`uResolution` is the **texture's** pixel size, not the viewport's, so the
+phosphor mask is fixed to the glass and magnifies as the camera approaches — the
+way a real shadow mask does, and what the into-the-glass beat needs.
+
+**Three things had to be added to the port**, because the original is a
+full-frame post-process where one texel is always one screen pixel. As geometry
+in a 3D scene that stops being true:
+
+- **Raster and mask alias hard** when the tube is small on screen. Mipmaps don't
+  help — those patterns are *computed*, not sampled. Both fade on measured
+  screen-pixels-per-period.
+- **The scanline taps break mipmapping.** `kA / linesN` is a step function of
+  `vUv.y`, so its automatic derivative explodes at every raster boundary and the
+  GPU picks a garbage mip along each line — which renders as a **ghosted second
+  copy of the text**. Fixed by selecting LOD from the smooth coordinate with
+  `textureGrad`, which is why the material is GLSL3.
+- **Halation is a NEAR-FIELD effect and ghosts under minification.** 24 point
+  samples can only represent a smooth halo while the texture is near 1:1 on
+  screen; minified, every tap lands on a blurry mip blob, the taps stop fusing,
+  and you get discrete displaced copies of the text — a doubled image, worst on
+  high-contrast type, which is all this screen has. Faded on **texels per screen
+  pixel**, not on the halo's size in pixels: the halo is still several pixels
+  wide long after the taps have stopped fusing, so that metric reads ~0.9
+  exactly where the ghost is worst. Strength also dropped from 0.3 to 0.15.
+  Scene bloom carries glow at distance; halation returns as the camera pushes
+  into the glass, which is where it belongs.
+
+Tune live in dev: `__crt.hold = true; __crt.uMaskStrength.value = 0.8`.
+
+### The phosphor beats (after the glass)
+
+`PhosphorField.jsx` carries three authored states, morphed by slide cues
+`phosphor.form` and `phosphor.decay` (eased like opacity/depth):
+
+Every mote also carries a slow seeded DRIFT, damped hard once the synapse
+forms. The time uniform used to reach the fragment shader only, so the cloud was
+frozen in space and the beat died the instant the camera stopped — a still field
+of dots is a texture, and the volume is the whole point of being inside it.
+
+- **Dream** (`inside-glass`, form 0) — an ethereal cloud of scattered glowing
+  motes, deliberately unreal; a seeded sparseness gate keeps only ~8% of the
+  34k deposits visible so the dots float in real darkness.
+- **Synapse** (`synapse`, form 1) — the motes stream into a seeded neural
+  network: node cores, filament edges, slow signal beads traveling the
+  connections. Each dot has its own formation delay, so the network assembles
+  rather than lerps.
+- **Loss** (`synapse-decay`, decay 1) — connections die one by one on seeded
+  cues, signals dying with them, leaving isolated dimming nodes. This is the
+  "losing brain connections" image; the beat exists for it.
+
+A per-grain thin-lens model (focus depth 5.0) turns out-of-focus motes into
+energy-conserving bokeh discs — the macro-lens look, without the post-process
+DoF that was removed for flashing. All of it is gated on `vRestMix`, so the
+measured shader/geometry handoff parity at the threshold is untouched.
+
+### `?flat` — authoring without the 3D
+
+`src/ui/FlatScreen.jsx` paints the screen's canvas straight to the page: no R3F
+mount, no WebGL context, no shader compile. Same sessions, same painter, same
+nav — so it's a faithful preview of what the glass will say, minus the tube and
+the camera. Use it to work on content. It's also the stage fallback if WebGL
+fails on the projector.
+
+Playback semantics (which session is showing, which step, how far through) live
+in `src/terminal/playback.js` and are shared by both renderers, so flat mode and
+the tube can't drift apart.
+
+### State
+
+- `src/state/useStore.js` — slide index plus an independent, Enter-driven
+  session step. `?slide=<id>` persists across reloads.
+
+  **ONE ARROW PRESS IS ONE SLIDE.** Never let arrows advance session state. The
+  moment an arrow advances something *inside* a slide, the counter stops moving,
+  `?slide=` can no longer describe where you are, the 0–9 jumps lose position,
+  and "go back two" stops meaning anything. Enter/backspace perform the fake
+  terminal while arrows remain the trivial inverse of one another.
+
+  If you touch navigation, re-run the check: walk forward to the end recording
+  every index, assert each press moved it by exactly one, walk back, and assert
+  the sequence is the exact reverse.
+- `src/state/useKeyboardNav.js` — → / Space next, ← back, Enter/backspace
+  session step, **0–9 jump**, `f` fullscreen.
+- `src/state/useSessionAutoplay.js` — a slide marked `autoplay` plays its
+  session on an authored schedule instead of on Enter, for beats the MACHINE
+  performs rather than the presenter. One press of Enter or Backspace hands it
+  back for the rest of the visit. It never touches the slide index, so the
+  arrow invariant above is untouched.
+
+### UI
+
+`src/ui/Overlay.jsx` is presenter chrome only, and **hidden unless you pass
+`?hud`** — a slide counter in the corner during the cold open tells the room
+they're watching a deck. `src/index.css` is ~50 lines for the same reason.
 
 ## Conventions & gotchas
 
-- **The overlay is a scaled stage.** All overlay/DOM sizes are authored in
-  **1080p design pixels** on a fixed 1920×1080 stage that's scaled to fit the
-  viewport (`--stage-scale`, set on resize in `Overlay.jsx`), so the deck is
-  proportionally identical at any resolution. Use fixed `px`/`rem` for overlay
-  content — **not** `vw`/`vh`. Exception: `showModal()` dialogs are promoted to
-  the top layer, which ignores the stage transform, so size those in `vmin`.
-- **Keep motion calm.** Static or very slow drift only — earlier versions flickered
-  from animated points, grain, and twinkle. Avoid reintroducing per-frame churn.
-- Planets use **custom shaders**, so scene `<light>`s don't affect them — lighting
-  is hand-rolled and comes from the sun direction.
-- `logarithmicDepthBuffer` + a far plane of 150k–400k let the tiny system and the
-  huge galaxy coexist without z-fighting. Don't shrink the far plane.
-- drei `<Text>` / troika fonts fetch from a CDN — **self-host a font before
-  presenting** so it works offline on conference wifi.
-- For the live talk: **record a full screen-capture backup run** — insurance
-  against WebGL/projector failure.
+- **The screen texture is 2560×1440**, 16:9 so it fills a projector exactly edge
+  to edge in the cold open. The tube gets its 4:3-ish character from the
+  shader's barrel warp and bezel, not from the texture's shape.
+- **80 columns.** Font size is derived so exactly 80 characters land across the
+  usable width; the caret is positioned by *measuring* the line, not by
+  multiplying a column count, so it can't drift off the end of typed text.
+- **Wait for fonts before the first paint.** Text measured before JetBrains Mono
+  lands silently uses fallback metrics and the grid shifts a beat into the talk.
+  `ensureFonts()` gates it; `clearWrapCache()` after.
+- **Nurb GLBs have no UV channel.** Do not box-project a tiled normal over a
+  compound prop: projection seams and repeated grain look worse than a clean
+  material and de-index the mesh. Macro textures belong on geometry with an
+  intentional projection (the home desk has directional planar UVs; the chair
+  cushions get per-cushion planar fabric UVs in `segmentChairGeometry`). Small
+  CAD props use authored edges plus physically distinct broad roughness.
+- **Nurb GLBs also ship per-face normals, and `mergeVertices` cannot smooth
+  them** — it compares every attribute, so coincident vertices carrying
+  different face normals never merge and recomputed normals stay flat. All CAD
+  surface finishing lives in `lib/propSurface.js` and applies to the monitor
+  housing and every desk prop: `toCreasedNormals` at 40° (lathe facets shade
+  round, chamfers stay crisp), the `weatherGeometry` pass (per-vertex cavity
+  darkening, convex-edge wear, seeded mottle — no UVs required), and
+  `varyRoughnessByWear`, which drives ROUGHNESS from that same vertex data so
+  grimy cavities scatter light and handled edges tighten it. Uniform
+  roughness is most of what reads as lifeless clay. The home environment map
+  also carries STRUCTURED sources (window panes, door slit) because a
+  gradient-only environment gives every specular a shapeless wash.
+- **CAD boolean cut rims tessellate curved faces into ragged slivers** that
+  catch light as torn dashes (the monitor's vent slots). Do not fight the
+  tessellation — cover the cut with manufactured geometry the way a real
+  housing does (`Monitor.jsx` louver blades over the vent fields, thick
+  enough in x to bridge the shell's curvature).
+- **Quality per frame beats brute-force resolution.** DPR caps at 1.25, FXAA
+  resolves edges after one shaded scene sample, variance shadow maps update only
+  when a stage swaps, and repeated office/monitor assets stay instanced. Preserve
+  those economics when adding detail.
+- **Do not bolt on progressive path tracing.** Camera flights and the animated
+  terminal texture invalidate accumulation, and the wall/phosphor architecture
+  depends on instancing that the primary WebGL path tracer does not support.
+  Prefer local HDR/PMREM, real PBR map sets, modeled silhouettes, and static or
+  baked lighting for this deterministic presentation renderer.
+- **Deep-linking works.** A slide with no session of its own resolves the most
+  recent session at or before it and paints it complete, so `?slide=` and the
+  0–9 jump keys never show a dead screen.
+- **The screen must stay alive.** A monitor whose cursor has stopped blinking
+  reads as a photograph of a monitor.
+- For the live talk: **record a full screen-capture backup run.** Insurance
+  against WebGL or projector failure. Non-negotiable.

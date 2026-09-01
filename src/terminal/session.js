@@ -1,0 +1,302 @@
+/**
+ * ─────────────────── THE FAKE AGENT SESSION ───────────────────
+ * The thing on the screen is an AI coding harness that does not exist. It is a
+ * script: a list of steps, advanced one at a time by the presenter. Tap Enter
+ * and the next step plays—a visual loads, a line types itself, the agent thinks,
+ * a tool runs, and an
+ * answer streams in. You talk over it.
+ *
+ * Why scripted rather than live: the screen is a canvas texture inside a 3D
+ * scene (there is no DOM up there to be interactive), and more importantly a
+ * talk needs the same beat to land the same way at every rehearsal. The agent
+ * being fake is also the point — this is a talk about what these tools do to
+ * you, performed by a mock of one.
+ *
+ * COPY IS PLACEHOLDER. The shape is right, the words are Scott's to write.
+ *
+ * Step kinds:
+ *   user  { text }                     types out, character by character
+ *   say   { text }                     agent prose, streams in by word
+ *   think { label }                    spinner, then collapses to an elapsed time
+ *   tool  { name, arg, out[] }         a tool call and its output
+ *   note  { text }                     dim chrome (banners, token counts)
+ *   gap   {}                           a blank line / breathing beat
+ *   visual { id }                      a catalog visual replaces the transcript
+ * ──────────────────────────────────────────────────────────────
+ */
+
+import { prepareWithSegments, layoutWithLines } from '@chenglou/pretext'
+import { AGENT_WEEK, formatUsageDuration } from '../data/agentUsage.js'
+import { CHAR_W, LINE_H, ROWS, SAFE_COLS, font } from './theme.js'
+import { getTerminalVisual } from './visuals.js'
+
+/* ─────────────────────────── text wrapping ─────────────────────────── */
+
+const wrapCache = new Map()
+
+/**
+ * Wrap to a column count using pretext — real break opportunities, correct for
+ * emoji and non-Latin, and it never touches the DOM to measure (which would
+ * reflow the page mid-talk). Cached because the painter runs every frame.
+ */
+function wrap(text, cols) {
+  const key = `${cols}\u0000${text}`
+  const hit = wrapCache.get(key)
+  if (hit) return hit
+  const prepared = prepareWithSegments(text, font(400))
+  const { lines } = layoutWithLines(prepared, cols * CHAR_W, LINE_H)
+  const out = lines.map((l) => l.text)
+  wrapCache.set(key, out)
+  return out
+}
+
+/** Font metrics change once JetBrains Mono lands; anything measured before is wrong. */
+export function clearWrapCache() {
+  wrapCache.clear()
+}
+
+/* ──────────────────────────── step timing ──────────────────────────── */
+
+const CHARS_PER_SEC = 34 // Scott typing — fast, but human
+const WORDS_PER_SEC = 9 // the agent streaming
+
+/** How long a step takes to play out, in seconds. */
+export function stepDuration(step) {
+  switch (step.kind) {
+    case 'user':
+      return Math.max(0.5, step.text.length / CHARS_PER_SEC)
+    case 'say':
+      return Math.max(0.6, step.text.split(/\s+/).length / WORDS_PER_SEC)
+    case 'think':
+      return step.secs ?? 1.6
+    case 'tool':
+      return 0.35 + (step.out?.length ?? 0) * 0.11
+    case 'visual':
+      return 0.01
+    default:
+      return 0.25
+  }
+}
+
+const revealChars = (text, p) => text.slice(0, Math.ceil(text.length * p))
+
+function revealWords(text, p) {
+  const words = text.split(' ')
+  return words.slice(0, Math.ceil(words.length * p)).join(' ')
+}
+
+const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+
+/* ───────────────────────── step → display lines ───────────────────────── */
+
+/**
+ * Expand one step into display lines. `p` is 0→1 through the step; a finished
+ * step is expanded at p = 1. Returns `{ lines, caret }`, where caret carries
+ * the TEXT the cursor sits after rather than a column index — the painter
+ * measures it, so the block lands exactly against the last glyph no matter
+ * what the face's real advance width turns out to be.
+ */
+function expand(step, p, time) {
+  const done = p >= 1
+  switch (step.kind) {
+    case 'user': {
+      const shown = revealChars(step.text, p)
+      const text = `YOU    ${shown}`
+      return {
+        lines: [{ text, role: 'user', weight: 500 }],
+        caret: text,
+      }
+    }
+
+    case 'say': {
+      const shown = done ? step.text : revealWords(step.text, p)
+      // SAFE_COLS, not the full grid: the tube's barrel warp overscans the outer
+      // edge and an oblique camera foreshortens it away. See theme.js.
+      const wrapped = wrap(shown, SAFE_COLS - 7)
+      return {
+        lines: wrapped.map((text, index) => ({
+          text: `${index === 0 ? 'AGENT  ' : '       '}${text}`,
+          role: 'agent',
+        })),
+        caret: null,
+      }
+    }
+
+    case 'think': {
+      if (done) {
+        const secs = (step.secs ?? 1.6).toFixed(1)
+        return {
+          lines: [{ text: `AGENT  ${step.label} · ${secs}s`, role: 'meta' }],
+          caret: null,
+        }
+      }
+      const frame = SPINNER[Math.floor(time * 12) % SPINNER.length]
+      return {
+        lines: [{ text: `AGENT  ${frame} ${step.label}…`, role: 'tool' }],
+        caret: null,
+      }
+    }
+
+    case 'tool': {
+      const head = {
+        text: `TOOL   ${step.name}  ${step.arg ?? ''}`.trimEnd(),
+        role: 'tool',
+      }
+      const out = step.out ?? []
+      // Header lands immediately; output pays out over the rest of the step.
+      const shown = done ? out.length : Math.floor(Math.max(0, p - 0.2) * 1.25 * out.length)
+      const body = out.slice(0, shown).map((text, i) => ({
+        text: `       ${i === out.length - 1 ? '└' : '│'} ${text}`,
+        role: 'meta',
+      }))
+      return { lines: [head, ...body], caret: null }
+    }
+
+    case 'note':
+      return { lines: [{ text: step.text, role: 'meta' }], caret: null }
+
+    case 'gap':
+      return { lines: [{ text: '', role: 'meta' }], caret: null }
+
+    default:
+      return { lines: [], caret: null }
+  }
+}
+
+/**
+ * Build everything the painter needs for one frame: the visible transcript
+ * (last ROWS lines) and where the caret sits.
+ *
+ * `index` is the step currently playing; `progress` is 0→1 within it. Steps
+ * before it are expanded complete.
+ */
+export function buildFrame(script, index, progress, time) {
+  const activeStep = script[Math.min(index, script.length - 1)]
+  if (activeStep?.kind === 'visual') {
+    return {
+      lines: [],
+      caret: null,
+      visual: getTerminalVisual(activeStep.id),
+    }
+  }
+
+  const lines = []
+  let caret = null
+
+  for (let i = 0; i <= index && i < script.length; i++) {
+    const p = i < index ? 1 : progress
+    const { lines: stepLines, caret: prefix } = expand(script[i], p, time)
+    // Only the LIVE step owns the cursor. Earlier prompts have been submitted;
+    // leaving the caret parked on one of them strands it halfway up a finished
+    // transcript.
+    if (i === index && prefix != null) {
+      caret = { row: lines.length + stepLines.length - 1, prefix }
+    }
+    lines.push(...stepLines)
+  }
+
+  // Between taps the transcript is settled and nothing owns the cursor — but a
+  // real CLI is sitting at an idle prompt, and "between taps" is most of the
+  // talk, because that's when Scott is speaking. Without this the screen goes
+  // dead exactly when the room is looking at it longest.
+  //
+  // Only once the agent's TURN is over, though: a prompt that appears while a
+  // tool is still running claims the agent finished when it hasn't. Look ahead
+  // past blank lines — if the next thing that happens is Scott typing, the
+  // agent is done and the cursor is waiting on him.
+  if (!caret && progress >= 1) {
+    let next = index + 1
+    while (script[next]?.kind === 'gap') next++
+    if (!script[next] || script[next].kind === 'user') {
+      lines.push({ text: 'YOU    ', role: 'user', weight: 500 })
+      caret = { row: lines.length - 1, prefix: 'YOU    ' }
+    }
+  }
+
+  // Scroll: keep the tail on screen, and keep the caret's row with it.
+  const overflow = Math.max(0, lines.length - ROWS)
+  if (caret) caret = { ...caret, row: caret.row - overflow }
+  return { lines: lines.slice(overflow), caret }
+}
+
+/** Total steps in a script — the presenter taps through these one at a time. */
+export const stepCount = (script) => script.length
+
+/* ─────────────────────── OPENING AGENT SESSION ────────────────────────
+ * Scott asks the agent about his own usage. It answers honestly. Then he asks
+ * the question the whole talk is about, and it thinks — and never answers.
+ *
+ * SHORT ON PURPOSE. An earlier version ran fifteen beats: a banner, three
+ * separate exchanges, a tool call and a spinner for each. That's a sketch, not
+ * a cold open — the audience has to sit through the machinery before the point
+ * lands. Seven beats—including the ready state—gets to "is that a lot?" while
+ * they're still deciding
+ * whether this is a real demo, which is exactly where it needs to land.
+ *
+ * If a beat isn't carrying the argument, cut it. The spinners and banners are
+ * texture; the two questions are the content.
+ *
+ * PLACEHOLDER COPY — the beats are right, the words are Scott's.
+ * ────────────────────────────────────────────────────────────────────── */
+
+export const COLD_OPEN = [
+  { kind: 'note', text: 'SESSION  usage-audit · ready' },
+  { kind: 'user', text: 'how many hours did I spend in here last week?' },
+  {
+    kind: 'tool',
+    name: 'usage.read',
+    arg: '--window 7d',
+    out: [
+      `sessions: ${AGENT_WEEK.sessions}`,
+      `active: ${Math.floor(AGENT_WEEK.activeMinutes / 60)}h ${AGENT_WEEK.activeMinutes % 60}m`,
+    ],
+  },
+  {
+    kind: 'say',
+    text: `You spent ${formatUsageDuration(AGENT_WEEK.activeMinutes)} across ${AGENT_WEEK.sessions} sessions. ${formatUsageDuration(AGENT_WEEK.afterMidnightMinutes)} were after midnight.`,
+  },
+  { kind: 'gap' },
+  { kind: 'user', text: 'is that a lot?' },
+  { kind: 'think', label: 'thinking', secs: 2.6 },
+]
+
+/**
+ * A single catalog visual, as a session. The one-step shape matters: it is what
+ * `playback.js` recognises as a distinct content identity, so each of these
+ * gets the real undraw/draw sweep when a slide changes to it.
+ */
+const screen = (id) => Object.freeze([Object.freeze({ kind: 'visual', id })])
+
+export const TITLE_SCREEN = screen('talk-title')
+export const SYNTAX_SCREEN = screen('syntax')
+export const SENTRY_SCREEN = screen('sentry')
+export const QR_SCREEN = screen('qr')
+export const ROB = screen('rob')
+
+// Act markers for the glass-filling threshold pushes: each context change is
+// preceded by the machine writing the next chapter, and the held-forward rule
+// keeps that writing on the glass through the beats it introduces.
+// PLACEHOLDER COPY — see terminal/visuals.js.
+export const CUBICLE_ACT_SCREEN = screen('act-cubicle')
+export const PHOSPHOR_ACT_SCREEN = screen('act-phosphor')
+export const CEILING_ACT_SCREEN = screen('act-ceiling')
+export const BOUNDARIES_ACT_SCREEN = screen('act-boundaries')
+
+// ── The survey on the glass (NARRATIVE.md §3) ──
+export const MOST_PROMPTS = screen('most-prompts')
+export const Q_STOPPING = screen('q-stopping')
+export const STOPPING_SLEEP = screen('stopping-sleep')
+export const Q_PRESSURE = screen('q-pressure')
+export const PRODUCTIVITY_PARADOX = screen('productivity-paradox')
+export const EARLY_CAREER = screen('early-career')
+export const Q_AGENTS = screen('q-agents')
+export const AGENTS_STOPPING = screen('agents-stopping')
+export const AGENTS_OUTCOMES = screen('agents-outcomes')
+export const STOPPING_BEATS_COUNT = screen('stopping-beats-count')
+export const Q_SKILLS = screen('q-skills')
+export const Q_ENJOYMENT = screen('q-enjoyment')
+export const SKILLS_ENJOYMENT = screen('skills-enjoyment')
+export const WHAT_GETS_PRUNED = screen('what-gets-pruned')
+export const THREE_ZEROS = screen('three-zeros')
+export const DRIVE_QUADRANTS_CHART = screen('drive-quadrants')
+export const THREE_R = screen('three-r')

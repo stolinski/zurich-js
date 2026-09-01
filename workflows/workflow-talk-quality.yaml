@@ -1,0 +1,114 @@
+id: a7ed6b18-9d39-4aea-8e8c-08f28d036a8d
+name: talk-quality
+description: Build an isolated production presentation, capture browser evidence, and record automated and visual gates separately.
+tags:
+  domain: presentation-quality
+  evidence: browser
+inputs:
+  properties:
+    profile:
+      type: string
+      enum: [smoke, transitions, full]
+      default: full
+    viewport:
+      type: string
+      default: 1920x1080
+    dpr:
+      type: number
+      default: 1
+    cache:
+      type: string
+      enum: [fresh, warm]
+      default: warm
+    slides:
+      type: string
+      default: all
+    directions:
+      type: string
+      enum: [both, forward, backward]
+      default: both
+    mode:
+      type: string
+      enum: [all, settled, transitions]
+      default: all
+    settleMs:
+      type: integer
+      default: 2500
+    traceMs:
+      type: integer
+      default: 4000
+    build:
+      type: boolean
+      default: true
+    browserMode:
+      type: string
+      enum: [headless, headed]
+      default: headless
+    aaProfile:
+      type: string
+      enum: [production, fxaa, msaa2-dpr125, msaa4-dpr1, msaa2-fxaa, ssaa4-reference]
+      default: production
+    handoffMode:
+      type: string
+      enum: [normal, shader, geometry]
+      default: normal
+jobs:
+  - name: quality-evidence
+    description: Capture durable evidence and reject automated transition regressions without pretending to approve the visuals.
+    steps:
+      - name: capture-production-evidence
+        description: Run the typed talk/quality model in an isolated Vite preview and Chrome process.
+        task:
+          type: model_method
+          modelIdOrName: talk-quality
+          methodName: run
+          inputs:
+            profile: ${{ inputs.profile }}
+            viewport: ${{ inputs.viewport }}
+            dpr: ${{ inputs.dpr }}
+            cache: ${{ inputs.cache }}
+            slides: ${{ inputs.slides }}
+            directions: ${{ inputs.directions }}
+            mode: ${{ inputs.mode }}
+            settleMs: ${{ inputs.settleMs }}
+            traceMs: ${{ inputs.traceMs }}
+            build: ${{ inputs.build }}
+            browserMode: ${{ inputs.browserMode }}
+            aaProfile: ${{ inputs.aaProfile }}
+            handoffMode: ${{ inputs.handoffMode }}
+        dependsOn: []
+        weight: 1
+        allowFailure: false
+      - name: transition-gate
+        description: Fail on measured transition regressions when transitions were requested.
+        task:
+          type: assert
+          expr: >-
+            data.latest("talk-quality", "quality-result").attributes.transitionGate.status != "fail"
+          message: >-
+            Automated transition gate failed: ${{ data.latest("talk-quality", "quality-result").attributes.transitionGate.reason }}
+          severity: high
+        dependsOn:
+          - step: capture-production-evidence
+            condition:
+              type: succeeded
+        weight: 1
+        allowFailure: false
+      - name: visual-review-required
+        description: Keep visual acceptance visibly unresolved until a person reviews the archived frames.
+        task:
+          type: assert
+          expr: >-
+            data.latest("talk-quality", "quality-result").attributes.visualGate.status == "pass"
+          message: >-
+            Visual gate is not approved: ${{ data.latest("talk-quality", "quality-result").attributes.visualGate.reason }}
+          severity: medium
+        dependsOn:
+          - step: capture-production-evidence
+            condition:
+              type: succeeded
+        weight: 1
+        allowFailure: true
+    dependsOn: []
+    weight: 1
+version: 1

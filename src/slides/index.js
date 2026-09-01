@@ -1,890 +1,601 @@
-import { DialogDemo } from "./demos/DialogDemo.jsx";
-import { DrawerDemo } from "./demos/DrawerDemo.jsx";
-import { ScrollScrubDemo } from "./demos/ScrollScrubDemo.jsx";
-import { CounterDemo } from "./demos/CounterDemo.jsx";
-import { SiblingIndexDemo } from "./demos/SiblingIndexDemo.jsx";
-import { CarouselDemo } from "./demos/CarouselDemo.jsx";
-import { StickyDemo } from "./demos/StickyDemo.jsx";
-// import { BottomSheetDemo } from "./demos/BottomSheetDemo.jsx"; // bottom-sheet slide cut for now
-import { ReelDemo } from "./demos/ReelDemo.jsx";
-import { SwipeActionsDemo } from "./demos/SwipeActionsDemo.jsx";
-import { AnchorFlipDemo } from "./demos/AnchorFlipDemo.jsx";
-import { DependencyContrastDemo } from "./demos/DependencyContrastDemo.jsx";
-import { StreamDemo } from "./demos/StreamDemo.jsx";
-import { SelectDemo } from "./demos/SelectDemo.jsx";
-import { EmojiPickerDemo } from "./demos/EmojiPickerDemo.jsx";
-import { HtmlInCanvasDemo } from "./demos/HtmlInCanvasDemo.jsx";
-import { SiteFrameDemo } from "./demos/SiteFrameDemo.jsx";
-
-/**
- * ───────────────────────── PLANETS (CLUSTERS) ─────────────────────────────
- *  Each demo planet is defined ONCE here: its theme `label`, its `planet`
- *  body, and the `camera` waypoint demos park at. A demo slide just tags
- *  `cluster: "<id>"` (in the array below) and the builder injects the planet
- *  (onto the cluster's FIRST demo), the parked camera, the section kicker, and
- *  the accent — no per-slide planet/waypoint copying.
- *
- *  Order here is the OUTWARD spatial tour, escalating toward bleeding-edge.
- *  • Move a demo to another planet → change its one `cluster` tag.
- *  • Reorder demos within a planet → just reorder them in the array.
- *  • Retheme / recolor / reposition a planet → edit it here once.
- *  Positions stay within the small solar-system scale (~tens of units from the
- *  origin sun); the galaxy lives far away (see scene/layout.js).
- * ──────────────────────────────────────────────────────────────────────────
- */
-const CLUSTERS = {
-    "native-html": {
-        label: "Native HTML",
-        planet: {
-            position: [-58, 3, 36],
-            radius: 3.0,
-            color: "#f5a524",
-            colorDeep: "#5a2e05",
-            atmosphere: "#ffd27a",
-            freq: 3.0,
-            variant: "terran",
-            tilt: 0.18,
-        },
-        // Target below the planet → it rides high as decoration above the demos.
-        camera: { pos: [-44, 9, 52], target: [-58, -2, 36] },
-    },
-    "scroll-snap": {
-        label: "Scroll-snap UI",
-        planet: {
-            position: [-86, -6, -28],
-            radius: 3.2,
-            color: "#34d399",
-            colorDeep: "#064e3b",
-            atmosphere: "#a7f3d0",
-            freq: 2.4,
-            variant: "ocean",
-            tilt: 0.35,
-        },
-        camera: { pos: [-68, 4, -22], target: [-86, -11, -28] },
-    },
-    "scroll-driven": {
-        label: "Scroll-driven CSS",
-        planet: {
-            position: [-30, -4, -92],
-            radius: 3.4,
-            color: "#a855f7",
-            colorDeep: "#2e0a52",
-            atmosphere: "#d9a8ff",
-            freq: 2.0,
-            variant: "gas",
-            tilt: 0.45,
-            rings: { inner: 1.4, outer: 2.45 },
-        },
-        // Target aimed BELOW the planet so it rides high in frame (decoration above
-        // the bottom-anchored demo, not fighting it in the middle). See statement
-        // demo slides.
-        camera: { pos: [-16, 6, -70], target: [-30, -10, -92] },
-    },
-    "css-lang": {
-        label: "CSS as a language",
-        planet: {
-            position: [44, -8, -104],
-            radius: 3.0,
-            color: "#fb7185",
-            colorDeep: "#4c0519",
-            atmosphere: "#fecdd3",
-            freq: 2.8,
-            variant: "cratered",
-            tilt: 0.2,
-        },
-        camera: { pos: [36, 2, -86], target: [44, -13, -104] },
-    },
-    overlays: {
-        label: "Overlays & menus",
-        planet: {
-            position: [118, 5, -46],
-            radius: 2.8,
-            color: "#22d3ee",
-            colorDeep: "#06363f",
-            atmosphere: "#8ff2ff",
-            freq: 2.6,
-            variant: "ice",
-            tilt: 0.55,
-            moon: true,
-        },
-        camera: { pos: [101, 13, -26], target: [118, -1, -46] },
-    },
-    edge: {
-        label: "Bleeding edge",
-        planet: {
-            position: [132, 14, 44],
-            radius: 3.2,
-            color: "#e879f9",
-            colorDeep: "#4a044e",
-            atmosphere: "#f5d0fe",
-            freq: 2.2,
-            variant: "molten",
-            tilt: 0.3,
-            moon: {
-                color: "#ffcaa6",
-                colorDeep: "#5a2a10",
-                dist: 2.6,
-                radius: 0.3,
-            },
-        },
-        camera: { pos: [113, 20, 38], target: [132, 9, 44] },
-    },
-};
-
-/**
- * Expand `cluster` tags into the flat slide shape the rest of the app expects
- * (Universe reads `planet`, CameraRig reads `camera`, Overlay reads `kicker` /
- * `accent`). The planet body lands on the FIRST slide of each cluster; every
- * slide in the cluster shares the parked camera + accent. Anything set
- * explicitly on a slide wins. Non-clustered slides pass straight through.
- */
-function withClusters(list) {
-    const planted = new Set();
-    return list.map((slide) => {
-        if (!slide.cluster) return slide;
-        const c = CLUSTERS[slide.cluster];
-        if (!c)
-            throw new Error(
-                `Unknown cluster "${slide.cluster}" on slide "${slide.id}"`,
-            );
-        const out = {
-            ...slide,
-            kicker: slide.kicker ?? c.label,
-            camera: slide.camera ?? c.camera,
-            accent: slide.accent ?? c.accent ?? c.planet?.atmosphere,
-        };
-        // First demo of the cluster carries the planet so it renders + the
-        // camera flies to it; the rest park alongside as card swaps.
-        if (!planted.has(slide.cluster)) {
-            planted.add(slide.cluster);
-            out.planet = slide.planet ?? c.planet;
-        }
-        return out;
-    });
-}
+import { defineSlides } from '../presentation/defineSlides.js'
+import {
+  AGENTS_OUTCOMES,
+  AGENTS_STOPPING,
+  BOUNDARIES_ACT_SCREEN,
+  CEILING_ACT_SCREEN,
+  COLD_OPEN,
+  CUBICLE_ACT_SCREEN,
+  DRIVE_QUADRANTS_CHART,
+  EARLY_CAREER,
+  MOST_PROMPTS,
+  PHOSPHOR_ACT_SCREEN,
+  PRODUCTIVITY_PARADOX,
+  QR_SCREEN,
+  ROB,
+  Q_AGENTS,
+  Q_ENJOYMENT,
+  Q_PRESSURE,
+  Q_SKILLS,
+  Q_STOPPING,
+  SENTRY_SCREEN,
+  SKILLS_ENJOYMENT,
+  STOPPING_BEATS_COUNT,
+  STOPPING_SLEEP,
+  SYNTAX_SCREEN,
+  THREE_R,
+  THREE_ZEROS,
+  TITLE_SCREEN,
+  WHAT_GETS_PRUNED,
+} from '../terminal/session.js'
 
 /**
  * ─────────────────────────────────────────────────────────────────────────
- *  THE TALK.  Each object is one slide. This is the only file you edit to
- *  build it out — add planets (see CLUSTERS above), copy, code, and demos.
+ *  THE TALK — "The True Cost of AI Coding"
  *
- *  Order: title hook → who I am (Syntax / Sentry constellations) → into the
- *  solar system to tour the demo planets → AI close → galaxy pull-back.
+ *  The argument is in NARRATIVE.md; this file is its running order. Two
+ *  pillars carry it — the slot machine at HOME, the atrophy INSIDE THE GLASS —
+ *  and the cubicle and wall between them are the context that makes neither
+ *  optional. See PLAN.md for the build and QUALITY.md for acceptance.
  *
- *  Fields (all optional except id + camera/cluster):
- *    cluster "<id>"  join a demo planet (see CLUSTERS) — injects planet/camera/
- *                    kicker/accent. To re-home a demo, change this one tag.
- *    camera  { pos, target, smoothTime? }   where/how the camera flies
- *                    (from the cluster for demos; set here to override)
- *    planet  { position, radius, color, colorDeep, atmosphere, freq }
- *    eyebrow / title / body / code / demo / socials / kicker   panel content
- *    center  true → centered stage without code (wide centerpiece demo)
- *    accent  '#rrggbb' → override the per-scene accent (else planet/kicker)
- *    support per-engine { chrome, safari, firefox } → 3D logo coins. Each value:
- *            true · false/omit · 'partial' · { since:'125' } · { since, flag:true }.
- *            Hover a coin for version/flag. Omit `support` to hide. See BrowserSupport.
+ *  This is the only file you edit to arrange the talk.
  *
- *  Demos are ordered most-supported → least within each planet.
+ *  ── THE RHYTHM ──
+ *  Data beats FILL THE GLASS. Reveal beats sit in the room. That alternation
+ *  is not a compromise for legibility, it is the thesis: while you are reading
+ *  the number you are in the same trance as the person at the desk, and when
+ *  the camera pulls back you see where they were sitting the whole time.
+ *  A chart framed inside the room is also simply not readable from the back of
+ *  a conference hall — verified, not assumed.
+ *
+ *  ── THE PACING RULE (alternate per ACT, never per BEAT) ──
+ *  An earlier cut alternated glass/room on every slide and the camera yo-yoed:
+ *  28 flights across the deck, several of them out-and-straight-back-in to say
+ *  one sentence. Group instead — enter a stage, do ALL the room work in one
+ *  run, then move to the glass once and stay there for the whole data run.
+ *  Down to 20 flights, every one of which is a real transition.
+ *
+ *  Three rules fall out of that, and breaking any of them brings the yo-yo back:
+ *    · A qualification is the SAME thought as the chart it qualifies. Caveats
+ *      HOLD — same camera, same glass, no flight (`stopping-caveat`,
+ *      `early-career-caveat`). The press exists so the caveat cannot be
+ *      skipped on stage, not to move the camera.
+ *    · Room beats that escalate are ONE move and nothing goes between them.
+ *      `agent-wall-near` → `agent-wall` is the "one, two, four, infinity"
+ *      reveal; a chart was once scheduled in the middle and cut it in half.
+ *    · Do not return to a stage to say something a single line can carry. The
+ *      return trip visits two rooms, not three, for exactly this reason.
+ *
+ *  Fields (all optional except id + camera):
+ *    camera   { pos, target, smoothTime?, fillScreen? }
+ *             `fillScreen: true` parks head-on at exactly the distance that
+ *             covers the viewport at any aspect, and locks camera input. It
+ *             also zeroes all post-processing (see scene/Effects.jsx). With
+ *             `tube: 0` that combination is what makes the cold open read as a
+ *             screen recording; with `tube: 1` it is a full-frame CRT.
+ *    session  a fake-agent script (see terminal/session.js). Driven by ENTER,
+ *             never by the arrows — the arrows are slides, always. A slide
+ *             with NO session holds the previous one, complete: that is how a
+ *             chart stays up while the camera moves and Scott talks over it.
+ *    autoplay true to play the session on an authored schedule instead of on
+ *             Enter (state/useSessionAutoplay.js). For beats the machine
+ *             performs; a beat the PRESENTER performs must not have it, or the
+ *             timing of the room is taken away from the person in it. Enter and
+ *             Backspace still hand control back on the first press.
+ *    stage    'home' | 'cubicle' | 'wall' | 'phosphor'. Context swaps are held
+ *             until the hero glass covers frame, so EVERY stage change here is
+ *             immediately preceded by a glass-filling slide — forwards and
+ *             backwards. Breaking that pairing pops the scenery on stage.
+ *    crt      tube params. `tube: 0` is a flat passthrough — a screen
+ *             recording. `tube: 1` is a CRT. Anything between is the reveal.
+ *
+ *  There is no DOM content layer — every legible thing is drawn onto the
+ *  screen's canvas.
+ *
+ *  Nav: → / ← move SLIDES and nothing else, always. Enter runs the next thing
+ *  in the fake agent (backspace undoes it) — a separate performance control, on
+ *  the key you'd actually hit at a terminal. 0–9 jump, f fullscreen.
+ *
+ *  COPY IS PLACEHOLDER throughout — Scott rewrites.
  * ─────────────────────────────────────────────────────────────────────────
  */
-export const slides = withClusters([
-    {
-        id: "start",
-        // Black pre-roll: the screen stays black on load (see .blackout in
-        // Overlay.jsx) so the opening fly-in only fires when you hit next. The
-        // camera sits pulled back; advancing dollies in to the title.
-        camera: { pos: [78, 16, 66], target: [34, 1, 22] },
-    },
-    {
-        id: "title",
-        kicker: "Departure",
-        title: "This Component Could Have Been A Div",
-        planet: {
-            position: [34, 1, 22],
-            radius: 2.4,
-            color: "#5b9dff",
-            colorDeep: "#0b2a6b",
-            atmosphere: "#9cd0ff",
-            freq: 2.6,
-        },
-        camera: { pos: [48, 6, 40], target: [34, 1, 22], smoothTime: 1.4 },
-    },
-    {
-        id: "intro-syntax",
-        kicker: "Hello",
-        // `intro: true` → no frosted card; the content floats centered in space
-        // below the logo constellation (see .card--intro). Here that's just the
-        // socials, enlarged — the Syntax logo overhead already names the show.
-        intro: true,
-        socials: ["@stolinski", "@syntaxfm"],
-        // Frames the Syntax constellation (at x -360) head-on, camera looking +z
-        // (away from the galaxy band) so the backdrop is clean deep space. Sentry
-        // sits far to the right, off-screen, until the next slide pans over to it.
-        camera: { pos: [-360, 408, 190], target: [-360, 400, 520] },
-    },
-    {
-        id: "intro-sentry",
-        kicker: "Hello",
-        // Same chromeless treatment: just the centered "Sentry.io" wordmark
-        // floating below the Sentry logo constellation.
-        intro: true,
-        title: "Sentry.io",
-        camera: { pos: [360, 408, 190], target: [360, 400, 520] },
-    },
-    {
-        id: "intro-qr",
-        kicker: "Hello",
-        // QR code rendered as white stars — same chromeless intro treatment as
-        // the Sentry wordmark. The pan keeps moving right: Syntax → Sentry → QR.
-        intro: true,
-        title: "Code & Demos",
-        camera: { pos: [1080, 408, 190], target: [1080, 400, 520] },
-    },
-    {
-        id: "system",
-        // Frame the React-logo atom (ReactAtom, gated to this slide in Universe.jsx)
-        // alone against deep space — one planet, no neighbors in sight. Looks +z so
-        // the sun and the other planets stay behind the camera, out of frame.
-        // `bare`: no card — just the atom against space (you narrate over it).
-        bare: true,
-        accent: "#61dafb",
-        // Short smoothTime: this is a long descent from the far-out intro constellation
-        // (intro-sentry is 408 units up) into a close-up of the atom, so the default
-        // 1.0 leaves a long slow coast at the end. 0.65 keeps the swoop tight.
-        camera: { pos: [-2, 13, 92], target: [-3, 10, 120], smoothTime: 0.65 },
-    },
 
-    /* ───── PLANET 1 · Native HTML — dialogs & drawers (all <dialog>) ───── */
-    {
-        // Arrival beat: just the planet + a centered chromeless wordmark
-        // (Sentry-slide style) announcing the cluster before the demos fire.
-        id: "dialogs-drawers",
-        cluster: "native-html",
-        intro: true,
-        title: "Dialogs & Drawers",
-    },
-    {
-        id: "native-html",
-        cluster: "native-html",
-        title: "A basic modal",
-        statement: true,
-        support: {
-            chrome: { since: "37" },
-            safari: { since: "15.4" },
-            firefox: { since: "98" },
-        },
-        code: [
-            "<dialog ref={ref}>…</dialog>",
-            "",
-            "ref.current.showModal()",
-        ].join("\n"),
-        demo: DialogDemo,
-    },
-    {
-        id: "drawer",
-        cluster: "native-html",
-        title: "A drawer that slides in",
-        statement: true,
-        support: {
-            chrome: { since: "117" },
-            safari: { since: "17.5" },
-            firefox: { since: "129" },
-        },
-        // Part 1 of the drawer — the ENTER. translate moves it; @starting-style is
-        // the state to animate FROM, so the first open slides instead of popping.
-        code: [
-            '<dialog class="drawer">…</dialog>',
-            "",
-            ".drawer       { translate: 100% 0 }",
-            ".drawer[open] { translate: 0 }",
-            ".drawer { transition: translate 0.35s ease }",
-            "",
-            "/* the state to animate FROM, so the first",
-            "   open SLIDES in instead of popping */",
-            "@starting-style {",
-            "  .drawer[open] { translate: 100% 0 }",
-            "}",
-        ].join("\n"),
-        demo: DrawerDemo,
-    },
-    {
-        id: "drawer-exit",
-        cluster: "native-html",
-        title: "And it slides back out",
-        statement: true,
-        support: {
-            chrome: { since: "117" },
-            safari: { since: "17.4" },
-            firefox: { since: "129" },
-        },
-        // Part 2 — the EXIT, the kill shot. Closing a <dialog> normally yanks it out
-        // instantly; allow-discrete on display/overlay keeps it rendered + in the top
-        // layer long enough to play the slide-out. The part people install vaul for.
-        code: [
-            "/* closing a <dialog> normally removes it now —",
-            "   display: none hits, the exit never plays */",
-            "",
-            ".drawer {",
-            "  transition:",
-            "    translate 0.35s ease,",
-            "    display   0.35s allow-discrete,",
-            "    overlay   0.35s allow-discrete;",
-            "}",
-            "",
-            "/* allow-discrete keeps it rendered + on top",
-            "   long enough to animate OUT — no library */",
-        ].join("\n"),
-        demo: DrawerDemo,
-    },
+/** Head-on at the covering distance: the reading position for every data beat. */
+const GLASS = Object.freeze({ fillScreen: true, target: [0, 0, 0], fov: 35 })
+/** The cold open's framing — same covering solve, wider lens, flat tube. */
+const FLAT_GLASS = Object.freeze({ fillScreen: true, target: [0, 0, 0], fov: 50 })
 
-    /* ───── PLANET 2 · Scroll-snap UI — sheets, swipes, carousels ───── */
-    {
-        // Arrival beat (see "dialogs-drawers").
-        id: "scroll-snap",
-        cluster: "scroll-snap",
-        intro: true,
-        title: "Scroll Snap",
-    },
-    {
-        id: "reel",
-        cluster: "scroll-snap",
-        split: true,
-        statement: true,
-        title: "The classic TikTok Swiper",
-        support: {
-            chrome: { since: "69" },
-            safari: { since: "11" },
-            firefox: { since: "68" },
-        },
-        code: [
-            ".feed {",
-            "  overflow-y: auto;",
-            "  scroll-snap-type: y mandatory;",
-            "}",
-            "",
-            "/* each post is one snap target */",
-            ".post {",
-            "  height: 100%;",
-            "  scroll-snap-align: start;",
-            "}",
-        ].join("\n"),
-        demo: ReelDemo,
-    },
-    // Cut for now — re-enable by uncommenting (and the BottomSheetDemo import).
-    // {
-    //     id: "bottom-sheet",
-    //     cluster: "scroll-snap",
-    //     split: true,
-    //     title: "A sheet that snaps to size",
-    //     support: {
-    //         chrome: { since: "69" },
-    //         safari: { since: "11" },
-    //         firefox: { since: "68" },
-    //     },
-    //     code: [
-    //         ".sheet {",
-    //         "  overflow-y: auto;",
-    //         "  scroll-snap-type: y mandatory;",
-    //         "  overscroll-behavior: contain;",
-    //         "}",
-    //         "",
-    //         "/* one rung per resting position */",
-    //         ".detent { scroll-snap-align: start }",
-    //     ].join("\n"),
-    //     demo: BottomSheetDemo,
-    // },
-    {
-        id: "swipe-actions",
-        cluster: "scroll-snap",
-        split: true,
-        statement: true,
-        title: "A row swiper",
-        support: {
-            chrome: { since: "105" },
-            safari: { since: "16" },
-            firefox: { since: "110" },
-        },
-        code: [
-            ".swipe {",
-            "  display: grid;",
-            "  grid-template-columns: auto 1fr auto;",
-            "  container-type: inline-size;",
-            "  overflow-x: auto;",
-            "  scroll-snap-type: x mandatory;",
-            "}",
-            "",
-            "/* middle cell fills the row → actions wait */",
-            "/* offscreen; center is the ONLY snap point, */",
-            "/* so every released swipe springs back */",
-            ".row {",
-            "  inline-size: 100cqw;",
-            "  scroll-snap-align: center;",
-            "}",
-        ].join("\n"),
-        demo: SwipeActionsDemo,
-    },
-    {
-        id: "carousel",
-        cluster: "scroll-snap",
-        split: true,
-        statement: true,
-        title: "The carousel builds its own controls",
-        support: {
-            chrome: { since: "135" },
-            safari: false,
-            firefox: false,
-        },
-        code: [
-            ".carousel {",
-            "  display: flex;",
-            "  overflow-x: auto;",
-            "  scroll-snap-type: x mandatory;",
-            "  scroll-marker-group: after;   /* dot row */",
-            "}",
-            ".slide { scroll-snap-align: center }",
-            "",
-            "/* dots + arrows — GENERATED, zero markup */",
-            '.slide::scroll-marker { content: "" }',
-            ".slide::scroll-marker:target-current {",
-            "  background: #fff",
-            "}",
-            '.carousel::scroll-button(right) { content: "›" }',
-        ].join("\n"),
-        demo: CarouselDemo,
-    },
+const FLAT = Object.freeze({ tube: 0 })
+const TUBE = Object.freeze({ tube: 1, maskMode: 2 })
+/**
+ * The glass-filling beat preset: softened mask, and a TIGHT BEAM.
+ *
+ * `focus` is the gaussian beam width, and at the default 0.55 it is what made
+ * the type on every data slide read soft — a wide beam smears each glyph
+ * vertically, and these are the slides where the glass IS the frame and the
+ * type is all there is to look at. Halation goes to zero for the same reason:
+ * it is a 24-tap near-field blur, and on a covering framing the texture is
+ * close enough to 1:1 that it is fully active over every letterform.
+ *
+ * 0.22 rather than 0.34 because the difference is not gradual — measured
+ * high-frequency detail is flat between 0.55 and 0.34 and then jumps 23% at
+ * 0.22. The tube still reads as a tube: curvature, grille, bezel and vignette
+ * are all untouched, and it is the BEAM that stops being a smear.
+ */
+const TUBE_FULL = Object.freeze({
+  tube: 1,
+  maskMode: 2,
+  maskStrength: 0.7,
+  focus: 0.22,
+  halation: 0,
+})
 
-    /* ───── PLANET 3 · Scroll-driven CSS — scroll position drives style ───── */
-    {
-        // Arrival beat (see "dialogs-drawers").
-        id: "scroll-driven",
-        cluster: "scroll-driven",
-        intro: true,
-        title: "Scroll Driven",
-    },
-    {
-        id: "scroll-scrub",
-        cluster: "scroll-driven",
-        title: "Scroll-driven animation",
-        statement: true,
-        split: true,
-        support: {
-            chrome: { since: "115" },
-            safari: { since: "26" },
-            firefox: { flag: true },
-        },
-        code: [
-            ".card {",
-            "  animation: scrub linear both;",
-            "  animation-timeline: view(inline);",
-            "}",
-            "",
-            "@keyframes scrub {",
-            "  0%   { scale: .6; rotate: y -42deg }",
-            "  50%  { scale: 1;  rotate: y 0 }",
-            "  100% { scale: .6; rotate: y 42deg }",
-            "}",
-        ].join("\n"),
-        demo: ScrollScrubDemo,
-    },
-    {
-        id: "sticky-state",
-        cluster: "scroll-driven",
-        split: true,
-        statement: true,
-        title: "A header that knows it’s stuck",
-        support: {
-            chrome: { since: "133" },
-            safari: false,
-            firefox: false,
-        },
-        code: [
-            ".header {",
-            "  position: sticky; top: 0;",
-            "  container-type: scroll-state;",
-            "}",
-            "",
-            "@container scroll-state(stuck: top) {",
-            "  .title { box-shadow: 0 12px 30px #000 }",
-            "}",
-        ].join("\n"),
-        demo: StickyDemo,
-    },
+export const slides = defineSlides([
+  /* ═══════════════ ① THE FLAT-SCREEN OPEN ═══════════════
+   * Exactly one line on unlit glass. No harness chrome, post, perspective, or
+   * visible edge: the first image is only the name of the talk. */
+  {
+    id: 'cold-open',
+    stage: 'home',
+    session: TITLE_SCREEN,
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 0.6 },
+  },
+  {
+    // These are real Slides—not hidden Session steps—so normal arrow navigation
+    // reaches every identity screen and each one has a stable deep link.
+    id: 'intro-syntax',
+    stage: 'home',
+    session: SYNTAX_SCREEN,
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 0.45 },
+  },
+  {
+    id: 'intro-sentry',
+    stage: 'home',
+    session: SENTRY_SCREEN,
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 0.45 },
+  },
+  {
+    // The exchange PLAYS ITSELF. This is not a demo Scott performs — it is the
+    // machine working while he talks over it, and tapping Enter seven times to
+    // keep a conversation moving puts his hand on a keyboard during the one
+    // beat where the room is supposed to forget there is a deck at all.
+    //
+    // Enter and Backspace still work and still take it back: one press hands
+    // the exchange to the presenter for the rest of the visit, so a line can be
+    // held on or re-read without the schedule dragging him forward. Arrows are
+    // untouched and still move exactly one slide.
+    id: 'agent-session',
+    stage: 'home',
+    session: COLD_OPEN,
+    autoplay: true,
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 0.6 },
+  },
+  {
+    // ROB. Scott's own confession becomes a point on a scale that ends in a
+    // hospital — and then the reply thread turns it from an anecdote into the
+    // reason this survey exists.
+    //
+    // It used to have no session of its own, which meant it HELD the
+    // after-midnight chart: the room read Scott's week while hearing about
+    // someone else's night. The beat gets its own glass.
+    id: 'rob',
+    stage: 'home',
+    session: ROB,
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 0.5 },
+  },
 
-    /* ───── PLANET 4 · CSS as a language — it computes + knows things ───── */
-    {
-        // Arrival beat (see "dialogs-drawers").
-        id: "values",
-        cluster: "css-lang",
-        intro: true,
-        title: "Values",
-    },
-    {
-        id: "counter",
-        cluster: "css-lang",
-        title: "Numbers that count themselves",
-        statement: true,
-        support: {
-            chrome: { since: "85" },
-            safari: { since: "16.4" },
-            firefox: { since: "128" },
-        },
-        code: [
-            "@property --n {",
-            '  syntax: "<integer>";',
-            "  initial-value: 0;",
-            "}",
-            "",
-            ".stat {",
-            "  counter-reset: n var(--n);",
-            "  animation: count 3s both;",
-            "}",
-            ".stat::after { content: counter(n) }",
-            "",
-            "@keyframes count { to { --n: 1000000 } }",
-        ].join("\n"),
-        demo: CounterDemo,
-    },
-    {
-        id: "sibling-index",
-        cluster: "css-lang",
-        title: "Every element knows its index",
-        statement: true,
-        split: true,
-        support: {
-            chrome: { since: "138" },
-            safari: { since: "26.2" },
-            firefox: false,
-        },
-        code: [
-            ".bar {",
-            "  height: calc(sibling-index() * 28px);",
-            "  background: hsl(calc(sibling-index() * 26) 85% 62%);",
-            "  animation-delay: calc(sibling-index() * 70ms);",
-            "}",
-            "",
-            '/* no style="--i" anywhere */',
-        ].join("\n"),
-        demo: SiblingIndexDemo,
-    },
+  {
+    // AFTER ROB, not before him. The QR used to sit third, among the identity
+    // assets, where it asked a room that had been told nothing yet to scan a
+    // survey about a problem it had not met. It lands here instead: they have
+    // just read the post and the reply count, and the code is the answer to
+    // the question that leaves them with. It also carries the base count now
+    // (n = 3,593) — that number is what makes the link worth scanning, and it
+    // was being spent as an act marker four acts later.
+    id: 'intro-qr',
+    stage: 'home',
+    session: QR_SCREEN,
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 0.45 },
+  },
 
-    /* ───── PLANET 5 · Overlays & menus — anchor positioning (zero-JS menu) ───── */
-    {
-        // Arrival beat (see "dialogs-drawers").
-        id: "overlays-menus",
-        cluster: "overlays",
-        intro: true,
-        title: "Overlays & Menus",
-    },
-    {
-        id: "anchor-flip",
-        cluster: "overlays",
-        // Side-by-side: the code sits beside the live (draggable) demo so there's
-        // room to show the menu flipping as you drag. Card-less: the two panels
-        // float in space with the title as a bottom caption (see .card--statement).
-        split: true,
-        statement: true,
-        title: "A menu that flips to stay on screen",
-        support: {
-            chrome: { since: "125" },
-            safari: { since: "18.4" },
-            firefox: { since: "147" },
-        },
-        code: [
-            ".btn  { anchor-name: --btn }",
-            "",
-            ".menu {",
-            "  position-anchor: --btn;",
-            "  position-area: block-end;",
-            "  position-try-fallbacks:",
-            "    flip-block, flip-inline;",
-            "}",
-            "",
-            "/* the menu flips to stay on screen — no JS */",
-        ].join("\n"),
-        demo: AnchorFlipDemo,
-    },
-    {
-        id: "image-placeholder",
-        cluster: "overlays",
-        // Full-bleed image, no card or title — it fills the stage over the universe
-        // (see the `bare` branch in Overlay.jsx, which renders a bare `image`).
-        bare: true,
-        image: {
-            src: "/anchor.png",
-            alt: "Anchor positioning",
-        },
-    },
-    {
-        id: "select-base",
-        cluster: "overlays",
-        split: true,
-        statement: true,
-        // Part 1 — the OPT-IN. A real native <select> (keyboard, typeahead, form
-        // submission, a11y all free) becomes fully styleable with one line:
-        // `appearance: base-select` on the control AND its ::picker popover. The
-        // custom trigger is a <button> whose <selectedcontent> mirrors the chosen
-        // option. Don't name the library on the slide — say it out loud.
-        title: "Select lists no longer suck",
-        support: {
-            chrome: { since: "135" },
-            safari: { flag: true, label: "Technology Preview" },
-            firefox: false,
-        },
-        code: [
-            "<select>",
-            "  /* <selectedcontent /> mirrors the selected option */",
-            "  <button><selectedcontent /></button>",
-            "",
-            '  <option value="maya">',
-            '    <img src="avatar.png">',
-            "    <b>Maya R.</b> <small>Frontend</small>",
-            "  </option>",
-            "</select>",
-            "",
-            "/* opt the control + its popover into styling */",
-            "select,",
-            "select::picker(select) {",
-            "  appearance: base-select;",
-            "}",
-        ].join("\n"),
-        demo: SelectDemo,
-    },
-    {
-        id: "select-style",
-        cluster: "overlays",
-        split: true,
-        statement: true,
-        // Same layout/title as select-base (it's the continuation — only the code
-        // changes); narrate the difference. Keeps the two beats visually identical.
-        title: "Select lists no longer suck",
-        // Part 2 — the PAYOFF. Now the option list is just a box of flex rows you
-        // style like anything else (the exact part that used to force a JS
-        // combobox), with native state in pure CSS — and because the picker is a
-        // real popover, it animates open via @starting-style.
-        support: {
-            chrome: { since: "135" },
-            safari: { flag: true, label: "Technology Preview" },
-            firefox: false,
-        },
-        code: [
-            "/* the option list is just flex rows now */",
-            "option { display: flex; gap: 12px }",
-            "",
-            "option:hover      { background: #1c2540 }",
-            "option:checked    { background: var(--accent) }",
-            "option::checkmark { display: none } /* no tick */",
-            "",
-            "/* it's a popover, so it can animate open */",
-            "@starting-style {",
-            "  select:open::picker(select) { opacity: 0 }",
-            "}",
-        ].join("\n"),
-        demo: SelectDemo,
-    },
-    {
-        id: "select-emoji",
-        cluster: "overlays",
-        // Side-by-side: code beside the live reaction picker, to show more.
-        split: true,
-        statement: true,
-        // Una Kravets' emoji reaction picker, used verbatim (see EmojiPickerDemo).
-        // The shock: this Facebook-style reaction bar is the SAME native <select>
-        // — the only trick is laying its picker out as a horizontal row of round
-        // emoji. The code panel shows that unique bit (not the base-select opt-in
-        // from the prior slides, nor her @supports fallback). Credit Una on the
-        // demo; don't name a library on the slide.
-        eyebrow: "Still one native <select>",
-        title: "An emoji reaction picker",
-        support: {
-            chrome: { since: "135" },
-            safari: { flag: true, label: "Technology Preview" },
-            firefox: false,
-        },
-        // Her verbatim property lines — the row-picker is what makes this demo
-        // unique. The demo itself renders the full pen. codepen.io/una/pen/RNaWYNK
-        code: [
-            "/* the picker is a horizontal row of round */",
-            "/* emoji — a reaction bar, not a dropdown */",
-            "::picker(select) {",
-            "  flex-direction: row;",
-            "}",
-            "",
-            "option {",
-            "  font-size: 1.8rem;",
-            "  border-radius: 50%;",
-            "  padding: 0.7rem;",
-            "  &::checkmark { display: none }",
-            "}",
-        ].join("\n"),
-        demo: EmojiPickerDemo,
-    },
+  /* ═══════════════ ② HOME — THE MACHINE YOU CAN'T PUT DOWN ═══════════════
+   * PILLAR 1. Why prompting is hard to stop, and what it does to sleep. */
+  {
+    // THE REVEAL, and it is ONE beat.
+    //
+    // The tube wakes DURING the pull-back rather than before it. `tube-wake`
+    // used to hold at the covering distance while curvature, raster and
+    // reflection came up, and only then did the camera move — which meant the
+    // audience watched the picture bend, waited, and then watched it recede.
+    // Two presses to deliver one idea, with a dead spot in the middle. The
+    // slide's `crt` target damps toward TUBE over exactly the same flight, so
+    // asking for both at once costs nothing and the glass becomes an object in
+    // the same gesture that reveals the object.
+    //
+    // Square-on, and nothing after it. The three-quarter and profile waypoints
+    // that followed re-explained the same fact from two more angles; the
+    // housing arriving around an image the room has already accepted is the
+    // punchline, and it only lands once.
+    //
+    // Longer than either beat it replaces, because it is now carrying a lens
+    // change (50 → 35) and the tube ramp on top of the dolly.
+    id: 'reveal',
+    stage: 'home',
+    crt: TUBE,
+    camera: { pos: [0, 2.5, 44], target: [0, -0.5, 0], fov: 35, smoothTime: 3 },
+    focus: [0, 0, 0],
+  },
+  {
+    // The mechanism, named. Bare glass — an animated slot machine would break
+    // the calm-motion rule and cheapen it.
+    id: 'variable-reward',
+    stage: 'home',
+    session: MOST_PROMPTS,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    id: 'q-stopping',
+    stage: 'home',
+    session: Q_STOPPING,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // The strongest relationship in the survey, ρ = 0.41.
+    id: 'stopping-sleep',
+    stage: 'home',
+    session: STOPPING_SLEEP,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // A HOLD: same camera, same glass, no flight. The counterweight (a third
+    // report no sleep change at all) and the association disclaimer are the
+    // same thought as the chart above them, so the frame must not move — this
+    // exists as a press so the qualification cannot be skipped on stage.
+    // Spoken here, once, and meant — not re-hedged on every later chart.
+    id: 'stopping-caveat',
+    stage: 'home',
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
 
-    /* ───── PLANET 6 · Bleeding edge — newest of the new ───── */
-    {
-        // Arrival beat (see "dialogs-drawers").
-        id: "bleeding-edge",
-        cluster: "edge",
-        intro: true,
-        title: "Bleeding Edge",
-    },
-    {
-        id: "stream",
-        cluster: "edge",
-        // COPY IS PLACEHOLDER — Scott rewrites. The eyebrow names the old way (the
-        // hand-rolled JS DOM injection: fetch → find the node → clone a <template> →
-        // innerHTML it in → wire up the loading state). Title stays direct, about the
-        // feature. https://developer.chrome.com/blog/declarative-partial-updates
-        eyebrow: "No fetch, no innerHTML, no hydration",
-        title: "HTML that streams in, out of order",
-        // Wide centerpiece demo (like ai-supply-chain): the live mock + the real
-        // declarative source sit side-by-side inside the demo itself. No `support`
-        // coins — the wide card would collide with the right-margin column, so the
-        // compat fact (Chrome 148, flag) lives inside the demo instead.
-        statement: true,
-        demo: StreamDemo,
-    },
-    {
-        id: "html-canvas",
-        cluster: "edge",
-        // The finale's SETUP. For years, getting DOM into a canvas/WebGL meant a
-        // screenshot (html2canvas) or a separate CSS3D layer that can't composite
-        // with the scene. drawElementImage() rasterizes a LIVE, interactive element
-        // straight into a 2D context — real fonts, inputs, CSS. The demo lets you
-        // type on the left and watch the canvas (right) update. COPY IS PLACEHOLDER.
-        title: "Draw live HTML into a canvas",
-        // Wide side-by-side demo (like `stream`): the live component, its <canvas>
-        // mirror, and the genuine drawElementImage source all sit inside the demo.
-        // No `support` coins — the wide card would collide with the right-margin
-        // column, so the compat fact (Chrome 148, flag) lives inside the demo.
-        statement: true,
-        demo: HtmlInCanvasDemo,
-    },
-    {
-        id: "html-canvas-reveal",
-        cluster: "edge",
-        // THE STAR — the talk's own card, live DOM rasterized to a texture on a
-        // plain 3D panel floating beside the planet (scene HtmlPanel, gated by
-        // this id in Universe). Deliberately NO effects: the shock is just "that's
-        // real DOM in the universe" — the star-scatter trick already happened on
-        // the html-canvas slide. NO overlay card — `bare` renders just the
-        // universe; Scott narrates. Uses the real drawElementImage on stage (flag
-        // on), a hand-drawn fallback otherwise.
-        bare: true,
-        camera: { pos: [112, 16, 51], target: [131, 13, 45], smoothTime: 1.4 },
-    },
-    {
-        id: "graffiti",
-        // The credibility payoff capping the demo tour: Graffiti — Scott's
-        // platform-only (HTML/CSS) component library — embedded LIVE and full
-        // screen. `bare` drops the card so the faux-browser frame fills the stage;
-        // its desktop width forces the site's desktop layout (no mobile view).
-        // Parked at the bleeding-edge planet (same vista as html-canvas-reveal, no
-        // camera move) — ai-intro then does the pull-back to the system overview.
-        bare: true,
-        demo: SiteFrameDemo,
-        accent: "#34d399",
-        camera: { pos: [112, 16, 51], target: [131, 13, 45], smoothTime: 1.2 },
-    },
+  /* ═══════════════ ③ CUBICLE — THE PRESSURE ═══════════════ */
+  {
+    // The glass writes the act marker during the push, and the held-forward
+    // rule keeps it up through the cubicle beats it introduces.
+    id: 'cubicle-threshold',
+    stage: 'home',
+    session: CUBICLE_ACT_SCREEN,
+    crt: { tube: 1, maskMode: 2, maskStrength: 0.68 },
+    camera: { ...GLASS, smoothTime: 2.0 },
+    focus: [0, 0, 0],
+  },
+  {
+    // Enough width to reveal neighboring pools of agent activity over the
+    // partitions, while the original monitor remains the anchor. Spoken: saved
+    // effort returns as decisions and supervision, never as rest.
+    id: 'cubicle-wide',
+    stage: 'cubicle',
+    crt: TUBE,
+    camera: { pos: [-24, 4, 118], target: [8, -2, -50], fov: 35, smoothTime: 2.6 },
+    focus: [0, -1, -4],
+  },
+  {
+    id: 'q-pressure',
+    stage: 'cubicle',
+    session: Q_PRESSURE,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 2.0 },
+  },
+  {
+    // The tools work AND experienced developers were slower while believing
+    // they were faster. Both findings get used to ask for more.
+    id: 'productivity-paradox',
+    stage: 'cubicle',
+    session: PRODUCTIVITY_PARADOX,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  /* ═══════════════ ④ WALL — THE THROTTLE ═══════════════ */
+  {
+    // Most people are not running ten agents — median 2.
+    id: 'q-agents',
+    stage: 'wall',
+    session: Q_AGENTS,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 2.0 },
+  },
+  {
+    id: 'agents-stopping',
+    stage: 'wall',
+    session: AGENTS_STOPPING,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 2.6 },
+  },
+  {
+    // Benefit and cost climb together; the dashed skills line refuses to follow.
+    id: 'agents-outcomes',
+    stage: 'wall',
+    session: AGENTS_OUTCOMES,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // THE TELL. Hold agent count constant and the sleep gap barely shrinks: it
+    // isn't how many agents, it's whether you can stop. Pillar 1 confirmed from
+    // a second direction, and the finding the video never reaches.
+    id: 'stopping-beats-count',
+    stage: 'wall',
+    session: STOPPING_BEATS_COUNT,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
 
-    /* ───────────────────────── CLOSING MOVEMENT: AGENTS ─────────────────────────
-     *  The "so what" — placed BEFORE the galaxy so the pull-back stays the final
-     *  payoff and isn't spoiled (from this "whole system" vista the galaxy is still
-     *  just a faint band; see scene/layout.js scale separation). AI is the meaning
-     *  of the tour, not a tangent: agents default to the average (div soup + a
-     *  dependency), so your platform knowledge is the ceiling on what they ship —
-     *  and a vote on the next corpus. Supply chain is the load-bearing middle.
-     *
-     *  COPY IS PLACEHOLDER — Scott rewrites. Parked at the system overview (a
-     *  deliberate rhyme with the early `system` slide); `ai-intro` flies back here
-     *  from the bleeding-edge planet, then `galaxy` does the big pull-back from here.
-     * ────────────────────────────────────────────────────────────────────────── */
-    {
-        id: "ai-intro",
-        kicker: "Agents",
-        title: "Your agents can write this too.",
-        body: "Less code, less bespoke APIs to use, less version thrash.",
-        statement: true,
-        // Pull back out of the bleeding-edge planet to the whole-system vista.
-        camera: { pos: [70, 95, 250], target: [0, 0, 0], smoothTime: 1.8 },
-    },
-    {
-        id: "ai-supply-chain",
-        kicker: "Agents",
-        eyebrow: "Every import is a trust decision",
-        title: "The same menu, two supply chains",
-        statement: true,
-        demo: DependencyContrastDemo,
-        camera: { pos: [70, 95, 250], target: [0, 0, 0] },
-    },
-    {
-        id: "ai-excuse",
-        kicker: "Agents",
-        eyebrow: "The trade-off collapsed",
-        title: "The reason you installed it is gone",
-        worm: true,
-        body: "You pulled in the library because writing it yourself was the expensive part. It isn’t anymore. The dependency stopped being a trade and became risk you kept for nothing.",
-        statement: true,
-        // View from the SUN side (sun behind the camera, out of frame) so we see the
-        // lit face of the planet and the worm breaching it — no distracting sun. Aimed
-        // BELOW the planet (low target Y) + pulled back a touch so the planet + worm
-        // ride high in the frame, leaving the lower third clear for the statement text.
-        camera: { pos: [21, 6, 16], target: [33, -2, 21], smoothTime: 1.6 },
-    },
-    {
-        id: "ai-defaults",
-        kicker: "Agents",
-        title: "You have control",
-        body: "You don't have to accept whatever it gives you",
-        statement: true,
-        code: [
-            "# CLAUDE.md / .cursorrules",
-            "",
-            "Prefer the platform over packages:",
-            "  <dialog>        over a modal library",
-            "  :has()          over state",
-            "  anchor + try    over Floating UI",
-            "  scroll timeline over scroll listeners",
-            "",
-            "No new dependency without asking first.",
-        ].join("\n"),
-        // Ease back out to the system vista after the close worm beat.
-        camera: { pos: [70, 95, 250], target: [0, 0, 0], smoothTime: 1.8 },
-    },
-    {
-        // The star-field QR again as the closing beat: fly back up out of the
-        // system to the same constellation from the intro, right before the
-        // galaxy pull-back. Chromeless, just the QR + wordmark.
-        id: "ai-close",
-        intro: true,
-        title: "Code & Demos",
-        camera: { pos: [1080, 408, 190], target: [1080, 400, 520] },
-    },
-    {
-        // Duplicate of the intro Syntax beat as a closing sign-off: pan back left
-        // from the QR to the Syntax constellation, socials enlarged below it.
-        // (Whitelisted in Universe.jsx so the constellation renders here too.)
-        id: "outro-syntax",
-        kicker: "Hello",
-        intro: true,
-        socials: ["@stolinski", "@syntaxfm"],
-        camera: { pos: [-360, 408, 190], target: [-360, 400, 520] },
-    },
+  /* ═══════════════ ⑤ THE SKILL YOU CAN'T FEEL GOING ═══════════════
+   * PILLAR 2. The argument is made ON the glass, because inside the phosphor
+   * the screen is behind the camera and no statement can be read there. The
+   * descent that follows is the wordless payoff of what was just said. */
+  {
+    // AFTER the agent data, not before it. The pull-back used to open this act,
+    // so the room saw fifty-four screens and only then learned that the median
+    // developer runs two — which is the reveal explaining itself away. Now the
+    // data lands first (two is normal, more costs you sleep, and the count was
+    // never the mechanism anyway) and the camera pulls back onto a wall the
+    // room has just been given every reason not to expect.
+    //
+    // Still ONE continuous escalation with the next beat, and nothing may be
+    // scheduled between them.
+    id: 'agent-wall-near',
+    stage: 'wall',
+    crt: TUBE,
+    camera: { pos: [-16, 2, 58], target: [0, 0, -6], fov: 35, smoothTime: 2.5 },
+    focus: [0, 0, -2],
+  },
+  {
+    // Fifty-four pooled procedural agents surround the full-resolution hero:
+    // one instanced chassis draw and one instanced screen draw. Spoken: the
+    // escalation is trivially logical, and there is no number at which the
+    // reasoning stops.
+    id: 'agent-wall',
+    stage: 'wall',
+    crt: TUBE,
+    camera: { pos: [0, 0, 206], target: [0, 0, -3], fov: 35, smoothTime: 3.2 },
+    focus: [0, 0, -3],
+  },
+  {
+    id: 'phosphor-return',
+    stage: 'wall',
+    session: PHOSPHOR_ACT_SCREEN,
+    crt: { tube: 1, maskMode: 2, maskStrength: 0.72 },
+    camera: { ...GLASS, smoothTime: 3.0 },
+    focus: [0, 0, 0],
+  },
+  {
+    // Only 12% say sharpening.
+    id: 'q-skills',
+    stage: 'wall',
+    session: Q_SKILLS,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    id: 'q-enjoyment',
+    stage: 'wall',
+    session: Q_ENJOYMENT,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // ρ = −0.37, the strongest negative in the survey. Not two findings —
+    // mostly the same people. Say that the survey measured BELIEF about skill
+    // and never tested anyone; then say why belief is the thing that matters.
+    //
+    // The finding, stated. WHY it happens is the descent that follows. This is
+    // also the last glass-filling wall beat, so it occludes the phosphor swap.
+    id: 'skills-enjoyment',
+    stage: 'wall',
+    session: SKILLS_ENJOYMENT,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // THE DREAM, and now the ENTIRE descent in one move.
+    //
+    // `phosphor-approach` and `phosphor-threshold` used to sit in front of this
+    // — two held waypoints that widened the grille and faded the geometry in
+    // while the camera crept toward a bright patch of terminal output. They
+    // were the mechanism of the handoff shown as three separate stops, and
+    // stopping is exactly what a descent must not do: the room watched a
+    // sequence of near-identical grids instead of travelling anywhere. The
+    // handoff eases over this one flight now, so the glass opens and the camera
+    // keeps going THROUGH it into the cloud.
+    //
+    // Long, because it is the only wordless beat in the talk and the movement
+    // IS the content.
+    id: 'inside-glass',
+    stage: 'phosphor',
+    crt: { tube: 1, maskMode: 2, maskPitchPx: 32, maskStrength: 1, focus: 0.2, halation: 0 },
+    phosphor: { opacity: 1, screenOpacity: 0, depth: 1, form: 0, decay: 0 },
+    camera: { pos: [3.0, 2.1, -1.6], target: [-1.8, 0.6, -9.6], fov: 32, smoothTime: 4.2 },
+    focus: [-3, 1.4, -8],
+  },
+  {
+    // WHY 1 — NEUROPLASTICITY. The brain is an efficient machine and prunes
+    // what it isn't using. The motes stream into a neural network during the
+    // flight, and Scott explains the mechanism over it: this is not a metaphor
+    // for what he is describing, it is a picture of it. The instrument you
+    // played in middle school.
+    id: 'synapse',
+    stage: 'phosphor',
+    crt: { tube: 1, maskMode: 2, maskPitchPx: 32, maskStrength: 1, focus: 0.2, halation: 0 },
+    phosphor: { opacity: 1, screenOpacity: 0, depth: 1, form: 1, decay: 0 },
+    camera: { pos: [0.4, 1.6, -0.6], target: [-0.2, 1.1, -8.2], fov: 32, smoothTime: 3.0 },
+    focus: [-0.2, 1.1, -8.2],
+  },
+  {
+    // WHY 2 — use it or lose it, watched rather than asserted. Connections die
+    // one by one across this slow drift, each edge on its own seeded cue, until
+    // only isolated dimming nodes remain. Say nothing over it. The silence is
+    // the point: nothing on screen announces the loss, which is what WHY 4
+    // then proves about your own sense of it.
+    id: 'synapse-decay',
+    stage: 'phosphor',
+    crt: { tube: 1, maskMode: 2, maskPitchPx: 32, maskStrength: 1, focus: 0.2, halation: 0 },
+    phosphor: { opacity: 1, screenOpacity: 0, depth: 1, form: 1, decay: 1 },
+    camera: { pos: [-0.8, 1.4, -2.2], target: [-0.4, 1.0, -8.6], fov: 32, smoothTime: 3.4 },
+    focus: [-0.4, 1.0, -8.6],
+  },
 
-    /* ── THE PAYOFF ── The final pull-back. Stays last; nothing parked on top of
-     *  it. The huge zoom from the system vista to GALAXY.center is the reveal, and
-     *  the sign-off (socials) lands on it. */
-    {
-        id: "galaxy",
-        title: "Thank you",
-        socials: ["@stolinski", "@syntaxfm"],
-        // Card-less finale: a huge "Thank you" at top-center over the galaxy
-        // pull-back, socials signed off beneath it.
-        statement: "top",
-        className: "card--thanks",
-        camera: {
-            pos: [8000, 52000, 15000],
-            target: [8000, -900, -15000], // === GALAXY.center
-            smoothTime: 2.2, // long, majestic pull-back (still slower than the hops)
-        },
-    },
-]);
+  /* ═══════════════ ⑥ THE TURN ═══════════════ */
+  {
+    // Back out through the faceplate: the deposits fade and the glass reforms,
+    // holding the same skill/enjoyment split the camera entered through. Also
+    // the occlusion that carries the phosphor→wall swap, in both directions.
+    id: 'phosphor-exit',
+    stage: 'phosphor',
+    crt: { tube: 1, maskMode: 2, maskStrength: 0.72 },
+    phosphor: { opacity: 0, screenOpacity: 1, depth: 1, form: 1, decay: 1 },
+    camera: { ...GLASS, smoothTime: 3.2 },
+    focus: [0, 0, 0],
+  },
+  {
+    // WHY 3 — it takes the reps, not the typing. Reading the problem, holding
+    // it, choosing the approach: exactly what gets delegated first. Lands as
+    // the application of the decay the room has just watched, which is why it
+    // is here rather than before the descent.
+    id: 'what-gets-pruned',
+    stage: 'wall',
+    session: WHAT_GETS_PRUNED,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.6 },
+  },
+  {
+    // WHY 4, AND THE TURN OF THE TALK. Skill worry predicts nothing about how
+    // hard anyone runs AI — so you cannot use your own sense of it as a gauge.
+    // Directly after a silent decay nobody could feel, that is the proof.
+    id: 'three-zeros',
+    stage: 'wall',
+    session: THREE_ZEROS,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.4 },
+  },
+  {
+    // WHO IS HOLDING THE THROTTLE. Read top to bottom: own pull only (n=173),
+    // neither, both, outside pressure only. Same keystrokes, four prices — and
+    // no cell is free. The least-damaged group also runs the fewest agents.
+    id: 'drive-quadrants',
+    stage: 'wall',
+    session: DRIVE_QUADRANTS_CHART,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.6 },
+  },
+
+  /* ═══════════════ ⑦ THE RETURN — THE FIX IS A STACK ═══════════════
+   * Out the way we came in, each level holding one layer of the answer. The
+   * form has to invert or it has no resolution, and the autonomy caveat needs
+   * the cubicle physically back in frame. */
+  {
+    // Spoken over this: agent count is the one number you can turn down, and
+    // the outcomes chart priced it — but the tell already said the count was
+    // never the mechanism. Smallest lever, not the fix. It does not need its
+    // own trip back to the wall to be said.
+    id: 'act-ceiling',
+    stage: 'wall',
+    session: CEILING_ACT_SCREEN,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 2.6 },
+    focus: [0, 0, 0],
+  },
+  {
+    // THE CEILING. Everything about to be said assumes you are allowed to stop.
+    // Against a quota, a manager who treats the tool as a magic bullet, or being
+    // 23 and looking at that employment chart, a 15-minute timer will not save
+    // you. Healthy prompting cannot be carried by personal discipline alone.
+    id: 'return-cubicle',
+    stage: 'cubicle',
+    crt: TUBE,
+    camera: { pos: [-20, 3.5, 76], target: [6, -1.5, -26], fov: 35, smoothTime: 2.8 },
+    focus: [0, -1, -4],
+  },
+  {
+    // THE EMPLOYMENT CHART, and it belongs HERE.
+    //
+    // It spent the talk in the cubicle act, between the pressure question and
+    // the productivity paradox, where it was the only beat about the job
+    // MARKET — a different argument wearing the same act's clothes, and the
+    // slides either side of it had nothing to do with it. The ceiling is what
+    // it is evidence FOR: everything the talk is about to advise assumes you
+    // are allowed to act on it, and being twenty-three looking at this chart is
+    // one of the three reasons you might not be. `return-cubicle` was already
+    // reaching for it in prose; now the room can see it.
+    id: 'early-career',
+    stage: 'cubicle',
+    session: EARLY_CAREER,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 2.2 },
+  },
+  {
+    // A HOLD — the chart stays exactly where it is.
+    // NON-NEGOTIABLE, and spoken with the chart still up: unemployment rose
+    // across every kind of job in that window, and rose MORE for the jobs least
+    // exposed to AI. This is not proof AI took those jobs. Without this beat the
+    // chart is dishonest and the advice section loses the room's trust — which
+    // is the very next thing out of Scott's mouth, so it matters more here than
+    // it did in the cubicle.
+    id: 'early-career-caveat',
+    stage: 'cubicle',
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    id: 'act-boundaries',
+    stage: 'cubicle',
+    session: BOUNDARIES_ACT_SCREEN,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 2.4 },
+    focus: [0, 0, 0],
+  },
+  {
+    // HOW YOU'D KNOW, and WHAT WORKS — both spoken at the desk, where they
+    // apply. Sleep first, then loss of interest, exhaustion, anxiety, pulling
+    // away from people; then somatization. Then: box the loop, make stopping
+    // structural, stay the one deciding, narrow the ambition, talk to people.
+    // The glass stays on one line so the screen never lectures the room.
+    id: 'boundaries',
+    stage: 'home',
+    crt: TUBE,
+    camera: { pos: [15, 3, 46], target: [-2, -1, -2], fov: 35, smoothTime: 2.8 },
+    focus: [0, 0, -2],
+  },
+  {
+    // THE 3R. A result becomes a response only when a person takes
+    // responsibility for it. The shortcut is drawn dim because it is the one
+    // everybody already takes; the routed edge is the rep that stops the
+    // atrophy AND the friction the slot machine does not have.
+    id: 'three-r',
+    stage: 'home',
+    session: THREE_R,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 2.4 },
+    focus: [0, 0, 0],
+  },
+  {
+    // The title again — same words as slide 1, on glass you now know is an
+    // object, in a room, in a building, made of phosphor. Then the idle cursor.
+    // Hold it blinking and stop talking.
+    id: 'close',
+    stage: 'home',
+    session: TITLE_SCREEN,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 2.0 },
+    focus: [0, 0, 0],
+  },
+])

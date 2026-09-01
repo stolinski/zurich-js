@@ -1,5 +1,7 @@
-// Ashima 3D simplex noise — the standard GLSL implementation.
-// Imported into planet shaders to give surfaces real, organic detail.
+// Ashima 3D simplex noise — the standard GLSL implementation, plus fbm.
+// Nothing imports this yet. Kept through the demolition because the room in
+// phase 1 wants it: dust in the air, wear on the monitor's plastic, the faint
+// non-uniformity of real glass. Delete it if phase 1 lands without needing it.
 export const snoise = /* glsl */ `
 vec3 mod289(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
 vec4 mod289(vec4 x){return x - floor(x*(1.0/289.0))*289.0;}
