@@ -45,6 +45,10 @@ const CAD = {
   // stood proud of the picture all the way round and caught the screen's own
   // light as a hard bright rectangle. That's what reads as a box-shadow.
   recessDepthMm: 12,
+  // The chin's recessed control bay: its centre line and its floor. The
+  // inserts below stand on that floor.
+  controlsYMm: -206,
+  bayFloorMm: -3,
 }
 
 const SCALE = SCREEN_SIZE.w / CAD.screenWidthMm
@@ -197,12 +201,18 @@ export function Monitor() {
     return new THREE.TubeGeometry(curve, 72, CABLE_R, 8, false)
   }, [])
 
-  const controlY = -4.86
+  const controlY = (CAD.controlsYMm - CAD.screenCentreMm) * SCALE
   const controls = [
     { x: -6.83, width: 0.43 },
     { x: -5.97, width: 0.55 },
     { x: -4.95, width: 0.55 },
   ]
+  // The inserts stand in the chin's bay, from its floor to a millimetre proud
+  // of the face: buttons in a well rather than decals on a flat chin.
+  const housingShift = (CAD.recessDepthMm - 2) * SCALE
+  const bayFloorZ = CAD.bayFloorMm * SCALE + housingShift
+  const insertDepth = housingShift + SCALE - bayFloorZ
+  const insertZ = bayFloorZ + insertDepth / 2
 
   return (
     <group>
@@ -216,17 +226,17 @@ export function Monitor() {
       <primitive
         object={housing}
         scale={SCALE}
-        position={[0, -CAD.screenCentreMm * SCALE, (CAD.recessDepthMm - 2) * SCALE]}
+        position={[0, -CAD.screenCentreMm * SCALE, housingShift]}
       />
 
-      {/* Separate inserts sit inside the CAD recesses, so the controls read as
-          buttons rather than three strangely illuminated holes in the shell. */}
+      {/* Separate inserts sit inside the bay, so the controls read as buttons
+          rather than three strangely illuminated holes in the shell. */}
       {controls.map(({ x, width }, index) => (
-        <mesh key={x} position={[x, controlY, 0.315]}>
-          <boxGeometry args={[width * 0.82, 0.18, 0.055]} />
+        <mesh key={x} position={[x, controlY, insertZ]}>
+          <boxGeometry args={[width * 0.82, 0.18, insertDepth]} />
           <meshStandardMaterial color="#07090b" roughness={0.74} />
           {index === 0 && (
-            <mesh position={[-width * 0.2, 0, 0.033]}>
+            <mesh position={[-width * 0.2, 0, insertDepth / 2 + 0.004]}>
               <circleGeometry args={[0.045, 12]} />
               <meshBasicMaterial color="#62c77d" toneMapped={false} />
             </mesh>

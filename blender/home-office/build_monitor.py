@@ -14,15 +14,18 @@ The contract this must keep (see parts/crt_monitor.md and Monitor.jsx):
   • the opening is 523 × 295 mm, centred at X = 0 / Y = −17;
   • the pocket floors at Z = −12 (the live glass sits 10 mm in front of it);
   • the stand's underside is at Y = −288 (the desk-contact math);
-  • the controls sit on the chin at Y = −175, X = −222 / −194 / −161, flush
-    with Z = 0 (the deck supplies the inserts and the status light);
+  • the controls sit in a recessed bay on the chin, centred at Y = −206,
+    X = −222 / −194 / −161, the bay floor at Z = −3 (the deck supplies the
+    inserts and the status light);
   • Monitor.jsx buckets materials by position: stand below Y = −180, face
     in front of Z = −36, the rest is shell.
 
 It replaced the nurb CAD part on 2026-09-02: a five-station loft with a
 stepped fascia, a chin, and an integrated base/turntable/pedestal/tilt-barrel
 stand. Corners are tight (14 mm on the face, 6 mm at the opening): the first
-pass at 38 / 12 read as a rounded 2000s appliance, not a 90s tube.
+pass at 38 / 12 read as a rounded 2000s appliance, not a 90s tube. The sides
+are clean — no vents. Two manufactured cues remain: the mould split where the
+front bezel moulding meets the rear cabinet, and the control bay on the chin.
 """
 
 from __future__ import annotations
@@ -55,6 +58,20 @@ FASCIA = (287.5, 163.5, -7, 10)
 FASCIA_DEPTH = 10
 POCKET_FLOOR = -12
 STAND_DEPTH = -240
+# Mould split: a V-groove where the front bezel moulding meets the rear
+# cabinet, just before the shoulder gathers. Its walls are 45°, so the deck's
+# 40° normal crease keeps it a line rather than smearing it into a band.
+SEAM_DEPTH = -110
+SEAM_HALF_WIDTH = 1.5
+SEAM_INSET = 1.5
+# Chin control bay: a shallow rounded well centred on the chin band. The
+# deck's three button inserts and the status light sit in it.
+BAY = (46, 11, -206, 5)  # half width, half height, centre Y, corner radius
+BAY_CENTRE_X = -191.5
+BAY_FLOOR = -3
+# The polish: every break sharper than this gets a 2.5 mm bevel.
+POLISH_WIDTH = 2.5
+POLISH_ANGLE = math.radians(40)
 
 
 def cad(x: float, y: float, z: float) -> Vector:
@@ -62,18 +79,37 @@ def cad(x: float, y: float, z: float) -> Vector:
     return Vector((x, -z, y))
 
 
-def rounded_loop(bm: bmesh.types.BMesh, half_w: float, half_h: float, cy: float, r: float, z: float):
+def station_at(z: float) -> tuple[float, float, float, float]:
+    """The shell section at depth `z`, interpolated between the authored stations."""
+    for (z_front, *front), (z_back, *back) in zip(STATIONS, STATIONS[1:]):
+        if z_back <= z <= z_front:
+            t = (z_front - z) / (z_front - z_back)
+            return tuple(a + (b - a) * t for a, b in zip(front, back))
+    raise ValueError(f"depth {z} is outside the loft")
+
+
+def shell_sections() -> list[tuple[float, float, float, float, float]]:
+    """The loft stations plus the three sections that cut the mould split."""
+    seam = []
+    for dz, inset in ((SEAM_HALF_WIDTH, 0.0), (0.0, SEAM_INSET), (-SEAM_HALF_WIDTH, 0.0)):
+        z = SEAM_DEPTH + dz
+        half_w, half_h, cy, r = station_at(z)
+        seam.append((z, half_w - inset, half_h - inset, cy, r))
+    return sorted(STATIONS + tuple(seam), key=lambda section: -section[0])
+
+
+def rounded_loop(bm: bmesh.types.BMesh, half_w: float, half_h: float, cy: float, r: float, z: float, cx: float = 0.0):
     verts = []
     corners = (
-        (half_w - r, cy + half_h - r, 0.0),
-        (-half_w + r, cy + half_h - r, 90.0),
-        (-half_w + r, cy - half_h + r, 180.0),
-        (half_w - r, cy - half_h + r, 270.0),
+        (cx + half_w - r, cy + half_h - r, 0.0),
+        (cx - half_w + r, cy + half_h - r, 90.0),
+        (cx - half_w + r, cy - half_h + r, 180.0),
+        (cx + half_w - r, cy - half_h + r, 270.0),
     )
-    for cx, ccy, start in corners:
+    for ccx, ccy, start in corners:
         for step in range(CORNER_SEGMENTS + 1):
             angle = math.radians(start + 90.0 * step / CORNER_SEGMENTS)
-            verts.append(bm.verts.new(cad(cx + r * math.cos(angle), ccy + r * math.sin(angle), z)))
+            verts.append(bm.verts.new(cad(ccx + r * math.cos(angle), ccy + r * math.sin(angle), z)))
     edges = [bm.edges.new((verts[i], verts[(i + 1) % len(verts)])) for i in range(len(verts))]
     return verts, edges
 
@@ -120,16 +156,32 @@ def cylinder(bm: bmesh.types.BMesh, radius: float, length: float, cx: float, cz:
 def build_housing() -> bpy.types.Object:
     bm = bmesh.new()
 
-    # The shell: one loft through the stations, capped at the rear.
-    loops = [rounded_loop(bm, hw, hh, cy, r, z) for z, hw, hh, cy, r in STATIONS]
+    # The shell: one loft through the sections (three of them are the mould
+    # split), capped at the rear.
+    sections = shell_sections()
+    loops = [rounded_loop(bm, hw, hh, cy, r, z) for z, hw, hh, cy, r in sections]
     for a, b in zip(loops, loops[1:]):
         bridge(bm, a[1], b[1])
     bm.faces.new(loops[-1][0])
+    seam_edges = {
+        edge
+        for section, loop in zip(sections, loops)
+        if abs(section[0] - SEAM_DEPTH) <= SEAM_HALF_WIDTH + 1e-6
+        for edge in loop[1]
+    }
 
-    # The front: an annulus in to the fascia, the fascia stepping forward,
-    # its front annulus in to the opening, the pocket walls back, the floor.
+    # The front: the annulus from the shell's front section in to the fascia
+    # is FILLED rather than bridged so the control bay's rim can be a third
+    # loop in it; then the bay sinks, the fascia steps forward, its front
+    # annulus goes in to the opening, the pocket walls back, the floor.
     fascia_back = rounded_loop(bm, *FASCIA, 0)
-    bridge(bm, loops[0][1], fascia_back[1])
+    bay_rim = rounded_loop(bm, *BAY, 0, cx=BAY_CENTRE_X)
+    bmesh.ops.triangle_fill(
+        bm, use_beauty=True, use_dissolve=False, edges=loops[0][1] + fascia_back[1] + bay_rim[1]
+    )
+    bay_floor = rounded_loop(bm, *BAY, BAY_FLOOR, cx=BAY_CENTRE_X)
+    bridge(bm, bay_rim[1], bay_floor[1])
+    bm.faces.new(bay_floor[0])
     fascia_front = rounded_loop(bm, *FASCIA, FASCIA_DEPTH)
     bridge(bm, fascia_back[1], fascia_front[1])
     opening_front = rounded_loop(bm, *OPENING, FASCIA_DEPTH)
@@ -153,6 +205,23 @@ def build_housing() -> bpy.types.Object:
     # No side vents: proud strips read as stickers and cuts read as torn rims.
     # The shell's sides stay clean, the way the FW900's do.
 
+    # The polish, in bmesh rather than a modifier so the seam can opt out: a
+    # 2.5 mm bevel would swallow a groove 3 mm wide.
+    sharp = [
+        edge
+        for edge in bm.edges
+        if edge not in seam_edges and edge.is_manifold and edge.calc_face_angle(0.0) > POLISH_ANGLE
+    ]
+    bmesh.ops.bevel(bm, geom=sharp, offset=POLISH_WIDTH, segments=2, affect="EDGES", clamp_overlap=True)
+    # Mark every break sharper than the polish angle as a hard edge, the seam
+    # included, so the lookdev proxy shades the way the deck does (Monitor.jsx
+    # creases normals at the same 40°). Without it the flat front face
+    # borrows the bevel's tilt at its rim and the fill's long triangles smear
+    # that across the chin as wedges.
+    for edge in bm.edges:
+        if edge.is_manifold and edge.calc_face_angle(0.0) > POLISH_ANGLE:
+            edge.smooth = False
+
     mesh = bpy.data.meshes.new("crt_monitor")
     bm.to_mesh(mesh)
     bm.free()
@@ -166,11 +235,6 @@ def build_housing() -> bpy.types.Object:
     mesh.materials.append(material)
     housing = bpy.data.objects.new("crt_monitor", mesh)
     bpy.context.scene.collection.objects.link(housing)
-    bevel = housing.modifiers.new("Polish", "BEVEL")
-    bevel.width = 2.5
-    bevel.segments = 2
-    bevel.limit_method = "ANGLE"
-    bevel.angle_limit = math.radians(40)
     return housing
 
 
