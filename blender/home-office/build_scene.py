@@ -18,6 +18,7 @@ import math
 import random
 from pathlib import Path
 
+import bmesh
 import bpy
 from mathutils import Vector
 
@@ -41,6 +42,11 @@ FRONT_Y = -35.0 * METRES_PER_SCENE_UNIT
 ROOM_HALF_WIDTH = 78.0 * METRES_PER_SCENE_UNIT
 
 random.seed(0x3A0F11CE)
+
+
+def smoothstep(edge0: float, edge1: float, value: float) -> float:
+    t = min(1.0, max(0.0, (value - edge0) / (edge1 - edge0)))
+    return t * t * (3.0 - 2.0 * t)
 
 
 def clean_scene() -> None:
@@ -1021,58 +1027,107 @@ def build_mouse(
     location: tuple[float, float, float],
     yaw: float,
 ) -> None:
-    """A modern wireless-shaped mouse, modelled rather than imported.
+    """A modern mouse, modelled rather than imported.
 
-    The CAD mouse read as a lump at any distance. A squashed sphere sunk a
-    third of the way into the mat gives the smooth dome a real mouse has, and
-    the seam, the wheel and a cable are all the detail a desk shot can use.
+    The CAD mouse read as a lump and a squashed sphere read as an egg. This
+    is a bevelled block with a palm hump two-thirds back, a lower and
+    narrower nose, and a flat base: the block's soft shoulders and flatter
+    top are what make it read as a product. The button split, the seam
+    across, and the wheel are ray-cast onto the finished surface, so they sit
+    on it whatever the profile does. The nose points away from the sitter
+    (local −y), toward the glass.
     """
-    x, y, z = location
-    cos, sin = math.cos(yaw), math.sin(yaw)
-    local = lambda dx, dy: (x + dx * cos - dy * sin, y + dx * sin + dy * cos)
+    length, width, height = 0.118, 0.064, 0.037
 
-    bpy.ops.mesh.primitive_uv_sphere_add(
-        segments=64, ring_count=32, radius=1.0, location=(x, y, z + 0.012), rotation=(0, 0, yaw)
-    )
-    shell = bpy.context.object
-    shell.name = "Mouse shell"
-    shell.scale = (0.031, 0.056, 0.024)
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    for polygon in shell.data.polygons:
+    def profile(t: float) -> float:  # height along the length, 0 nose … 1 back
+        return 0.50 + 0.50 * math.exp(-(((t - 0.66) / 0.32) ** 2))
+
+    def taper(t: float) -> float:  # width along the length
+        return 0.76 + 0.24 * smoothstep(0.05, 0.72, t) - 0.14 * smoothstep(0.86, 1.0, t)
+
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.bevel(bm, geom=bm.edges[:], offset=0.42, segments=12, affect="EDGES", profile=0.62)
+    for vertex in bm.verts:
+        x, y, z = vertex.co
+        t = y + 0.5
+        vertex.co = Vector((x * width * taper(t), y * length, (z + 0.5) * height * profile(t)))
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
+    mesh = bpy.data.meshes.new("Mouse body")
+    bm.to_mesh(mesh)
+    bm.free()
+    for polygon in mesh.polygons:
         polygon.use_smooth = True
-    shell.data.materials.append(mats["mouse"])
-    move_to_collection(shell, target)
+    body = bpy.data.objects.new("Mouse body", mesh)
+    body.location = location
+    body.rotation_mode = "XYZ"
+    body.rotation_euler = (0, 0, yaw)
+    mesh.materials.append(mats["mouse"])
+    target.objects.link(body)
+    bpy.context.view_layer.update()
 
-    seam_x, seam_y = local(0.0, 0.03)
-    add_box(
+    def surface_z(local_x: float, local_y: float) -> float:
+        hit, point, _normal, _index = body.ray_cast(
+            Vector((local_x, local_y, height * 2)), Vector((0, 0, -1))
+        )
+        return point.z if hit else 0.0
+
+    def world(local_x: float, local_y: float, local_z: float) -> tuple[float, float, float]:
+        return tuple(body.matrix_world @ Vector((local_x, local_y, local_z)))
+
+    nose = -length / 2
+    split_end = nose + 0.46 * length
+    add_curve(
+        "Mouse button split",
+        [
+            world(0.0, y, surface_z(0.0, y) + 0.0003)
+            for y in (nose + 0.004 + (split_end - nose - 0.004) * i / 12 for i in range(13))
+        ],
+        0.0011,
+        mats["black"],
+        target,
+    )
+    half_width = (width / 2) * taper(0.46) * 0.96
+    add_curve(
         "Mouse button seam",
-        (0.0015, 0.05, 0.006),
-        (seam_x, seam_y, z + 0.032),
+        [
+            world(x, split_end, surface_z(x, split_end) + 0.0003)
+            for x in (-half_width + 2 * half_width * i / 14 for i in range(15))
+        ],
+        0.0011,
+        mats["black"],
+        target,
+    )
+    wheel_y = nose + 0.26 * length
+    wheel_top = surface_z(0.0, wheel_y)
+    add_box(
+        "Mouse wheel slot",
+        (0.011, 0.025, 0.012),
+        world(0.0, wheel_y, wheel_top - 0.0065),
         mats["black"],
         target,
         rotation=(0, 0, yaw),
     )
-    wheel_x, wheel_y = local(0.0, 0.026)
     add_cylinder(
         "Mouse wheel",
-        0.007,
-        0.005,
-        (wheel_x, wheel_y, z + 0.033),
+        0.009,
+        0.0045,
+        world(0.0, wheel_y, wheel_top - 0.006),
         mats["rubber"],
         target,
         rotation=(0, math.pi / 2, yaw),
-        vertices=32,
+        vertices=48,
     )
-    tail_x, tail_y = local(0.0, 0.05)
+    x, y, z = location
     add_curve(
         "Mouse cable",
         [
-            (tail_x, tail_y, z + 0.004),
-            (tail_x + 0.06, tail_y + 0.22, z + 0.002),
-            (tail_x + 0.10, tail_y + 0.50, DESK_TOP_Z + 0.002),
-            (tail_x + 0.13, tail_y + 0.72, DESK_TOP_Z - 0.12),
+            world(0.0, nose - 0.001, 0.005),
+            world(0.05, nose - 0.16, 0.002),
+            world(0.09, nose - 0.45, DESK_TOP_Z - z + 0.002),
+            world(0.13, nose - 0.70, DESK_TOP_Z - z - 0.12),
         ],
-        0.0025,
+        0.0022,
         mats["rubber"],
         target,
     )
@@ -1083,7 +1138,7 @@ def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
     # Every imported prop is seated on the measured surface it stands on (see
     # seat_on): the stationery set's origin sat 26 mm below its own base,
     # which sank its pencil cup into the desk.
-    build_mouse(target, mats, (0.52, -0.24, DESK_MAT_TOP_Z), math.radians(-8))
+    build_mouse(target, mats, (0.52, -0.24, DESK_MAT_TOP_Z), math.radians(172))
     seat_on(
         import_glb(
             MODEL_DIR / "mug.glb",
@@ -1381,7 +1436,9 @@ def build_materials() -> dict[str, bpy.types.Material]:
         "rubber": principled_material("Soft rubber", "#111514", 0.82),
         "keyboard": principled_material("Keyboard case", "#242a28", 0.54, coat=0.08),
         "keycap": textured_material("PBT keycaps", "#303530", "#555b52", 0.72, scale=140.0, detail=2.0, bump_strength=0.04, bump_distance=0.0005),
-        "mouse": principled_material("Mouse satin shell", "#4b514b", 0.46, coat=0.17),
+        # Matte and dark: under the screen key a satin shell was one broad
+        # highlight and read as an egg.
+        "mouse": principled_material("Mouse shell", "#2b302d", 0.62, coat=0.10),
         "ceramic": principled_material("Bone ceramic", "#a39a86", 0.29, coat=0.56),
         "leather": textured_material("Worn leather", "#554335", "#79624e", 0.59, scale=18.0, detail=6.0, bump_strength=0.12, bump_distance=0.0015),
         "lamp": principled_material("Lamp painted metal", "#36413f", 0.36, metallic=0.56),
