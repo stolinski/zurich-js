@@ -198,10 +198,15 @@ talk needs the same beat to land the same way at every rehearsal.
   metric scale on the same spatial contract as the old CAD room (desk top at
   −8.34, floor −34.34, ceiling 42, walls ±78/−64/35 in scene units), and
   `export_scene.py` writes `public/models/home-office.glb`: modifiers applied,
-  transforms baked, meshes merged by material, no lights or cameras, ~200k
-  triangles, 13 MB. `HomeOffice.jsx` scales the metric root by 16/0.52 and
+  transforms baked, meshes merged by material, no lights or cameras, ~210k
+  triangles, 15 MB. `HomeOffice.jsx` scales the metric root by 16/0.52 and
   re-materials ten named surfaces with the talk's shared plaster/linen/wood
-  maps so the stage look presets stay in charge. `Room.jsx` now only supplies
+  maps so the stage look presets stay in charge. Every imported prop is placed
+  with `seat_on`, which measures the asset's lowest vertex and rests it on the
+  surface — origins in downloaded assets are wherever their author left them.
+  The lamp and the notebook are Poly Haven CC0 models (`assets/`); the lamp
+  exports as dark painted metal because its stock orange enamel would be the
+  one saturated colour in an amber room. `Room.jsx` now only supplies
   `DESK_Y`/`OFFICE_FLOOR_Y`; its `Room` component and the home branch of
   `Props` are the retired CAD set, kept until the projector check passes.
 - `Effects.jsx` — restrained bloom, vignette, explicit ACES filmic tone mapping,

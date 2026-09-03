@@ -458,6 +458,25 @@ def import_glb_group(
     return [anchor, *imported]
 
 
+def seat_on(objects: list[bpy.types.Object], surface_z: float, gap: float = 0.0015) -> None:
+    """Drop an imported group so its lowest vertex rests on a surface.
+
+    Imported assets keep their origin wherever their author left it, so a
+    location alone sinks some into the desk and floats others above it. The
+    measured world-space bottom is the only placement that always sits.
+    """
+    bpy.context.view_layer.update()
+    lowest = min(
+        (obj.matrix_world @ Vector(corner)).z
+        for obj in objects
+        if obj.type == "MESH"
+        for corner in obj.bound_box
+    )
+    for obj in objects:
+        if obj.parent is None or obj.parent not in objects:
+            obj.location.z += surface_z + gap - lowest
+
+
 def build_floor(target: bpy.types.Collection, material: bpy.types.Material) -> None:
     width = ROOM_HALF_WIDTH * 2
     depth = BACK_WALL_Y - FRONT_Y
@@ -640,16 +659,20 @@ def build_architecture(target: bpy.types.Collection, mats: dict[str, bpy.types.M
         vertices=32,
     )
 
-    # Continuous baseboards establish contact and scale.
+    # Continuous baseboards establish contact and scale. The back one stops
+    # either side of the acoustic panel, which runs floor to ceiling in front
+    # of the wall.
     base_z = FLOOR_Z + 0.045
-    add_box(
-        "Back baseboard",
-        (ROOM_HALF_WIDTH * 2, 0.026, 0.09),
-        (0, BACK_WALL_Y - 0.07, base_z),
-        mats["trim"],
-        target,
-        bevel=0.004,
-    )
+    panel_left, panel_right = -0.77, 0.81
+    for x0, x1 in ((-ROOM_HALF_WIDTH, panel_left), (panel_right, ROOM_HALF_WIDTH)):
+        add_box(
+            "Back baseboard",
+            (x1 - x0, 0.026, 0.09),
+            ((x0 + x1) / 2, BACK_WALL_Y - 0.07, base_z),
+            mats["trim"],
+            target,
+            bevel=0.004,
+        )
     for x in (-ROOM_HALF_WIDTH + 0.02, ROOM_HALF_WIDTH - 0.02):
         add_box(
             "Side baseboard",
@@ -660,12 +683,17 @@ def build_architecture(target: bpy.types.Collection, mats: dict[str, bpy.types.M
             bevel=0.004,
         )
 
-    # Contemporary slatted acoustic field behind the monitor—dark, not decorative glow.
+    # Contemporary slatted acoustic field behind the monitor — floor to
+    # ceiling, dark, not decorative glow.
     panel_y = BACK_WALL_Y - 0.072
+    panel_bottom = FLOOR_Z - 0.002
+    panel_top = CEILING_Z + 0.002
+    panel_height = panel_top - panel_bottom
+    panel_z = (panel_top + panel_bottom) / 2
     add_box(
         "Acoustic felt backing",
-        (1.52, 0.025, 1.34),
-        (0.02, panel_y + 0.018, FLOOR_Z + 1.41),
+        (1.52, 0.025, panel_height),
+        (0.02, panel_y + 0.018, panel_z),
         mats["felt"],
         target,
         bevel=0.006,
@@ -674,8 +702,8 @@ def build_architecture(target: bpy.types.Collection, mats: dict[str, bpy.types.M
         x = -0.69 + index * 0.078
         add_box(
             f"Acoustic walnut slat {index + 1:02d}",
-            (0.036, 0.035, 1.28),
-            (x, panel_y - 0.014, FLOOR_Z + 1.41),
+            (0.036, 0.035, panel_height - 0.012),
+            (x, panel_y - 0.014, panel_z),
             mats["slat"],
             target,
             bevel=0.0035,
@@ -859,46 +887,55 @@ def build_shelving(target: bpy.types.Collection, mats: dict[str, bpy.types.Mater
         )
 
     muted_book_mats = [mats["book_warm"], mats["book_cool"], mats["book_paper"]]
+    # Books stand upright and packed: a lean about the wrong axis lifted one
+    # bottom edge off the shelf, which reads as a modelling error, not a book.
     for shelf in range(4):
         cursor = 0.47
         count = (5, 7, 4, 6)[shelf]
+        shelf_top = FLOOR_Z + 0.12 + shelf * 0.42 + 0.0175
         for index in range(count):
             width = random.uniform(0.025, 0.055)
             height = random.uniform(0.19, 0.31)
             add_box(
                 f"Book {shelf + 1:02d}-{index + 1:02d}",
                 (0.20, width, height),
-                (x - 0.03, cursor, FLOOR_Z + 0.14 + shelf * 0.42 + height / 2),
+                (x - 0.03, cursor + width / 2, shelf_top + 0.001 + height / 2),
                 muted_book_mats[(shelf + index) % len(muted_book_mats)],
                 target,
-                rotation=(0, math.radians(random.uniform(-2, 2)), 0),
                 bevel=0.003,
                 segments=2,
             )
-            cursor += width + 0.012
+            cursor += width + 0.005
 
-    # Floating shelves on the back wall hold a sparse, believable history.
-    for z in (FLOOR_Z + 1.78, FLOOR_Z + 2.06):
+    # Floating shelves on the back wall hold a sparse, believable history. The
+    # books stand ON the lower shelf, packed from its left end and set back
+    # from its front edge; the upper shelf clears the tallest of them.
+    shelf_y = BACK_WALL_Y - 0.14
+    lower_shelf_z = FLOOR_Z + 1.78
+    upper_shelf_z = FLOOR_Z + 2.10
+    for z in (lower_shelf_z, upper_shelf_z):
         add_box(
             "Floating walnut shelf",
             (0.70, 0.17, 0.035),
-            (-0.96, BACK_WALL_Y - 0.14, z),
+            (-0.96, shelf_y, z),
             mats["slat"],
             target,
             bevel=0.007,
         )
+    cursor = -1.28
     for index in range(7):
         width = random.uniform(0.026, 0.047)
-        height = random.uniform(0.17, 0.25)
+        height = random.uniform(0.16, 0.23)
         add_box(
             f"Shelf book {index + 1:02d}",
             (width, 0.13, height),
-            (-1.22 + index * 0.065, BACK_WALL_Y - 0.19, FLOOR_Z + 1.92 + height / 2),
+            (cursor + width / 2, shelf_y + 0.01, lower_shelf_z + 0.0175 + 0.001 + height / 2),
             muted_book_mats[index % len(muted_book_mats)],
             target,
             bevel=0.003,
             segments=2,
         )
+        cursor += width + 0.004
 
 
 def build_plant(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]) -> None:
@@ -967,38 +1004,67 @@ def build_chair(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
 
 def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]) -> None:
     build_keyboard(target, mats)
-    import_glb(
-        MODEL_DIR / "mouse.glb",
-        "Wired mouse",
-        target,
-        location=(0.52, -0.24, DESK_TOP_Z + 0.004),
-        rotation=(-math.pi / 2, 0, math.radians(-8)),
-        material=mats["mouse"],
+    # Every imported prop is seated on the measured desk top (see seat_on):
+    # the stationery set's origin sat 26 mm below its own base, which sank
+    # its pencil cup into the desk.
+    seat_on(
+        import_glb(
+            MODEL_DIR / "mouse.glb",
+            "Wired mouse",
+            target,
+            location=(0.52, -0.24, DESK_TOP_Z),
+            rotation=(-math.pi / 2, 0, math.radians(-8)),
+            material=mats["mouse"],
+        ),
+        DESK_TOP_Z,
     )
-    import_glb(
-        MODEL_DIR / "mug.glb",
-        "Ceramic mug",
-        target,
-        location=(0.83, 0.01, DESK_TOP_Z + 0.003),
-        rotation=(-math.pi / 2, 0, math.radians(18)),
-        material=mats["ceramic"],
+    seat_on(
+        import_glb(
+            MODEL_DIR / "mug.glb",
+            "Ceramic mug",
+            target,
+            location=(0.83, 0.01, DESK_TOP_Z),
+            rotation=(-math.pi / 2, 0, math.radians(18)),
+            material=mats["ceramic"],
+        ),
+        DESK_TOP_Z,
     )
-    import_glb(
-        MODEL_DIR / "notebook.glb",
-        "Leather notebook",
+    # The notebook and the lamp are Poly Haven (CC0) models in place of the
+    # CAD parts, which read as extruded blocks at any distance. The binder
+    # keeps its leather and paper maps; the lamp is exported as the dark
+    # painted metal the old lamp was, because its stock orange enamel would be
+    # the one saturated colour in an amber room.
+    binder = import_glb_group(
+        ASSET_DIR / "binder_notebook" / "binder_notebook_1k.gltf",
+        "Binder notebook",
         target,
-        location=(-0.72, -0.18, DESK_TOP_Z + 0.003),
-        rotation=(-math.pi / 2, 0, math.radians(-11)),
-        material=mats["leather"],
+        location=(-0.72, -0.18, DESK_TOP_Z),
+        rotation=(0, 0, math.radians(-11)),
     )
-    import_glb(
-        MODEL_DIR / "desk_lamp.glb",
-        "Anglepoise lamp",
+    # The asset ships a closed and an open copy on top of each other; a desk
+    # gets the closed one.
+    open_copies = [obj for obj in binder if obj.type == "MESH" and "closed" not in obj.name]
+    binder = [obj for obj in binder if obj not in open_copies]
+    for obj in open_copies:
+        bpy.data.objects.remove(obj, do_unlink=True)
+    seat_on(binder, DESK_TOP_Z)
+    lamp = import_glb_group(
+        ASSET_DIR / "desk_lamp_arm_01" / "desk_lamp_arm_01_1k.gltf",
+        "Arm lamp",
         target,
-        location=(-0.97, 0.20, DESK_TOP_Z + 0.002),
-        rotation=(-math.pi / 2, 0, math.radians(24)),
-        material=mats["lamp"],
+        location=(-0.97, 0.20, DESK_TOP_Z),
+        rotation=(0, 0, math.radians(24)),
     )
+    seat_on(lamp, DESK_TOP_Z)
+    for obj in lamp:
+        if obj.type != "MESH":
+            continue
+        for material in obj.data.materials:
+            if material is None:
+                continue
+            material["export_base_color"] = rgba("#36413f")
+            material["export_roughness"] = 0.36
+            material["export_metallic"] = 0.56
     # Contemporary details: phone face-down, pencil, and a small interface box.
     add_box(
         "Phone face down",
@@ -1010,13 +1076,16 @@ def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
         bevel=0.012,
         segments=5,
     )
-    import_glb_group(
-        ASSET_DIR / "stationery_supplies.glb",
-        "Poly Haven stationery",
-        target,
-        location=(-0.61, 0.15, DESK_TOP_Z + 0.012),
-        rotation=(math.pi / 2, 0, math.radians(-6)),
-        scale=0.9,
+    seat_on(
+        import_glb_group(
+            ASSET_DIR / "stationery_supplies.glb",
+            "Poly Haven stationery",
+            target,
+            location=(-0.61, 0.15, DESK_TOP_Z),
+            rotation=(math.pi / 2, 0, math.radians(-6)),
+            scale=0.9,
+        ),
+        DESK_TOP_Z,
     )
     add_box(
         "Audio interface",
@@ -1290,12 +1359,16 @@ def main() -> None:
     build_architecture(export, mats)
     build_desk(export, mats)
     build_shelving(export, mats)
-    import_glb_group(
-        ASSET_DIR / "potted_plant_02.glb",
-        "Poly Haven potted plant",
-        export,
-        location=(1.76, 1.72, FLOOR_Z + 0.59),
-        rotation=(0, 0, math.radians(-18)),
+    # On the credenza, seated on its measured top rather than a guessed height.
+    seat_on(
+        import_glb_group(
+            ASSET_DIR / "potted_plant_02.glb",
+            "Poly Haven potted plant",
+            export,
+            location=(1.76, 1.72, FLOOR_Z + 0.59),
+            rotation=(0, 0, math.radians(-18)),
+        ),
+        FLOOR_Z + 0.58,
     )
     build_chair(export, mats)
     build_props(export, mats)

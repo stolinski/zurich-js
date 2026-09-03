@@ -86,6 +86,7 @@ def prepare_materials_for_gltf() -> None:
         "potted_plant_02_leaves",
         "potted_plant_02_pot",
         "stationery_supplies",
+        "binder_notebook",
     }
     for material in bpy.data.materials:
         if not material.use_nodes:
