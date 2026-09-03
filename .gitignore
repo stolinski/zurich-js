@@ -25,3 +25,6 @@ quality-artifacts/
 # Python build caches
 __pycache__/
 *.py[cod]
+
+# Blender autosave backups
+*.blend1

@@ -10,7 +10,8 @@ import {
   commitPendingStage,
   usePresentationRuntime,
 } from '../state/presentationRuntime.js'
-import { DESK_Y, OFFICE_FLOOR_Y, Room } from './Room.jsx'
+import { DESK_Y, OFFICE_FLOOR_Y } from './Room.jsx'
+import { HomeOffice } from './HomeOffice.jsx'
 import { Props } from './Props.jsx'
 import { Monitor } from './Monitor.jsx'
 import { PhosphorField } from './PhosphorField.jsx'
@@ -1250,8 +1251,7 @@ function StageSet({ stage, screenTexture }) {
         visible={stage === 'home'}
         userData={{ presentationStages: ['home'] }}
       >
-        <Room />
-        <Props variant="home" />
+        <HomeOffice />
       </group>
       <group
         visible={stage === 'cubicle'}
