@@ -1257,7 +1257,7 @@ function StageSet({ stage, screenTexture }) {
         visible={stage === 'cubicle'}
         userData={{ presentationStages: ['cubicle'] }}
       >
-        <Props variant="cubicle" />
+        <Props />
         <CubicleStage active={stage === 'cubicle'} />
       </group>
       <group

@@ -207,8 +207,9 @@ talk needs the same beat to land the same way at every rehearsal.
   The lamp and the notebook are Poly Haven CC0 models (`assets/`); the lamp
   exports as dark painted metal because its stock orange enamel would be the
   one saturated colour in an amber room. `Room.jsx` now only supplies
-  `DESK_Y`/`OFFICE_FLOOR_Y`; its `Room` component and the home branch of
-  `Props` are the retired CAD set, kept until the projector check passes.
+  `DESK_Y`/`OFFICE_FLOOR_Y`; the CAD home set (its `Room` component, the
+  home branch of `Props`, and the desk/lamp/notebook GLBs) was retired on
+  2026-09-03 and lives in git.
 - `Effects.jsx` — restrained bloom, vignette, explicit ACES filmic tone mapping,
   FXAA, and banding dither. **All of it zeroes on a `fillScreen` slide.**
   EffectComposer forces the renderer to `NoToneMapping`, so ACES must live in

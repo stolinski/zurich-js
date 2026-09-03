@@ -10,7 +10,9 @@ import { DESK_Y } from './Room.jsx'
 import { MM } from './scale.js'
 
 /**
- * What else is on the desk.
+ * What else is on the CUBICLE desk. (The home desk has been dressed in
+ * Blender since 2026-09-02 — see HomeOffice.jsx; the home branch this file
+ * used to carry, with its CAD lamp and notebook, is gone.)
  *
  * Two jobs, and the second matters more than the first.
  *
@@ -30,8 +32,6 @@ import { MM } from './scale.js'
 const CASE_MODEL = '/models/keyboard_case.glb'
 const MUG_MODEL = '/models/mug.glb'
 const MOUSE_MODEL = '/models/mouse.glb'
-const LAMP_MODEL = '/models/desk_lamp.glb'
-const NOTEBOOK_MODEL = '/models/notebook.glb'
 
 // Must match the CAD. Standard key pitch.
 const PITCH_MM = 19.05
@@ -224,13 +224,6 @@ function propMaterials(profile, fallback) {
       new THREE.MeshStandardMaterial({ color: '#111315', roughness: 0.9 }),
     ]
   }
-  if (profile === 'lamp') {
-    return [
-      new THREE.MeshStandardMaterial({ color: '#35414d', roughness: 0.4, metalness: 0.42 }),
-      new THREE.MeshStandardMaterial({ color: '#202832', roughness: 0.54, metalness: 0.32 }),
-      new THREE.MeshStandardMaterial({ color: '#465462', roughness: 0.34, metalness: 0.5 }),
-    ]
-  }
   if (profile === 'mug') {
     // Glazed ceramic: a clearcoat gives the one sharp bright specular on the
     // desk — the material read that separates a mug from a painted cylinder.
@@ -299,9 +292,7 @@ function Mug({ position, rotation, color = '#15181c' }) {
   )
 }
 
-export function Props({ variant = 'home' }) {
-  const cubicle = variant === 'cubicle'
-
+export function Props() {
   return (
     <group>
       {/* Close and low — this is the foreground anchor. Kept inside the screen's
@@ -328,53 +319,22 @@ export function Props({ variant = 'home' }) {
         rotation={[-Math.PI / 2, 0, Math.PI + 0.18]}
       />
 
-      {/* Warm glazed bone at home: five near-identical charcoal props read as
-          one clay material poured over the whole desk. The mug is the value
-          anchor of the prop family. */}
-      <Mug
-        position={[9.9, DESK_Y, 5.4]}
-        rotation={[0, -0.5, 0]}
-        color={cubicle ? '#c9c6bc' : '#a39584'}
-      />
+      {/* Glazed bone: four near-identical charcoal props read as one clay
+          material poured over the whole desk. The mug is the value anchor of
+          the prop family. */}
+      <Mug position={[9.9, DESK_Y, 5.4]} rotation={[0, -0.5, 0]} color="#c9c6bc" />
 
-      {cubicle ? (
-        <>
-          {/* Corporate ephemera replaces the home lamp/notebook silhouette.
-              Muted paper and an ID badge catch the neutral ceiling light and
-              make this desk read as a different person's workstation. */}
-          <mesh position={[-10.5, DESK_Y + 0.08, 7.3]} rotation={[0, 0.22, 0]} castShadow>
-            <boxGeometry args={[6.8, 0.16, 4.5]} />
-            <meshStandardMaterial color="#d8d3c5" roughness={0.9} />
-          </mesh>
-          <mesh position={[-14.2, DESK_Y + 0.13, 5.8]} rotation={[0, -0.14, 0]} castShadow>
-            <boxGeometry args={[2.4, 0.12, 3.5]} />
-            <meshStandardMaterial color="#315b70" roughness={0.74} />
-          </mesh>
-        </>
-      ) : (
-        <>
-          {/* The lamp is OFF, and that's the point. Everything else on this
-              desk is horizontal and low, so it supplies the home silhouette. */}
-          <CadProp
-            url={LAMP_MODEL}
-            color="#29323c"
-            roughness={0.46}
-            metalness={0.2}
-            materialProfile="lamp"
-            position={[-19.5, DESK_Y, -2.5]}
-            rotation={[-Math.PI / 2, 0, -0.6]}
-          />
-
-          {/* Worn leather journal, not another charcoal slab. */}
-          <CadProp
-            url={NOTEBOOK_MODEL}
-            color="#5f4c3a"
-            roughness={0.6}
-            position={[-9.8, DESK_Y, 7.6]}
-            rotation={[-Math.PI / 2, 0, 0.38]}
-          />
-        </>
-      )}
+      {/* Corporate ephemera. Muted paper and an ID badge catch the neutral
+          ceiling light and make this desk read as a different person's
+          workstation from the home one. */}
+      <mesh position={[-10.5, DESK_Y + 0.08, 7.3]} rotation={[0, 0.22, 0]} castShadow>
+        <boxGeometry args={[6.8, 0.16, 4.5]} />
+        <meshStandardMaterial color="#d8d3c5" roughness={0.9} />
+      </mesh>
+      <mesh position={[-14.2, DESK_Y + 0.13, 5.8]} rotation={[0, -0.14, 0]} castShadow>
+        <boxGeometry args={[2.4, 0.12, 3.5]} />
+        <meshStandardMaterial color="#315b70" roughness={0.74} />
+      </mesh>
     </group>
   )
 }
@@ -382,5 +342,3 @@ export function Props({ variant = 'home' }) {
 useGLTF.preload(CASE_MODEL)
 useGLTF.preload(MUG_MODEL)
 useGLTF.preload(MOUSE_MODEL)
-useGLTF.preload(LAMP_MODEL)
-useGLTF.preload(NOTEBOOK_MODEL)

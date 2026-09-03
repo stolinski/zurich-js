@@ -9,7 +9,8 @@ export function configureIrradianceTexture(texture) {
   return texture
 }
 
+// The home set carried its own bounds until the Blender room replaced the
+// CAD one; only the cubicle projects baked irradiance now.
 export const IRRADIANCE_BOUNDS = Object.freeze({
   cubicle: Object.freeze({ minX: -130, minZ: -260, width: 260, depth: 360 }),
-  home: Object.freeze({ minX: -78, minZ: -64, width: 156, depth: 99 }),
 })

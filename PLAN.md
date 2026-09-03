@@ -224,9 +224,9 @@ rather than announcing the whole object in one frame. Repaint via `SHELL` in
 `Monitor.jsx`. A 16:9 tube isn't a cheat — widescreen CRTs existed, and it's why
 the cold open fills a projector with no letterbox.
 
-**Built:** authored CAD monitor, desk, keyboard, mouse, mug, lamp, and notebook;
-`scene/Room.jsx` (distinct home timber and office laminate furniture, floor,
-wall), `scene/Scene.jsx` (composition + stage-aware lighting), and a single
+**Built:** a Blender-authored monitor housing and home room (`blender/home-office`,
+`scene/HomeOffice.jsx`), CAD keyboard, mouse, and mug for the cubicle
+(`scene/Props.jsx`), `scene/Scene.jsx` (composition + stage-aware lighting), and a single
 square-on `reveal` where the housing arriving around an already-accepted image
 is the point. The three-quarter and profile waypoints that once followed it were
 cut: they re-explained the same fact from two more angles, and the punchline
