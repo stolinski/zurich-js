@@ -1,0 +1,5 @@
+# Cloudflare Pages. The deck is a static Vite build; `pnpm deploy` builds it
+# and uploads `dist` to the `true-cost-of-ai-coding` project (production is
+# the `main` branch, at https://true-cost-of-ai-coding.pages.dev).
+name = "true-cost-of-ai-coding"
+pages_build_output_dir = "dist"

@@ -98,7 +98,13 @@ Backed by a survey of 3,593 developers (<https://ai-health.syntax.fm>) and the
 pnpm install
 pnpm dev      # http://localhost:5173
 pnpm build
+pnpm ship     # build + upload dist to Cloudflare Pages (wrangler.toml)
 ```
+
+The deck is hosted at <https://true-cost-of-ai-coding.pages.dev> (Cloudflare
+Pages, direct upload from `dist`, production branch `main`). `pnpm ship`
+needs a logged-in wrangler; the build is static, so nothing else is
+configured on the Cloudflare side.
 
 ## The rules that protect the trick
 
