@@ -834,42 +834,131 @@ def build_desk(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]
         )
 
 
+KEY_UNIT = 0.01905
+# A 60% board: 61 keys in five rows at the standard pitch, with the real
+# widths for Backspace, Tab, Caps, Enter, both Shifts and the bottom row.
+KEY_ROWS = (
+    (1,) * 13 + (2,),
+    (1.5,) + (1,) * 12 + (1.5,),
+    (1.75,) + (1,) * 11 + (2.25,),
+    (2.25,) + (1,) * 10 + (2.75,),
+    (1.25,) * 3 + (6.25,) + (1.25,) * 4,
+)
+# OEM profile: the number row is tallest, the home row lowest.
+KEY_ROW_HEIGHTS = (0.0116, 0.0106, 0.0098, 0.0102, 0.0094)
+
+
 def build_keyboard(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]) -> None:
+    """A compact mechanical keyboard, modelled.
+
+    The old board was a grid of identical pillows on a slab, and a keyboard
+    is a specific object: a 60% layout at 19.05 mm pitch with the right
+    modifier widths, tapered caps in a row profile, a dark plate showing in
+    the gaps, a low case at a typing angle with a recess the caps sit in.
+    Everything hangs off one rig empty pivoted at the front edge on the mat,
+    so the tilt raises the back; the exporter bakes the world transforms.
+    """
+    bezel = 0.0055
+    width = 15 * KEY_UNIT + 2 * bezel
+    depth = 5 * KEY_UNIT + 2 * bezel
+    case_height = 0.0135
+    recess = 0.0045
     # Centred under the glass, which also keeps it clear of the binder.
-    keyboard_x, keyboard_y = 0.0, -0.235
-    # On the mat, so its base clears the mat's top rather than sitting in it.
-    add_box(
-        "Keyboard chassis",
-        (0.48, 0.17, 0.022),
-        (keyboard_x, keyboard_y, DESK_MAT_TOP_Z + 0.015),
-        mats["keyboard"],
-        target,
-        rotation=(math.radians(-2.0), 0, math.radians(-1.5)),
-        bevel=0.014,
-        segments=5,
-    )
-    rows = (14, 14, 13, 12, 8)
-    pitch_x, pitch_y = 0.031, 0.030
-    for row, count in enumerate(rows):
-        y = keyboard_y + 0.057 - row * pitch_y
-        total = (count - 1) * pitch_x
-        for column in range(count):
-            width = 0.027
-            x = keyboard_x - total / 2 + column * pitch_x
-            if row == 4 and column == 3:
-                width = 0.14
-                x += 0.055
-            elif row == 4 and column > 3:
-                x += 0.11
-            add_box(
+    rig = bpy.data.objects.new("Keyboard", None)
+    target.objects.link(rig)
+    rig.location = (0.0, -0.235 - depth / 2, DESK_MAT_TOP_Z)
+    rig.rotation_mode = "XYZ"
+    rig.rotation_euler = (math.radians(4.5), 0, math.radians(-1.5))
+
+    def mesh_object(
+        name: str,
+        bm: bmesh.types.BMesh,
+        material: bpy.types.Material,
+        location: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    ) -> bpy.types.Object:
+        mesh = bpy.data.meshes.new(name)
+        bm.to_mesh(mesh)
+        bm.free()
+        for polygon in mesh.polygons:
+            polygon.use_smooth = True
+        mesh.materials.append(material)
+        obj = bpy.data.objects.new(name, mesh)
+        obj.parent = rig
+        obj.location = location
+        target.objects.link(obj)
+        return obj
+
+    # The case: a bevelled block whose top is inset by the bezel and pushed
+    # down into a recess, so the plate and the cap bases sit inside it.
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for vertex in bm.verts:
+        vertex.co = Vector((
+            vertex.co.x * width,
+            (vertex.co.y + 0.5) * depth,
+            (vertex.co.z + 0.5) * case_height,
+        ))
+    bmesh.ops.bevel(bm, geom=bm.edges[:], offset=0.0025, segments=4, affect="EDGES")
+    bm.faces.ensure_lookup_table()
+
+    def face_height(face: bmesh.types.BMFace) -> float:
+        return face.calc_center_median().z
+
+    top = max(bm.faces, key=face_height)
+    bmesh.ops.inset_individual(bm, faces=[top], thickness=bezel - 0.0025, depth=0.0)
+    for vertex in top.verts:
+        vertex.co.z -= recess
+    mesh_object("Keyboard case", bm, mats["keyboard"])
+
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    for vertex in bm.verts:
+        vertex.co = Vector((
+            vertex.co.x * (width - 2 * bezel + 0.002),
+            bezel - 0.001 + (vertex.co.y + 0.5) * (depth - 2 * bezel + 0.002),
+            case_height - recess + (vertex.co.z + 0.5) * 0.003,
+        ))
+    mesh_object("Keyboard plate", bm, mats["keyboard_plate"])
+
+    for row, widths in enumerate(KEY_ROWS):
+        cy = depth - bezel - (row + 0.5) * KEY_UNIT
+        x = -15 * KEY_UNIT / 2
+        for column, units in enumerate(widths):
+            cap_w = units * KEY_UNIT - 0.0032
+            cap_d = KEY_UNIT - 0.0032
+            cap_h = KEY_ROW_HEIGHTS[row]
+            bm = bmesh.new()
+            bmesh.ops.create_cube(bm, size=1.0)
+            for vertex in bm.verts:
+                top_face = vertex.co.z > 0
+                sx, sy = (0.80, 0.74) if top_face else (1.0, 1.0)
+                vertex.co = Vector((
+                    vertex.co.x * cap_w * sx,
+                    vertex.co.y * cap_d * sy + (0.0009 if top_face else 0.0),
+                    (vertex.co.z + 0.5) * cap_h,
+                ))
+            bmesh.ops.bevel(bm, geom=bm.edges[:], offset=0.0011, segments=3, affect="EDGES")
+            mesh_object(
                 f"Keycap {row + 1:02d}-{column + 1:02d}",
-                (width, 0.025, 0.012),
-                (x, y, DESK_MAT_TOP_Z + 0.032),
-                mats["keycap"],
-                target,
-                bevel=0.004,
-                segments=3,
+                bm,
+                mats["keycap"] if units == 1 else mats["keycap_mod"],
+                (x + units * KEY_UNIT / 2, cy, case_height - recess + 0.003),
             )
+            x += units * KEY_UNIT
+
+    cable = add_curve(
+        "Keyboard cable",
+        [
+            (0.0, depth + 0.001, 0.008),
+            (0.03, depth + 0.10, -0.002),
+            (0.10, depth + 0.30, -0.03),
+            (0.16, depth + 0.55, -0.11),
+        ],
+        0.0022,
+        mats["rubber"],
+        target,
+    )
+    cable.parent = rig
 
 
 def build_shelving(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]) -> None:
@@ -1257,18 +1346,6 @@ def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
         )
 
     add_curve(
-        "Keyboard cable",
-        [
-            (0.05, -0.14, DESK_TOP_Z + 0.043),
-            (0.10, 0.12, DESK_TOP_Z + 0.052),
-            (0.22, 0.34, DESK_TOP_Z - 0.01),
-            (0.18, 0.42, DESK_TOP_Z - 0.11),
-        ],
-        0.004,
-        mats["rubber"],
-        target,
-    )
-    add_curve(
         "Monitor power cable",
         [
             (0.20, 0.20, DESK_TOP_Z + 0.33),
@@ -1436,6 +1513,10 @@ def build_materials() -> dict[str, bpy.types.Material]:
         "rubber": principled_material("Soft rubber", "#111514", 0.82),
         "keyboard": principled_material("Keyboard case", "#242a28", 0.54, coat=0.08),
         "keycap": textured_material("PBT keycaps", "#303530", "#555b52", 0.72, scale=140.0, detail=2.0, bump_strength=0.04, bump_distance=0.0005),
+        # Two-tone set: the modifiers and the spacebar sit a rung darker than
+        # the alphas, which is most of what makes a keyboard read at a glance.
+        "keycap_mod": principled_material("PBT modifier keycaps", "#1e2224", 0.7),
+        "keyboard_plate": principled_material("Keyboard plate", "#0b0d0d", 0.8),
         # Matte and dark: under the screen key a satin shell was one broad
         # highlight and read as an egg.
         "mouse": principled_material("Mouse shell", "#2b302d", 0.62, coat=0.10),
