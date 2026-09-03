@@ -4,8 +4,9 @@
  * The previous deck laid its slides out as a scaled 1920×1080 DOM stage over
  * the canvas — ~2000 lines of card, code-block and demo styling. This talk
  * draws every legible thing into the screen's canvas texture instead
- * (PLAN.md §2 rule 2), so the only DOM left is a presenter HUD that is hidden
- * unless you ask for it with ?hud.
+ * (PLAN.md §2 rule 2), so the only DOM left is presenter chrome: a clock in
+ * the corner, and a position HUD that is hidden unless you ask for it with
+ * ?hud.
  *
  * Type for the screen itself is JetBrains Mono, loaded in main.jsx via
  * @fontsource and measured in terminal/theme.js — not styled from here.
@@ -16,32 +17,70 @@
 }
 
 html,
-body,
-#root {
+body {
     margin: 0;
     height: 100%;
-    background: #04060a;
+    /* PHOSPHOR.glass (terminal/theme.js), not the scene's clear colour: on a
+       display that is not 16:9 the bars beside the stage meet the cold open's
+       bare glass, and a seam there is an edge to the picture — the one thing
+       the cold open must never show. Both crush to black on a projector. */
+    background: #0b0a06;
     overflow: hidden;
 }
 
-canvas {
+/* THE STAGE. The talk is composed at 16:9 — the screen texture's shape and
+   QUALITY.md's 1920×1080 target — so the root is a 16:9 box that fits the
+   window and sits centred on the page background: letterboxed on a wider
+   window, pillarboxed on a narrower one. A resize scales the picture, it never
+   re-frames it, so a 16:10 laptop panel or a 4:3 projector shows exactly what
+   was rehearsed, smaller. Both renderers fill this box. */
+#root {
     position: fixed;
+    inset: 0;
+    margin: auto;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: min(100vh, calc(100vw * 9 / 16));
+}
+
+canvas {
+    position: absolute;
     inset: 0;
 }
 
 /* ?flat — the screen's canvas painted straight to the page, no WebGL. Keeps its
-   authored 2560×1440 and covers the viewport, matching how CameraRig frames the
-   real screen in the cold open (cover, never letterbox). */
+   authored 2560×1440 and fills the 16:9 stage, matching how CameraRig frames
+   the real screen in the cold open. */
 .flat-screen {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
 }
 
+/* Presenter clock — always on, one dim number in the corner counting up from
+   0:00, click to reset. Positioned inside the stage box so it lands in the
+   picture's corner, not in a letterbox bar. */
+.timer {
+    position: absolute;
+    top: 28px;
+    left: 36px;
+    z-index: 10;
+    appearance: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    font: 13px "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.12em;
+    font-variant-numeric: tabular-nums;
+    color: #ad8c2c;
+}
+
 /* Presenter readout — slide id, position, and step within a session. Opt in
-   with ?hud; never on for an audience. */
+   with ?hud; never on for an audience. Positioned inside the stage box so it
+   lands in the picture's corner, not in a letterbox bar. */
 .hud {
-    position: fixed;
+    position: absolute;
     top: 28px;
     right: 36px;
     z-index: 10;

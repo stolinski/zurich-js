@@ -296,7 +296,7 @@ function placeCadInstances(mesh, placements, dummy, cadRotation) {
  */
 export function OfficeDetails() {
   const gridMaterial = useRef(null)
-  const { camera, size } = useThree()
+  const { camera, size, viewport } = useThree()
   const { scene: fixtureScene } = useGLTF(FIXTURE_MODEL)
   const { scene: pedestalScene } = useGLTF(PEDESTAL_MODEL)
   const { scene: chairScene } = useGLTF(CHAIR_MODEL)
@@ -374,8 +374,11 @@ export function OfficeDetails() {
   useFrame(() => {
     if (!gridMaterial.current) return
     const distance = Math.max(0.001, camera.position.distanceTo(gridCenter))
+    // Moiré is a property of the physical raster, so measure in buffer pixels
+    // (CSS height × DPR), not CSS pixels.
     const pixelsPerUnit =
-      size.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * distance)
+      (size.height * viewport.dpr) /
+      (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * distance)
     const memberWidthPx = 0.12 * pixelsPerUnit
     // Thin repeated ceiling geometry is a projector moiré generator. Let the
     // manufactured grid exist only while its narrow side is genuinely sampled;

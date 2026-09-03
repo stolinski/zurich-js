@@ -152,7 +152,7 @@ export const TERMINAL_VISUALS = Object.freeze({
   'act-phosphor': Object.freeze({
     kind: 'statement',
     lines: Object.freeze([
-      Object.freeze({ text: 'look closer.', role: 'hot' }),
+      Object.freeze({ text: 'losing our skills.', role: 'hot' }),
     ]),
   }),
   // ROB — the post itself, drawn as a post.
@@ -191,6 +191,23 @@ export const TERMINAL_VISUALS = Object.freeze({
     lines: Object.freeze([
       Object.freeze({ text: 'most prompts are not the one.', role: 'hot' }),
     ]),
+  }),
+  // THE MACHINE, performed. Each Enter is one pull — one more prompt — and the
+  // reels are authored so the room watches three near-misses land before the
+  // one that pays, which is the schedule the beat is about. Deterministic:
+  // every rehearsal spins and lands the same symbols in the same order. Back
+  // in the deck by Scott's call (2026-09-02) after `the-lever` was cut.
+  'slot-machine': Object.freeze({
+    kind: 'slot',
+    symbols: Object.freeze(['7', '$', '@', '#', '%', '&']),
+    idle: Object.freeze(['$', '@', '#']),
+    pulls: Object.freeze([
+      Object.freeze(['7', '7', '$']),
+      Object.freeze(['7', '@', '7']),
+      Object.freeze(['7', '7', '#']),
+      Object.freeze(['7', '7', '7']),
+    ]),
+    prompt: 'one more prompt',
   }),
   'q-stopping': scaleVisual(QUESTIONS.stopping, DISTRIBUTIONS.stopping),
   'stopping-sleep': cohortVisual(
@@ -251,7 +268,10 @@ export const TERMINAL_VISUALS = Object.freeze({
       kind: 'series',
       format: 'percent',
       domain: Object.freeze({ min: 0, max: 80 }),
-      categories: Object.freeze(AGENT_OUTCOMES.map((row) => String(row.agents))),
+      // The survey's top answer is "5+", so the last band is five or more.
+      categories: Object.freeze(
+        AGENT_OUTCOMES.map((row) => (row.agents === 5 ? '5+' : String(row.agents)))
+      ),
       values: Object.freeze([
         Object.freeze({
           label: 'sleep change',
@@ -283,11 +303,19 @@ export const TERMINAL_VISUALS = Object.freeze({
 
   // ── ⑤ Inside the glass · the skill you can't feel going ──
   'q-skills': scaleVisual(QUESTIONS.skills, DISTRIBUTIONS.skills),
-  'what-gets-pruned': Object.freeze({
-    kind: 'statement',
-    lines: Object.freeze([
-      Object.freeze({ text: 'it was never the typing.', role: 'phosphor' }),
-      Object.freeze({ text: 'it was the deciding.', role: 'hot' }),
+  // GRILL ME. A brain on a grill, drawn in the slot machine's idiom: each time
+  // it lands a question pops up, Y or N answers it, and the answer flips it
+  // for the next. COPY IS PLACEHOLDER — the questions are Scott's; the form
+  // is the deliverable.
+  'grill-me': Object.freeze({
+    kind: 'grill',
+    title: 'grill me.',
+    questions: Object.freeze([
+      'could you have written this without the model?',
+      'did you read the diff before you shipped it?',
+      'do you know why it works?',
+      'could you debug it by hand tomorrow?',
+      'would you notice if it was wrong?',
     ]),
   }),
   // The three near-zero pairs, as bare glass. A 6×6 correlation matrix is
@@ -341,10 +369,18 @@ export const TERMINAL_VISUALS = Object.freeze({
       Object.freeze({ text: 'to stop.', role: 'hot' }),
     ]),
   }),
+  // GO FOR A WALK. One line, over a perspective line drawing of a path
+  // through simple line trees that the room walks along — the only visual in
+  // the catalog that moves on its own clock, and it moves at walking pace.
   'act-boundaries': Object.freeze({
+    kind: 'walk',
+    text: 'go for a walk.',
+    animated: true,
+  }),
+  'act-control': Object.freeze({
     kind: 'statement',
     lines: Object.freeze([
-      Object.freeze({ text: 'make stopping structural.', role: 'hot' }),
+      Object.freeze({ text: 'you are in control.', role: 'hot' }),
     ]),
   }),
   // The last image before the title returns. The shortcut is drawn dim and

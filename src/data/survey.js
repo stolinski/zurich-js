@@ -198,10 +198,17 @@ export const COHORTS = Object.freeze({
       rate: 0.3,
     }),
   }),
+  /**
+   * From the export's agents × q1 cross-tab: 453 of the 569 running four or
+   * more agents answered 4–5 on stopping (0.796), against 890 of the 2,253
+   * running one or two (0.395). The dashboard's insight rounds these to 80%
+   * and 40%; the glass rounds the same way. The agent scale tops out at "5+",
+   * so the high band is "4 or more", not "4–5".
+   */
   agentsToStopping: Object.freeze({
-    measure: 'continue past intended stopping point often or daily',
-    high: Object.freeze({ label: '4–5 agents', count: 569, rate: 0.8 }),
-    low: Object.freeze({ label: '1–2 agents', count: 2253, rate: 0.4 }),
+    measure: 'overran their stopping point often or daily',
+    high: Object.freeze({ label: '4 or more agents', count: 569, rate: 0.796 }),
+    low: Object.freeze({ label: '1–2 agents', count: 2253, rate: 0.395 }),
   }),
   /** Nearly flat: skill worry does not track how hard people use AI. */
   stoppingToSkills: Object.freeze({

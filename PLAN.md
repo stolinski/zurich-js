@@ -425,9 +425,10 @@ Settled there:
 - The video's six chapters map onto the movements by **scale, not order**: home
   carries the pull (q1/q5), cubicle the pressure (q3), the wall the throttle
   (agents), inside the glass the self (q4/q2).
-- The slot machine is **performed, not animated** — Scott pulls the lever on the
-  real Enter-driven harness, which respects the calm-motion rule and reframes
-  the cold open retroactively.
+- The slot machine is **performed** — Scott pulls the lever with Enter on the
+  glass (`slot-machine`, a catalog form with authored reels), so the spin is
+  deterministic and the churn lasts exactly one pull. Restored 2026-09-02 after
+  a cut that named the mechanism without showing it.
 - **No interviewee from the video is named or shown** — not on the glass, not
   aloud, not in the resources. Where the video used a person's framing the idea
   is re-argued in Scott's voice or dropped. Published work (the 2026 AI Index

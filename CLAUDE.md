@@ -51,14 +51,17 @@ A conference talk — **"The True Cost of AI Coding"** by Scott Tolinski, on wha
 AI coding tools do to developers' mental health — rendered as one continuous
 camera move through four scales.
 
-It opens on a pixel-flat screen reading **“the true cost of ai coding.”** Syntax,
-Sentry, and the talk QR load as monochrome local assets, then the screen becomes
-an **AI coding agent harness**: Scott taps, a user turn types, an agent thinks, a
-tool runs, an answer streams back, and a vector chart plots the result. No DOM
-slide chrome or perspective. Then the camera moves for the first time and the
-screen turns out to be a **cathode ray tube** in a room, and the room turns out
-to be full of them, and then you go **into the glass** and the phosphor triads
-become the material everything after is built from.
+It opens on a pixel-flat screen reading **“the true cost of ai coding.”** Syntax
+and Sentry load as monochrome local assets, then the tube wakes as the screen
+becomes an **AI coding agent harness**: Scott taps, a user turn types, an agent
+thinks, a tool runs, an answer streams back, a slot machine takes the pulls, and
+a vector chart plots the result. No DOM slide chrome or perspective. Then the
+camera moves for the first time and the **cathode ray tube** turns out to be in
+a room, and the room turns out to be full of them, and then you go **into the
+glass** and the phosphor triads become the material everything after is built
+from. (The tube waking at the chat window rather than at the pull-back is
+Scott's call of 2026-09-02: flat data slides read darker than tube ones, and
+the curve gives away nothing about the room.)
 
 **Read `PLAN.md`, `NARRATIVE.md`, `ART-DIRECTION.md`, `PRESENTATION-SYSTEM.md`,
 `CONTEXT.md`, then `QUALITY.md`.** PLAN protects the trick; NARRATIVE is what
@@ -124,10 +127,11 @@ Full list in PLAN.md §2; the ones that bite while coding:
 **`src/slides/index.js`** — the whole talk: order, camera waypoints, tube params,
 which fake-agent session plays. Start here.
 
-A slide declares where the camera flies, what the tube looks like, and
-optionally a `session`. Navigating tweens the camera and damps the tube
-parameters toward the new slide's values, so a change between slides plays as a
-physical transition rather than a cut.
+A slide declares where the camera flies, what the tube looks like, optionally a
+`session`, and optionally `lights` (the room's light level, 0–1; the close
+turns the room off and leaves the screen). Navigating tweens the camera and
+damps the tube parameters and the light level toward the new slide's values,
+so a change between slides plays as a physical transition rather than a cut.
 
 ### `src/terminal/` — the fake agent harness
 
@@ -154,8 +158,12 @@ Everything drawn onto the glass.
   typing is already that transition. Deep links initialize settled, keeping
   direct and navigated arrival pixel-identical.
 - `visuals.js` — the closed catalog of full-screen forms: `title`, `asset`,
-  `chart`, `statement` (bare glass, lines of driven phosphor), and `stat` (one
-  enormous odometer number + label). The three glass-filling threshold slides
+  `chart`, `statement` (bare glass, lines of driven phosphor), `stat` (one
+  enormous odometer number + label), `slot` (three authored reels; a session's
+  `pull` steps spin them, one Enter per pull), `grill` (a brain on a grill; a
+  session's `grill` steps flip it and ask its questions, answered with Y or
+  N), and `walk` (a line, over a perspective walk through line trees that
+  moves on the free-running clock). The three glass-filling threshold slides
   carry `statement`/`stat` **act markers** that the held-forward rule keeps on
   the glass through the beats they introduce. Numbers come only from
   `data/survey.js` (single source of truth, n = 3,593 from the Aug 28 export;
@@ -254,11 +262,14 @@ of dots is a texture, and the volume is the whole point of being inside it.
 
 - **Dream** (`inside-glass`, form 0) — an ethereal cloud of scattered glowing
   motes, deliberately unreal; a seeded sparseness gate keeps only ~8% of the
-  34k deposits visible so the dots float in real darkness.
+  34k deposits visible so the dots float in real darkness. They are FIREFLIES:
+  each wanders on its own slow seeded Lissajous path and blinks on its own
+  rhythm.
 - **Synapse** (`synapse`, form 1) — the motes stream into a seeded neural
   network: node cores, filament edges, slow signal beads traveling the
   connections. Each dot has its own formation delay, so the network assembles
-  rather than lerps.
+  rather than lerps, and the wander damps to nothing as it forms — the
+  fireflies settle and stay put.
 - **Loss** (`synapse-decay`, decay 1) — connections die one by one on seeded
   cues, signals dying with them, leaving isolated dimming nodes. This is the
   "losing brain connections" image; the beat exists for it.
@@ -294,8 +305,9 @@ the tube can't drift apart.
   If you touch navigation, re-run the check: walk forward to the end recording
   every index, assert each press moved it by exactly one, walk back, and assert
   the sequence is the exact reverse.
-- `src/state/useKeyboardNav.js` — → / Space next, ← back, Enter/backspace
-  session step, **0–9 jump**, `f` fullscreen.
+- `src/state/useKeyboardNav.js` — → next, ← back, Enter/backspace session
+  step, `y`/`n` answer the grill (inert anywhere else), **0–9 jump**, `f`
+  fullscreen. Space is deliberately unbound.
 - `src/state/useSessionAutoplay.js` — a slide marked `autoplay` plays its
   session on an authored schedule instead of on Enter, for beats the MACHINE
   performs rather than the presenter. One press of Enter or Backspace hands it
@@ -304,15 +316,25 @@ the tube can't drift apart.
 
 ### UI
 
-`src/ui/Overlay.jsx` is presenter chrome only, and **hidden unless you pass
-`?hud`** — a slide counter in the corner during the cold open tells the room
-they're watching a deck. `src/index.css` is ~50 lines for the same reason.
+`src/ui/Overlay.jsx` is presenter chrome only. The slide counter is **hidden
+unless you pass `?hud`** — a counter in the corner during the cold open tells
+the room they're watching a deck. The one thing always on is the clock in the
+top-left (`TalkTimer.jsx`): it counts up from 0:00 when the deck loads, a
+click resets it, and the start survives a reload so the `?flat` fallback keeps
+counting. `src/index.css` is small for the same reason.
 
 ## Conventions & gotchas
 
 - **The screen texture is 2560×1440**, 16:9 so it fills a projector exactly edge
   to edge in the cold open. The tube gets its 4:3-ish character from the
   shader's barrel warp and bezel, not from the texture's shape.
+- **The stage is always 16:9.** `#root` is a 16:9 box that fits the window
+  (`index.css`), letterboxed or pillarboxed on the page background, and both
+  renderers fill it. A resize scales the whole picture; it never re-frames it,
+  so what you rehearse in a window is what a 16:10 laptop panel or a 4:3
+  projector shows, smaller. Anything sized in device pixels (the dust sprites,
+  the ceiling-grid moiré fade) follows the drawing buffer, not a constant, so
+  720p and 4K outputs match the 1080p reference.
 - **80 columns.** Font size is derived so exactly 80 characters land across the
   usable width; the caret is positioned by *measuring* the line, not by
   multiplying a column count, so it can't drift off the end of typed text.

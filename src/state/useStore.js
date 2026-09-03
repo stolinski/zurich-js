@@ -47,6 +47,9 @@ export const useStore = create((set, get) => ({
   step: 0,
   count: slides.length,
   lastNavAt: 0,
+  // Yes/no answers given on the current slide, indexed by the step they were
+  // given on (see `answer`). Reset on every arrival, like the step itself.
+  answers: [],
   // Set the moment the presenter drives a step by hand on an autoplaying
   // slide, and cleared on arrival. Without it, backspacing to re-read a line
   // would be immediately undone by the next scheduled tick — the machine and
@@ -69,15 +72,33 @@ export const useStore = create((set, get) => ({
   next: () => {
     const t = performance.now()
     if (t - get().lastNavAt < NAV_THROTTLE_MS) return
-    set((s) => ({ index: clamp(s.index + 1), step: 0, lastNavAt: t, handOff: false }))
+    set((s) => ({
+      index: clamp(s.index + 1),
+      step: 0,
+      answers: [],
+      lastNavAt: t,
+      handOff: false,
+    }))
   },
   prev: () => {
     const t = performance.now()
     if (t - get().lastNavAt < NAV_THROTTLE_MS) return
-    set((s) => ({ index: clamp(s.index - 1), step: 0, lastNavAt: t, handOff: false }))
+    set((s) => ({
+      index: clamp(s.index - 1),
+      step: 0,
+      answers: [],
+      lastNavAt: t,
+      handOff: false,
+    }))
   },
   goto: (i) =>
-    set({ index: clamp(i), step: 0, lastNavAt: performance.now(), handOff: false }),
+    set({
+      index: clamp(i),
+      step: 0,
+      answers: [],
+      lastNavAt: performance.now(),
+      handOff: false,
+    }),
 
   /**
    * Run the next thing in the fake agent — bound to ENTER, because that's the
@@ -114,7 +135,25 @@ export const useStore = create((set, get) => ({
     const s = get()
     if (t - s.lastNavAt < NAV_THROTTLE_MS) return
     if (s.step === 0) return
-    set({ step: s.step - 1, lastNavAt: t, handOff: true })
+    // Taking a question back takes its answer with it.
+    set({ step: s.step - 1, answers: s.answers.slice(0, s.step - 1), lastNavAt: t, handOff: true })
+  },
+  /**
+   * Answer the question on the glass — bound to Y and N. Only a `grill` step
+   * takes an answer; anywhere else the keys do nothing, so a stray Y during
+   * the harness cannot advance it. Recording and advancing are one
+   * transaction: the answer belongs to the step it was given on, and the flip
+   * that follows is the next step's animation.
+   */
+  answer: (value) => {
+    const t = performance.now()
+    const s = get()
+    if (t - s.lastNavAt < NAV_THROTTLE_MS) return
+    if (slides[s.index]?.session?.[s.step]?.kind !== 'grill') return
+    if (s.step >= stepsIn(s.index) - 1) return
+    const answers = s.answers.slice(0, s.step)
+    answers[s.step] = value
+    set({ step: s.step + 1, answers, lastNavAt: t, handOff: true })
   },
 }))
 

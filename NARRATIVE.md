@@ -63,7 +63,7 @@ neither one is optional.
 
 ## 3. Beat sheet — as built
 
-**This is the shipped order**, 49 slides, matching `src/slides/index.js`
+**This is the shipped order**, 34 slides, matching `src/slides/index.js`
 exactly. Numbers are slide indices (the 0–9 jump keys and `?slide=<id>`).
 Suggested copy is draft.
 
@@ -79,7 +79,7 @@ data run. Caveats HOLD the frame rather than earning a flight — a qualificatio
 is the same thought as the chart it qualifies. The deck makes 20 camera moves;
 an earlier cut made 28 and visibly yo-yoed.
 
-### ① Cold open — the flat screen
+### ① Cold open — the flat screen, then the tube wakes at the chat window
 
 | # | Slide | Glass | The argument |
 |---|---|---|---|
@@ -94,13 +94,20 @@ an earlier cut made 28 and visibly yo-yoed.
 
 ### ② Home — the machine you can't put down · **PILLAR 1**
 
+Still the glass, still head-on. The tube has been awake since the chat window
+(slide 3 — the title and the two identity assets are the only flat frames), so
+every beat here carries the same drive as the data runs later, and the room
+learns where that tube sits only once the sleep data has landed. The pull-back
+closes the act instead of opening it.
+
 | # | Slide | Glass | The argument |
 |---|---|---|---|
-| 6 | `reveal` | (the glass bends, and keeps going) | The physical punchline, as ONE move: the tube wakes DURING the pull-back, so the housing arrives around an image the room has already accepted. `tube-wake` used to hold the wake still and only then move — two presses with a dead spot between them — and the three-quarter and profile waypoints that followed re-explained the same fact from two more angles. The punchline lands once. |
-| 7 | `variable-reward` | "most prompts are not the one." | **The mechanism.** Not a reliable reward — an unpredictable one. Variable-ratio is the most durable schedule there is, more than a reward that always comes, and the dopamine fires on the **anticipation**. The near-miss isn't failure, it's the fuel. |
+| 6 | `variable-reward` | "most prompts are not the one." | **The mechanism.** Not a reliable reward — an unpredictable one. Variable-ratio is the most durable schedule there is, more than a reward that always comes, and the dopamine fires on the **anticipation**. The near-miss isn't failure, it's the fuel. |
+| 7 | `slot-machine` | three reels, Enter is the lever | **The mechanism, shown.** Four pulls: `7 7 $`, `7 @ 7`, `7 7 #`, then `7 7 7`. Three near-misses before the one that pays, which is the schedule the room has just been told about — and each pull is typed as *one more prompt*. Deterministic reels; the prompt is the lever. Restored 2026-09-02. |
 | 8 | `q-stopping` | q1, **52%** often or daily | The survey borrowed the machine's own phrasing: *"just one more prompt."* |
 | 9 | `stopping-sleep` | **63%** (n=1,867) vs **23%** (n=1,034) | Strongest relationship in the survey, ρ = 0.41. The loop doesn't end at your bedtime. |
 | 10 | `stopping-caveat` | (HOLD — split stays, camera stays) | **Counterweight:** 35% report *no* sleep change (n=1,253). Then the disclaimer — this doesn't prove prompting wrecked anyone's sleep; it could run the other way. Once, here, and meant. |
+| 11 | `reveal` | (the glass recedes, carrying the sleep split) | The physical punchline, as ONE move: the dolly back into the room. The tube has been awake since the chat window, so the housing and the desk arrive around an image the room has already accepted. `tube-wake` used to hold the wake still and only then move — two presses with a dead spot between them — and the three-quarter and profile waypoints that followed re-explained the same fact from two more angles. The punchline lands once. Moved here from after the QR (2026-09-02), so it lands on a room that has just read the data. |
 
 The cold-open exchange now PLAYS ITSELF rather than waiting on Enter (see
 `autoplay` in slides/index.js). It is not a demo the presenter performs — it is
@@ -112,18 +119,17 @@ in this act asks him to drive a keyboard on stage.
 
 | # | Slide | Glass | The argument |
 |---|---|---|---|
-| 11 | `cubicle-threshold` | "it is not just you." | — |
-| 12 | `cubicle-wide` | — | Neighbouring pools of agent activity over the partitions. If it's possible to go faster we must go faster — and nobody asks why. Saved effort returns as decisions, supervision and a higher baseline, never as rest. |
-| 13 | `q-pressure` | q3, **71%** · 37% daily | Seven in ten. |
+| 12 | `cubicle-threshold` | "it is not just you." | — |
+| 13 | `q-pressure` | q3, **71%** · 37% daily | Seven in ten. The office arrives behind this glass; the room does not see it yet. |
 | 14 | `productivity-paradox` | **+26%** PRs · **−19%** speed | The tools work. And experienced devs were slower while *believing* they were faster. Both get used to ask for more. |
+| 15 | `cubicle-wide` | (holds the paradox chart) | Neighbouring pools of agent activity over the partitions. If it's possible to go faster we must go faster — and nobody asks why. Saved effort returns as decisions, supervision and a higher baseline, never as rest. After the data, not before it (2026-09-02): the office is the pull-back that closes the act, the way the desk closes Pillar 1. |
 
 ### ④ Wall — the throttle
 
 | # | Slide | Glass | The argument |
 |---|---|---|---|
-| 15 | `q-agents` | median **2**, 63% run 1–2 | Most people are not running ten agents. |
-| 16 | `agents-stopping` | **80%** (n=569) vs **40%** (n=2,253) | Double the overrun rate. More levers, more pulls. |
-| 17 | `agents-outcomes` | sleep **32→66%**, enjoyment **18→37%**, skills **flat, dashed** | Benefit and cost climb *together*. No setting moves one without the other. |
+| 16 | `q-agents` | median **2**, 63% run 1–2 | Most people are not running ten agents. |
+| 17 | `agents-stopping` | **80%** (n=569) vs **40%** (n=2,253) | Double the overrun rate. More levers, more pulls. Exact: 453/569 = 79.6% of people running four or more agents (the scale tops out at "5+"), 890/2,253 = 39.5% of those running one or two — verified against the export's agents × q1 cross-tab 2026-09-02. |
 | 18 | `stopping-beats-count` | **57%** (n=890) vs **21%** (n=866) | **The tell.** Hold agent count constant and the sleep gap barely shrinks. It isn't how many agents — it's whether you can stop. Pillar 1 from a second direction, and the finding the video never reaches. |
 | 19 | `agent-wall-near` | — | **After the data, not before it.** Neighbours enter peripheral vision. |
 | 20 | `agent-wall` | — | The pull-back used to OPEN this act, so the room saw fifty-four screens and only then learned the median developer runs two — the reveal explaining itself away. Now the data lands first and the camera pulls back onto a wall they have every reason not to expect. The escalation is trivially logical and that is the problem: one, two, four — there is no number at which the reasoning stops. **Nothing may be scheduled between these two.** |
@@ -132,65 +138,35 @@ in this act asks him to drive a keyboard on stage.
 
 **Mechanism before consequence.** The finding is stated on the glass, the
 descent explains *why* it happens with the synapse as the visual aid, and the
-glass then returns to say what that means. The two statement beats sit after the
+glass then returns to put the question to the room. The grill sits after the
 decay on purpose — "you can't feel it going" only pays if the room has just
 watched something disappear in silence.
 
 | # | Slide | Glass | The argument |
 |---|---|---|---|
-| 21 | `phosphor-return` | "look closer." | — |
+| 21 | `phosphor-return` | "losing our skills." | — |
 | 22 | `q-skills` | q4, **63%** diminishing | Only **12%** say sharpening (n=445). |
 | 23 | `q-enjoyment` | q2, **57%** less | 18% the same. 24% enjoy it *more*. |
 | 24 | `skills-enjoyment` | **68%** (n=2,279) vs **30%** (n=445) | **The finding.** ρ = **−0.37**, strongest negative in the survey. Not two findings — mostly the same people. Say plainly that the survey measured *belief* and never tested anyone; then say why belief is what matters, because it's what keeps you in the field. |
-| 25 | `inside-glass` | the dream | The whole descent in ONE move: the glass opens and the camera keeps going through it into the cloud. `phosphor-approach` and `phosphor-threshold` used to hold in front of this, widening the grille and fading the geometry in as two separate stops — the mechanism of the handoff shown as a sequence of near-identical grids, when the one thing a descent must not do is stop. |
-| 26 | `synapse` | the network assembles | **WHY 1 — NEUROPLASTICITY.** The brain is an efficient machine and prunes what it isn't using. Explained over the network, which is not a metaphor for what's being described — it's a picture of it. The instrument you played in middle school. |
-| 27 | `synapse-decay` | connections die one by one | **WHY 2 — use it or lose it**, watched rather than asserted. Say nothing. The silence is the point. |
-| 28 | `phosphor-exit` | the glass reforms | Back out through the faceplate, holding the same split the camera entered through. Also the occlusion carrying the phosphor→wall swap, both directions. |
-| 29 | `what-gets-pruned` | "it was never the typing. / it was the deciding." | **WHY 3 — it takes the reps, not the typing.** Reading the problem, holding it, choosing the approach: exactly what gets delegated first. Lands as the application of the decay just watched. |
-| 30 | `three-zeros` | ρ −0.002 · 0.018 · 0.049 | **WHY 4, and the turn of the talk.** Skill worry predicts nothing about how hard you run AI. 63% carry it regardless — **you cannot use your own sense of it as a gauge.** Directly after a silent decay nobody could feel, that is the proof. Spoken here too: skills-diminishing actually drifts *down* as agents rise (63→58%). Either heavy users stay more involved, or they've lost most and can't tell. We have no way of knowing which. Sit in that. |
+| 25 | `agents-outcomes` | sleep **32→66%**, enjoyment **18→37%**, skills **flat, dashed** | Benefit and cost climb *together*. No setting moves one without the other. Moved after the skill beats (2026-09-02): the flat line is the last thing on the glass before the descent. |
+| 26 | `inside-glass` | the dream — fireflies | The whole descent in ONE move: the glass opens and the camera keeps going through it into the cloud. The motes are fireflies now (2026-09-02): each wanders on its own slow seeded path and blinks on its own rhythm, so the cloud is a swarm of live things rather than a drifting texture. `phosphor-approach` and `phosphor-threshold` used to hold in front of this as two separate stops, when the one thing a descent must not do is stop. |
+| 27 | `synapse` | the fireflies settle into the network | **WHY 1 — NEUROPLASTICITY.** The brain is an efficient machine and prunes what it isn't using. The same motes that were wandering settle into their network positions and stay put — explained over it, which is not a metaphor for what's being described but a picture of it. The instrument you played in middle school. |
+| 28 | `synapse-decay` | connections die one by one | **WHY 2 — use it or lose it**, watched rather than asserted. Say nothing. The silence is the point. |
+| 29 | `what-gets-pruned` | "grill me." — a brain on a grill | **WHY 3, put to the room.** The glass reforms over the flight out of the cloud (`phosphor-exit` used to hold that as a beat of its own, with nothing to say on it; cut 2026-09-02) and lands on a brain on a grill. Each time it lands a question pops up — *could you have written this without the model? did you read the diff? do you know why it works? could you debug it by hand? would you notice if it was wrong?* — Scott answers with **Y** or **N** and the answer flips it. Five questions, then the tally. The questions are placeholder copy. |
 
-Beat 34 is why the correlation matrix is **not** drawn: a 6×6 Spearman grid is
-unreadable from the back of a room and buries the finding.
-
-### ⑥ The turn — who is holding the throttle
-
-| # | Slide | Glass | The argument |
-|---|---|---|---|
-| 31 | `drive-quadrants` | ranked by mean enjoyment | 2,489 of 3,593 answered clearly high or low on *both* own pull and outside pressure. |
-
-| Cell | n | Mean enjoyment | Enjoy it more | Sleep change |
-|---|---|---|---|---|
-| **Own pull only** | 173 | **3.30** | 46% | 44% |
-| Neither | 268 | 2.82 | 33% | **12%** |
-| **Both** | **1,484** | 2.54 | 24% | 66% |
-| **Outside pressure only** | 564 | **2.05** | 12% | 29% |
-
-1. **Same keystrokes, four prices.** Prompting past midnight because you can't
-   put it down is a different *experience* from doing it because someone
-   expects it. Identical behaviour, 34 points of enjoyment apart.
-2. **There is no free version.** Own-pull is the most enjoyable cell and still
-   reports 44% sleep change. The least-damaged cell is *Neither* — which also
-   runs the fewest agents (mean 1.59). Say that at an AI conference unsoftened.
-3. **Sixty percent of classified respondents are in "Both."** The modal
-   experience, and the worst cell for sleep.
-
-> ⚠ n = 173 for own-pull. It is on the glass. Say it.
-
-This is what makes the advice legitimate: *which advice can work at all depends
-on who is setting your pace.*
+The correlation matrix and the drive quadrants are **not** drawn (cut
+2026-09-02, with `three-zeros` and `drive-quadrants`): the data stays in
+`src/data/survey.js` for the talk to quote — the three near-zero pairs, and
+n = 173 for own-pull — but the room gets the question, not another chart.
 
 ### ⑦ The return — the fix is a stack
 
 | # | Slide | Stage | The argument |
 |---|---|---|---|
-| 32 | `act-ceiling` | `wall`, glass | "you have to be allowed / to stop." Spoken over it: agent count is the one number you can turn down, but the tell already said the count was never the mechanism — smallest lever, not the fix. |
-| 33 | `return-cubicle` | `cubicle` | **The ceiling.** Everything about to be said assumes you're allowed to stop. Against a quota, a manager who treats the tool as a magic bullet, or being 23 and looking at that employment chart, a 15-minute timer will not save you. Healthy prompting cannot be carried by personal discipline alone. |
-| `early-career` | 22–25 down ~20% · 41–49 **+12%** | Every band over 30 grew. Only the youngest fell. |
-| `early-career-caveat` | (HOLD — chart stays, camera stays) | **Non-negotiable, spoken:** unemployment rose across *every* job type in that window, and rose more for the jobs *least* exposed to AI. Not proof AI took those jobs — a reason a 23-year-old blows past a boundary. |
-| 36 | `act-boundaries` | `cubicle`, glass | "make stopping structural." |
-| 37 | `boundaries` | `home` | **How you'd know**, then **what works** — both at the desk where they apply. Sleep first, loss of interest, exhaustion that doesn't clear, anxiety, pulling away from people; then somatization. Then: box the loop (10–15 min, then stop whether or not it landed — a timer beats a variable-reward schedule, willpower doesn't); make stopping structural, not moral; stay the one deciding (that's Pillar 2's answer — put the reps back); narrow the ambition; talk to people, not just the model. The glass holds one line so the screen never lectures. |
-| 38 | `three-r` | `home`, glass | **The 3R.** `AI OUTPUT → RESULT → ⟨RESPONSIBILITY⟩ → RESPONSE`. Shortcut dim and dashed because it's the one everybody takes; routed edge hot. That routing is the rep that stops the atrophy **and** the friction the slot machine doesn't have. *(Manzotti, npj AI, 2026.)* |
-| 39 | `close` | `home`, glass, tube on | The title again — same words as slide 0, on glass you now know is an object, in a room, in a building, made of phosphor. Then the idle cursor. Hold it blinking and stop talking. |
+| 30 | `return-cubicle` | `cubicle`, "you have to be allowed / to stop." on the monitor | **The ceiling.** Everything about to be said assumes you're allowed to stop. Against a quota, or a manager who treats the tool as a magic bullet, a 15-minute timer will not save you. Healthy prompting cannot be carried by personal discipline alone. The line stays on the monitor for the whole beat; `act-ceiling`, `early-career` and its caveat were cut 2026-09-02. |
+| 31 | `act-boundaries` | `cubicle`, glass | "go for a walk." over a perspective line drawing of a path through bare line trees, walked along at walking pace. |
+| 32 | `boundaries` | `home`, "you are in control." on the monitor | **How you'd know**, then **what works** — both at the desk where they apply. Sleep first, loss of interest, exhaustion that doesn't clear, anxiety, pulling away from people; then somatization. Then: box the loop (10–15 min, then stop whether or not it landed — a timer beats a variable-reward schedule, willpower doesn't); make stopping structural, not moral; stay the one deciding (that's Pillar 2's answer — put the reps back); narrow the ambition; talk to people, not just the model. The glass holds one line so the screen never lectures. |
+| 33 | `close` | `home`, lights off | The lights go off in the room over the flight and the title comes back on the glass — same words as slide 0, on a screen you now know is an object, alone in the dark the way it was at 3am. Then the idle cursor. Hold it blinking and stop talking. `three-r` was cut 2026-09-02. |
 
 The return visits **two** rooms, not three. An earlier cut stopped at the wall
 first to say "turn your agent count down" — a point `stopping-beats-count`
@@ -247,15 +223,16 @@ early-career employment · agents distribution · agents→stopping ·
 agents→outcomes · stopping-beats-count · q4 · q2 · skills→enjoyment · drive
 quadrants · 3R diagram.
 
-**Statement on bare glass:** "it is not just you." · "look closer." · 3,593 ·
+**Statement on bare glass:** "it is not just you." · "losing our skills." · 3,593 ·
 "most prompts are not the one." · what-gets-pruned · **the three zeros**.
 
-**Named, not performed:** the slot machine. `the-lever` staged it as four live
-Enter presses with three near-misses; it was cut, and `variable-reward` now
-carries the mechanism as one line of glass. An animated slot machine would
-break the calm-motion rule, and so, it turned out, would a performed one — it
-put the presenter's hand on a keyboard for the length of a beat the room was
-supposed to be listening through.
+**Named, then performed:** the slot machine. `variable-reward` names the
+mechanism as one line of glass and `slot-machine` shows it: four Enter presses,
+three near-misses, then the pay — the reels are a catalog form with authored
+outcomes, so the spin is deterministic and the churn lasts exactly one pull.
+`the-lever` had staged this on the harness and was cut for putting the
+presenter's hand on a keyboard; it is back by Scott's call (2026-09-02), with
+the pull as the lever rather than a transcript to drive.
 
 **Said with nothing on screen** — the glass going dark *is* the emphasis:
 - The sampling disclaimer (self-selected; not the developer population).

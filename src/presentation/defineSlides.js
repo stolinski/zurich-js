@@ -67,6 +67,14 @@ export function defineSlides(specs) {
     ) {
       throw new Error(`Slide "${slide.id}" camera.fov must be between 20 and 70 degrees`)
     }
+    // `lights` is the room's light level, 0 (only the screen) to 1 (as
+    // authored). Eased over the slide's smoothTime like the tube parameters.
+    if (
+      slide.lights !== undefined &&
+      (!Number.isFinite(slide.lights) || slide.lights < 0 || slide.lights > 1)
+    ) {
+      throw new Error(`Slide "${slide.id}" lights must be between 0 and 1`)
+    }
   }
 
   const coldOpen = specs[0]

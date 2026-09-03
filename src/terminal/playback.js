@@ -51,7 +51,13 @@ export function sessionProgress(showing, elapsed) {
  */
 export function paintSession(ctx, showing, elapsed, time, options) {
   if (!showing) return null
-  const frame = buildFrame(showing.script, showing.step, sessionProgress(showing, elapsed), time)
+  const frame = buildFrame(
+    showing.script,
+    showing.step,
+    sessionProgress(showing, elapsed),
+    time,
+    showing.answers
+  )
   paintTerminal(ctx, frame, time, options)
   return frame
 }

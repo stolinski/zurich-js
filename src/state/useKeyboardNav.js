@@ -7,6 +7,8 @@ import { useStore } from './useStore.js'
  *   → / ←            SLIDES, and only slides. Every press moves exactly one.
  *   Enter            run the next thing in the fake agent (types a line, fires
  *                    a tool call, streams an answer). Backspace undoes it.
+ *   y / n            answer the question on the glass (the grill); nothing
+ *                    happens anywhere else
  *   0-9              jump straight to a slide (great for Q&A)
  *   f                fullscreen
  *
@@ -22,7 +24,7 @@ export function useKeyboardNav() {
   useEffect(() => {
     const onKey = (e) => {
       if (e.repeat) return // ignore held-key auto-repeat
-      const { next, prev, goto, runStep, undoStep } = useStore.getState()
+      const { next, prev, goto, runStep, undoStep, answer } = useStore.getState()
       if (e.key === 'ArrowRight' || e.key === 'PageDown') {
         e.preventDefault()
         next()
@@ -37,6 +39,8 @@ export function useKeyboardNav() {
         undoStep()
       } else if (/^[0-9]$/.test(e.key)) {
         goto(Number(e.key))
+      } else if (e.key === 'y' || e.key === 'n') {
+        answer(e.key === 'y' ? 'yes' : 'no')
       } else if (e.key === 'f') {
         document.documentElement.requestFullscreen?.()
       }

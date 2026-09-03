@@ -22,6 +22,10 @@
  *   note  { text }                     dim chrome (banners, token counts)
  *   gap   {}                           a blank line / breathing beat
  *   visual { id }                      a catalog visual replaces the transcript
+ *   pull   { id, pull }                one pull of a catalog slot machine; the
+ *                                      reels spin for the length of the step
+ *   grill  { id, question }            the brain flips and lands, then asks
+ *                                      question `question` (null: nothing left)
  * ──────────────────────────────────────────────────────────────
  */
 
@@ -59,6 +63,8 @@ export function clearWrapCache() {
 
 const CHARS_PER_SEC = 34 // Scott typing — fast, but human
 const WORDS_PER_SEC = 9 // the agent streaming
+const PULL_SECS = 2.4 // one pull of the slot machine, lever to last reel
+const FLIP_SECS = 1.6 // the brain in the air, lift-off to the question
 
 /** How long a step takes to play out, in seconds. */
 export function stepDuration(step) {
@@ -73,6 +79,10 @@ export function stepDuration(step) {
       return 0.35 + (step.out?.length ?? 0) * 0.11
     case 'visual':
       return 0.01
+    case 'pull':
+      return PULL_SECS
+    case 'grill':
+      return FLIP_SECS
     default:
       return 0.25
   }
@@ -170,13 +180,39 @@ function expand(step, p, time) {
  * `index` is the step currently playing; `progress` is 0→1 within it. Steps
  * before it are expanded complete.
  */
-export function buildFrame(script, index, progress, time) {
+export function buildFrame(script, index, progress, time, answers = []) {
   const activeStep = script[Math.min(index, script.length - 1)]
   if (activeStep?.kind === 'visual') {
     return {
       lines: [],
       caret: null,
       visual: getTerminalVisual(activeStep.id),
+    }
+  }
+  if (activeStep?.kind === 'grill') {
+    // Which question is up, how far through the flip that lands it, and every
+    // answer given so far (the one for the previous question is stamped on it
+    // while the brain is in the air).
+    return {
+      lines: [],
+      caret: null,
+      visual: {
+        ...getTerminalVisual(activeStep.id),
+        question: activeStep.question,
+        step: index,
+        progress,
+        answers,
+      },
+    }
+  }
+  if (activeStep?.kind === 'pull') {
+    // The catalog entry plus which pull this is and how far through it: the
+    // painter derives every reel position from those, so the spin is a pure
+    // function of progress and lands identically at every rehearsal.
+    return {
+      lines: [],
+      caret: null,
+      visual: { ...getTerminalVisual(activeStep.id), pull: activeStep.pull, progress },
     }
   }
 
@@ -281,14 +317,38 @@ export const CUBICLE_ACT_SCREEN = screen('act-cubicle')
 export const PHOSPHOR_ACT_SCREEN = screen('act-phosphor')
 export const CEILING_ACT_SCREEN = screen('act-ceiling')
 export const BOUNDARIES_ACT_SCREEN = screen('act-boundaries')
+export const CONTROL_ACT_SCREEN = screen('act-control')
+
+/**
+ * The grill, as a session: the brain lands and the first question pops on
+ * arrival; each Y or N stamps the answer and flips it for the next. The last
+ * step is the landing after the final answer, with nothing left to ask.
+ */
+export const GRILL_ME = Object.freeze([
+  ...getTerminalVisual('grill-me').questions.map((_, question) =>
+    Object.freeze({ kind: 'grill', id: 'grill-me', question })
+  ),
+  Object.freeze({ kind: 'grill', id: 'grill-me', question: null }),
+])
 
 // ── The survey on the glass (NARRATIVE.md §3) ──
 export const MOST_PROMPTS = screen('most-prompts')
+
+/**
+ * The slot machine, as a session: the idle machine on arrival, then one pull
+ * per Enter. `pull` indexes the visual's authored outcomes, so the script and
+ * the catalog cannot disagree about how many pulls there are.
+ */
+export const SLOT_MACHINE = Object.freeze([
+  Object.freeze({ kind: 'visual', id: 'slot-machine' }),
+  ...getTerminalVisual('slot-machine').pulls.map((_, pull) =>
+    Object.freeze({ kind: 'pull', id: 'slot-machine', pull })
+  ),
+])
 export const Q_STOPPING = screen('q-stopping')
 export const STOPPING_SLEEP = screen('stopping-sleep')
 export const Q_PRESSURE = screen('q-pressure')
 export const PRODUCTIVITY_PARADOX = screen('productivity-paradox')
-export const EARLY_CAREER = screen('early-career')
 export const Q_AGENTS = screen('q-agents')
 export const AGENTS_STOPPING = screen('agents-stopping')
 export const AGENTS_OUTCOMES = screen('agents-outcomes')
@@ -296,7 +356,3 @@ export const STOPPING_BEATS_COUNT = screen('stopping-beats-count')
 export const Q_SKILLS = screen('q-skills')
 export const Q_ENJOYMENT = screen('q-enjoyment')
 export const SKILLS_ENJOYMENT = screen('skills-enjoyment')
-export const WHAT_GETS_PRUNED = screen('what-gets-pruned')
-export const THREE_ZEROS = screen('three-zeros')
-export const DRIVE_QUADRANTS_CHART = screen('drive-quadrants')
-export const THREE_R = screen('three-r')

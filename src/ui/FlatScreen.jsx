@@ -74,16 +74,17 @@ export function FlatScreen() {
       time += dt
       if (!ready) return
 
-      const { index, step } = useStore.getState()
+      const { index, step, answers } = useStore.getState()
       const review = reviewCursor !== null
       const key = review ? `review:${reviewCursor}` : `${index}:${step}`
       if (key !== lastKey) {
         lastKey = key
         elapsed = 0
       }
-      const showing = review
+      const resolved = review
         ? reviewSession(reviewCursor)
         : resolveSession(slides, index, step)
+      const showing = resolved ? { ...resolved, answers } : null
       if (showing?.live) elapsed += dt
       const view = contentTransition.update(showing, time)
       paintSession(ctx, view.showing ?? showing, elapsed, time, {

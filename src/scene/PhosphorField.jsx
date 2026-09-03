@@ -97,21 +97,22 @@ const fieldVert = /* glsl */ `
     // the center's view depth: out-of-focus grains grow into soft bokeh discs
     // and dim by the same area, exactly like a macro lens. Surface state
     // (vRestMix = 0) keeps scale 1, preserving the measured handoff parity.
-    // CALM DRIFT. Nothing in this field moved: the time uniform reached the
-    // fragment shader for the travelling bead and never reached the vertex
-    // shader at all, so the cloud was frozen in space and the beat died the
-    // moment the camera stopped. A still field of dots is a texture; a drifting one is a
-    // volume, and the volume is the whole point of being inside it.
-    //
-    // Seeded per mote, slow enough to obey the calm-motion rule — you should
-    // never catch anything moving, only notice later that it has. Damped hard
-    // once the synapse forms: a network whose nodes wander is not a topology.
+    // FIREFLIES. In the dream every mote wanders on its own slow Lissajous
+    // path — two incommensurate seeded frequencies per axis — so the cloud
+    // reads as a swarm of live things rather than a drifting texture (a still
+    // field of dots is a texture; the volume is the whole point of being
+    // inside it). The wander damps to NOTHING as the synapse forms: the same
+    // motes settle into their network positions and stay put, because a
+    // topology whose nodes wander is not a topology.
     float driftPhase = aSeed * 6.2831853;
-    vec3 drift = vec3(
-      sin(uTime * 0.113 + driftPhase),
-      sin(uTime * 0.079 + driftPhase * 1.7),
-      cos(uTime * 0.094 + driftPhase * 0.6)
-    ) * (0.04 + 0.11 * aSeed) * vRestMix * (1.0 - 0.78 * vFormMix);
+    float wanderA = 0.35 + 0.45 * fract(aSeed * 13.7);
+    float wanderB = 0.21 + 0.3 * fract(aSeed * 29.3);
+    vec3 wander = vec3(
+      sin(uTime * wanderA + driftPhase) + 0.5 * sin(uTime * wanderB * 1.7 + driftPhase * 2.3),
+      sin(uTime * wanderA * 0.83 + driftPhase * 1.7) + 0.5 * cos(uTime * wanderB + driftPhase),
+      cos(uTime * wanderA * 0.67 + driftPhase * 0.6) + 0.5 * sin(uTime * wanderB * 1.3 + driftPhase * 3.1)
+    );
+    vec3 drift = wander * (0.12 + 0.28 * fract(aSeed * 5.1)) * vRestMix * (1.0 - vFormMix);
 
     vec3 center = mix(instanceCenter.xyz, restTarget, vRestMix) + drift;
     vec3 local = mix(scaledLocal, orientation * scaledLocal, vRestMix);
@@ -203,6 +204,13 @@ const fieldFrag = /* glsl */ `
     float dream = 0.18
       + 0.5 * smoothstep(0.45, 0.9, vSeed)
       + 0.9 * smoothstep(0.9, 0.99, vSeed);
+    // Fireflies blink: each visible mote pulses on its own seeded rhythm —
+    // mostly dim, with a brief bright flash — until the synapse forms and the
+    // network's steady drive takes over.
+    float blinkRate = 0.6 + 1.1 * fract(vSeed * 17.3);
+    float blinkWave = 0.5 + 0.5 * sin(uTime * blinkRate + vSeed * 61.8);
+    float blink = 0.3 + 1.1 * pow(blinkWave, 4.0);
+    dream *= mix(1.0, blink, 1.0 - vFormMix);
     // RADICAL thinning: ~8% of the population carries the dream as discrete
     // floating dots in real darkness (34k soft discs at any higher fraction
     // read as a glitter wall). The full population condenses back in as the

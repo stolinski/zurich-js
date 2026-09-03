@@ -21,6 +21,12 @@ import { mulberry32 } from '../lib/rng.js'
  */
 
 const COUNT = 900
+// Mote sprite size, authored against the 1080-row stage buffer (QUALITY.md).
+// gl_PointSize is in DEVICE pixels, so the value is rescaled to whatever
+// buffer the output actually has: without that a 720p projector shows motes
+// half again as large as rehearsed and a 4K feed shows them at half size.
+const MOTE_SIZE = 22
+const REFERENCE_BUFFER_ROWS = 1080
 
 const vert = /* glsl */ `
   uniform float uTime;
@@ -94,7 +100,7 @@ export function Dust() {
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
-      uSize: { value: 22 },
+      uSize: { value: MOTE_SIZE },
       uColor: { value: new THREE.Color('#ffe7b0') },
       // Matches the screen lamp in Scene.jsx.
       uLight: { value: new THREE.Vector3(0, 0.5, 4) },
@@ -103,8 +109,16 @@ export function Dust() {
     []
   )
 
-  useFrame((_, dt) => {
-    if (mat.current) mat.current.uniforms.uTime.value += dt
+  const bufferSize = useMemo(() => new THREE.Vector2(), [])
+
+  useFrame((state, dt) => {
+    if (!mat.current) return
+    mat.current.uniforms.uTime.value += dt
+    // Follow the drawing buffer, not the CSS viewport: the sprite is rasterized
+    // in physical pixels, and DPR is part of what the stage output decides.
+    state.gl.getDrawingBufferSize(bufferSize)
+    mat.current.uniforms.uSize.value =
+      MOTE_SIZE * (bufferSize.y / REFERENCE_BUFFER_ROWS)
   })
 
   return (

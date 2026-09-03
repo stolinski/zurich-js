@@ -5,9 +5,9 @@ import {
   BOUNDARIES_ACT_SCREEN,
   CEILING_ACT_SCREEN,
   COLD_OPEN,
+  CONTROL_ACT_SCREEN,
   CUBICLE_ACT_SCREEN,
-  DRIVE_QUADRANTS_CHART,
-  EARLY_CAREER,
+  GRILL_ME,
   MOST_PROMPTS,
   PHOSPHOR_ACT_SCREEN,
   PRODUCTIVITY_PARADOX,
@@ -20,13 +20,11 @@ import {
   Q_STOPPING,
   SENTRY_SCREEN,
   SKILLS_ENJOYMENT,
+  SLOT_MACHINE,
   STOPPING_BEATS_COUNT,
   STOPPING_SLEEP,
   SYNTAX_SCREEN,
-  THREE_R,
-  THREE_ZEROS,
   TITLE_SCREEN,
-  WHAT_GETS_PRUNED,
 } from '../terminal/session.js'
 
 /**
@@ -167,12 +165,19 @@ export const slides = defineSlides([
     // the exchange to the presenter for the rest of the visit, so a line can be
     // held on or re-read without the schedule dragging him forward. Arrows are
     // untouched and still move exactly one slide.
+    //
+    // THE TUBE WAKES HERE. The title and the two identity assets are the only
+    // flat frames; from the chat window on, every glass-filling beat is the
+    // same TUBE_FULL preset as the data runs, through the same post. Scott's
+    // call (2026-09-02): flat data slides read visibly darker than the tube
+    // ones, and a curved screen recording gives away nothing about the room —
+    // the pull-back still lands.
     id: 'agent-session',
     stage: 'home',
     session: COLD_OPEN,
     autoplay: true,
-    crt: FLAT,
-    camera: { ...FLAT_GLASS, smoothTime: 0.6 },
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 0.6 },
   },
   {
     // ROB. Scott's own confession becomes a point on a scale that ends in a
@@ -185,8 +190,8 @@ export const slides = defineSlides([
     id: 'rob',
     stage: 'home',
     session: ROB,
-    crt: FLAT,
-    camera: { ...FLAT_GLASS, smoothTime: 0.5 },
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 0.5 },
   },
 
   {
@@ -200,43 +205,33 @@ export const slides = defineSlides([
     id: 'intro-qr',
     stage: 'home',
     session: QR_SCREEN,
-    crt: FLAT,
-    camera: { ...FLAT_GLASS, smoothTime: 0.45 },
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 0.45 },
   },
 
   /* ═══════════════ ② HOME — THE MACHINE YOU CAN'T PUT DOWN ═══════════════
-   * PILLAR 1. Why prompting is hard to stop, and what it does to sleep. */
+   * PILLAR 1. Why prompting is hard to stop, and what it does to sleep.
+   *
+   * Still the glass, still head-on: the pull-back sits after the caveat, so
+   * the whole of Pillar 1 plays on the same covering tube the chat window
+   * woke, and the room learns where that tube sits only once the sleep data
+   * has landed. */
   {
-    // THE REVEAL, and it is ONE beat.
-    //
-    // The tube wakes DURING the pull-back rather than before it. `tube-wake`
-    // used to hold at the covering distance while curvature, raster and
-    // reflection came up, and only then did the camera move — which meant the
-    // audience watched the picture bend, waited, and then watched it recede.
-    // Two presses to deliver one idea, with a dead spot in the middle. The
-    // slide's `crt` target damps toward TUBE over exactly the same flight, so
-    // asking for both at once costs nothing and the glass becomes an object in
-    // the same gesture that reveals the object.
-    //
-    // Square-on, and nothing after it. The three-quarter and profile waypoints
-    // that followed re-explained the same fact from two more angles; the
-    // housing arriving around an image the room has already accepted is the
-    // punchline, and it only lands once.
-    //
-    // Longer than either beat it replaces, because it is now carrying a lens
-    // change (50 → 35) and the tube ramp on top of the dolly.
-    id: 'reveal',
-    stage: 'home',
-    crt: TUBE,
-    camera: { pos: [0, 2.5, 44], target: [0, -0.5, 0], fov: 35, smoothTime: 3 },
-    focus: [0, 0, 0],
-  },
-  {
-    // The mechanism, named. Bare glass — an animated slot machine would break
-    // the calm-motion rule and cheapen it.
+    // The mechanism, named, before it is shown.
     id: 'variable-reward',
     stage: 'home',
     session: MOST_PROMPTS,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // THE MACHINE, performed. Each Enter is one pull — one more prompt — and
+    // the reels land three near-misses before the one that pays. The
+    // calm-motion rule yields for the length of a pull because the churn IS
+    // the mechanism being shown; between pulls the machine is still.
+    id: 'slot-machine',
+    stage: 'home',
+    session: SLOT_MACHINE,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 1.2 },
   },
@@ -266,6 +261,30 @@ export const slides = defineSlides([
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 1.2 },
   },
+  {
+    // THE REVEAL, and it is ONE beat: the dolly back into the room.
+    //
+    // The tube has been awake since the chat window, so the pull-back no
+    // longer carries the wake — only the housing, the desk and the room
+    // arriving around an image the room has already accepted. `tube-wake`
+    // used to hold at the covering distance while curvature came up and only
+    // then move; the wake and the move were then fused; now the wake happens
+    // at the harness and this beat is purely spatial.
+    //
+    // After the caveat, not after the QR: the glass carries the held sleep
+    // split into the room, and the room learns where the tube sits only once
+    // the data has landed.
+    //
+    // Square-on, and nothing after it. The three-quarter and profile waypoints
+    // that followed re-explained the same fact from two more angles; the
+    // punchline only lands once. The tube's reading preset relaxes to the room
+    // preset (mask, beam, halation) over the same flight.
+    id: 'reveal',
+    stage: 'home',
+    crt: TUBE,
+    camera: { pos: [0, 2.5, 44], target: [0, -0.5, 0], fov: 35, smoothTime: 3 },
+    focus: [0, 0, 0],
+  },
 
   /* ═══════════════ ③ CUBICLE — THE PRESSURE ═══════════════ */
   {
@@ -279,16 +298,8 @@ export const slides = defineSlides([
     focus: [0, 0, 0],
   },
   {
-    // Enough width to reveal neighboring pools of agent activity over the
-    // partitions, while the original monitor remains the anchor. Spoken: saved
-    // effort returns as decisions and supervision, never as rest.
-    id: 'cubicle-wide',
-    stage: 'cubicle',
-    crt: TUBE,
-    camera: { pos: [-24, 4, 118], target: [8, -2, -50], fov: 35, smoothTime: 2.6 },
-    focus: [0, -1, -4],
-  },
-  {
+    // The stage swap to the cubicle happens behind this covering glass; the
+    // room is not seen until the data has landed.
     id: 'q-pressure',
     stage: 'cubicle',
     session: Q_PRESSURE,
@@ -303,6 +314,19 @@ export const slides = defineSlides([
     session: PRODUCTIVITY_PARADOX,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // Enough width to reveal neighboring pools of agent activity over the
+    // partitions, while the original monitor remains the anchor. Spoken: saved
+    // effort returns as decisions and supervision, never as rest. After the
+    // data, not before it (Scott, 2026-09-02): the office is the pull-back
+    // that closes the act, the way the desk closes Pillar 1. No session, so
+    // the paradox chart stays on the monitor through the move.
+    id: 'cubicle-wide',
+    stage: 'cubicle',
+    crt: TUBE,
+    camera: { pos: [-24, 4, 118], target: [8, -2, -50], fov: 35, smoothTime: 2.6 },
+    focus: [0, -1, -4],
   },
   /* ═══════════════ ④ WALL — THE THROTTLE ═══════════════ */
   {
@@ -319,14 +343,6 @@ export const slides = defineSlides([
     session: AGENTS_STOPPING,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 2.6 },
-  },
-  {
-    // Benefit and cost climb together; the dashed skills line refuses to follow.
-    id: 'agents-outcomes',
-    stage: 'wall',
-    session: AGENTS_OUTCOMES,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 1.2 },
   },
   {
     // THE TELL. Hold agent count constant and the sleep gap barely shrinks: it
@@ -398,11 +414,22 @@ export const slides = defineSlides([
     // mostly the same people. Say that the survey measured BELIEF about skill
     // and never tested anyone; then say why belief is the thing that matters.
     //
-    // The finding, stated. WHY it happens is the descent that follows. This is
-    // also the last glass-filling wall beat, so it occludes the phosphor swap.
+    // The finding, stated. WHY it happens is the descent that follows.
     id: 'skills-enjoyment',
     stage: 'wall',
     session: SKILLS_ENJOYMENT,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // Benefit and cost climb together; the dashed skills line refuses to
+    // follow. After the skill beats, not among the agent ones (Scott,
+    // 2026-09-02): the flat line is read once the room has the skill finding,
+    // as the last thing on the glass before the descent. This is now the last
+    // glass-filling wall beat, so it occludes the phosphor swap.
+    id: 'agents-outcomes',
+    stage: 'wall',
+    session: AGENTS_OUTCOMES,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 1.2 },
   },
@@ -456,46 +483,20 @@ export const slides = defineSlides([
 
   /* ═══════════════ ⑥ THE TURN ═══════════════ */
   {
-    // Back out through the faceplate: the deposits fade and the glass reforms,
-    // holding the same skill/enjoyment split the camera entered through. Also
-    // the occlusion that carries the phosphor→wall swap, in both directions.
-    id: 'phosphor-exit',
+    // GRILL ME. Back out through the faceplate — the deposits fade and the
+    // glass reforms over this one flight, which is also the occlusion that
+    // carries the phosphor stage out — and the glass lands on a brain on a
+    // grill. Each landing asks a question; Y or N answers it and flips the
+    // brain for the next. `phosphor-exit` used to hold the reformed glass as
+    // its own beat with nothing to say on it; the exit is this slide's arrival
+    // now (Scott, 2026-09-02).
+    id: 'what-gets-pruned',
     stage: 'phosphor',
+    session: GRILL_ME,
     crt: { tube: 1, maskMode: 2, maskStrength: 0.72 },
     phosphor: { opacity: 0, screenOpacity: 1, depth: 1, form: 1, decay: 1 },
     camera: { ...GLASS, smoothTime: 3.2 },
     focus: [0, 0, 0],
-  },
-  {
-    // WHY 3 — it takes the reps, not the typing. Reading the problem, holding
-    // it, choosing the approach: exactly what gets delegated first. Lands as
-    // the application of the decay the room has just watched, which is why it
-    // is here rather than before the descent.
-    id: 'what-gets-pruned',
-    stage: 'wall',
-    session: WHAT_GETS_PRUNED,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 1.6 },
-  },
-  {
-    // WHY 4, AND THE TURN OF THE TALK. Skill worry predicts nothing about how
-    // hard anyone runs AI — so you cannot use your own sense of it as a gauge.
-    // Directly after a silent decay nobody could feel, that is the proof.
-    id: 'three-zeros',
-    stage: 'wall',
-    session: THREE_ZEROS,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 1.4 },
-  },
-  {
-    // WHO IS HOLDING THE THROTTLE. Read top to bottom: own pull only (n=173),
-    // neither, both, outside pressure only. Same keystrokes, four prices — and
-    // no cell is free. The least-damaged group also runs the fewest agents.
-    id: 'drive-quadrants',
-    stage: 'wall',
-    session: DRIVE_QUADRANTS_CHART,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 1.6 },
   },
 
   /* ═══════════════ ⑦ THE RETURN — THE FIX IS A STACK ═══════════════
@@ -503,59 +504,20 @@ export const slides = defineSlides([
    * form has to invert or it has no resolution, and the autonomy caveat needs
    * the cubicle physically back in frame. */
   {
-    // Spoken over this: agent count is the one number you can turn down, and
-    // the outcomes chart priced it — but the tell already said the count was
-    // never the mechanism. Smallest lever, not the fix. It does not need its
-    // own trip back to the wall to be said.
-    id: 'act-ceiling',
-    stage: 'wall',
-    session: CEILING_ACT_SCREEN,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 2.6 },
-    focus: [0, 0, 0],
-  },
-  {
     // THE CEILING. Everything about to be said assumes you are allowed to stop.
-    // Against a quota, a manager who treats the tool as a magic bullet, or being
-    // 23 and looking at that employment chart, a 15-minute timer will not save
-    // you. Healthy prompting cannot be carried by personal discipline alone.
+    // Against a quota, or a manager who treats the tool as a magic bullet, a
+    // 15-minute timer will not save you. Healthy prompting cannot be carried
+    // by personal discipline alone. The line stays on the monitor for the
+    // whole beat — it used to be written on a glass slide of its own.
     id: 'return-cubicle',
     stage: 'cubicle',
+    session: CEILING_ACT_SCREEN,
     crt: TUBE,
     camera: { pos: [-20, 3.5, 76], target: [6, -1.5, -26], fov: 35, smoothTime: 2.8 },
     focus: [0, -1, -4],
   },
   {
-    // THE EMPLOYMENT CHART, and it belongs HERE.
-    //
-    // It spent the talk in the cubicle act, between the pressure question and
-    // the productivity paradox, where it was the only beat about the job
-    // MARKET — a different argument wearing the same act's clothes, and the
-    // slides either side of it had nothing to do with it. The ceiling is what
-    // it is evidence FOR: everything the talk is about to advise assumes you
-    // are allowed to act on it, and being twenty-three looking at this chart is
-    // one of the three reasons you might not be. `return-cubicle` was already
-    // reaching for it in prose; now the room can see it.
-    id: 'early-career',
-    stage: 'cubicle',
-    session: EARLY_CAREER,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 2.2 },
-  },
-  {
-    // A HOLD — the chart stays exactly where it is.
-    // NON-NEGOTIABLE, and spoken with the chart still up: unemployment rose
-    // across every kind of job in that window, and rose MORE for the jobs least
-    // exposed to AI. This is not proof AI took those jobs. Without this beat the
-    // chart is dishonest and the advice section loses the room's trust — which
-    // is the very next thing out of Scott's mouth, so it matters more here than
-    // it did in the cubicle.
-    id: 'early-career-caveat',
-    stage: 'cubicle',
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 1.2 },
-  },
-  {
+    // GO FOR A WALK, over a path through line trees that the room walks along.
     id: 'act-boundaries',
     stage: 'cubicle',
     session: BOUNDARIES_ACT_SCREEN,
@@ -568,34 +530,25 @@ export const slides = defineSlides([
     // apply. Sleep first, then loss of interest, exhaustion, anxiety, pulling
     // away from people; then somatization. Then: box the loop, make stopping
     // structural, stay the one deciding, narrow the ambition, talk to people.
-    // The glass stays on one line so the screen never lectures the room.
+    // The glass holds one line so the screen never lectures the room.
     id: 'boundaries',
     stage: 'home',
+    session: CONTROL_ACT_SCREEN,
     crt: TUBE,
     camera: { pos: [15, 3, 46], target: [-2, -1, -2], fov: 35, smoothTime: 2.8 },
     focus: [0, 0, -2],
   },
   {
-    // THE 3R. A result becomes a response only when a person takes
-    // responsibility for it. The shortcut is drawn dim because it is the one
-    // everybody already takes; the routed edge is the rep that stops the
-    // atrophy AND the friction the slot machine does not have.
-    id: 'three-r',
-    stage: 'home',
-    session: THREE_R,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 2.4 },
-    focus: [0, 0, 0],
-  },
-  {
-    // The title again — same words as slide 1, on glass you now know is an
-    // object, in a room, in a building, made of phosphor. Then the idle cursor.
-    // Hold it blinking and stop talking.
+    // The lights go off in the room and the title comes back on the glass —
+    // same words as slide 1, on a screen you now know is an object, alone in
+    // the dark the way it was at 3am. Then the idle cursor. Hold it blinking
+    // and stop talking.
     id: 'close',
     stage: 'home',
     session: TITLE_SCREEN,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 2.0 },
+    crt: TUBE,
+    lights: 0,
+    camera: { pos: [0, 2.5, 44], target: [0, -0.5, 0], fov: 35, smoothTime: 3 },
     focus: [0, 0, 0],
   },
 ])

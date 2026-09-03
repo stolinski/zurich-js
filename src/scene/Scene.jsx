@@ -7,6 +7,7 @@ import { DESK_Y } from './Room.jsx'
 import { OFFICE_ENVIRONMENT_SPEC, StageDirector } from './Stages.jsx'
 import { Dust } from './Dust.jsx'
 import { makeRoomEnvironment, STAGE_LOOK_PRESETS } from './environment.js'
+import { roomLightLevel, setRoomLightLevel } from './roomLight.js'
 import { useStore } from '../state/useStore.js'
 import { slides } from '../slides/index.js'
 import { QUALITY_AA_PROFILE } from '../qualityProfile.js'
@@ -196,17 +197,73 @@ const GLOBAL_LIGHT_VARIANTS = {
   },
 }
 
+// The sources that are the ROOM's light, as opposed to the screen's: these
+// follow a slide's `lights` level. The screen rectangle and its local fill are
+// the monitor itself and stay on when the room goes dark.
+const ROOM_LIGHT_VARIANTS = new Set(['ambient', 'doorway', 'oppositeRim', 'backWall'])
+
 function lightVariant(name) {
   const variant = GLOBAL_LIGHT_VARIANTS[name]
   return {
     presentationStages: variant.stages,
     presentationIntensities: variant.intensities,
     presentationCastShadows: variant.castShadows,
+    presentationRoomLight: ROOM_LIGHT_VARIANTS.has(name),
   }
 }
 
 function stageIntensity(name, stage) {
   return GLOBAL_LIGHT_VARIANTS[name].intensities[stage] ?? 0
+}
+
+/**
+ * Eases the room's light level toward the active slide's `lights` cue (1 when
+ * a slide says nothing) over that slide's smoothTime, and applies it on the
+ * render clock: the room lights scale with it, the environment keeps a
+ * quarter of its bounce (the screen still lights the desk), and the baked
+ * floor irradiance follows through roomLightLevel(). Identity at 1, which is
+ * every slide but the close.
+ */
+function RoomLightRig() {
+  const scene = useThree((state) => state.scene)
+  const index = useStore((state) => state.index)
+  const displayStage = usePresentationRuntime((state) => state.displayStage)
+  const from = useRef(1)
+  const elapsed = useRef(0)
+  const roomLights = useRef([])
+
+  useLayoutEffect(() => {
+    from.current = roomLightLevel()
+    elapsed.current = 0
+  }, [index])
+
+  useFrame((_, dt) => {
+    elapsed.current += dt
+    const slide = slides[index]
+    const target = slide?.lights ?? 1
+    const duration = Math.max(0.001, slide?.camera?.smoothTime ?? 1)
+    const progress = Math.min(1, elapsed.current / duration)
+    const eased = progress * progress * (3 - 2 * progress)
+    const level = progress >= 1 ? target : THREE.MathUtils.lerp(from.current, target, eased)
+    setRoomLightLevel(level)
+
+    if (roomLights.current.length === 0) {
+      scene.traverse((object) => {
+        if (object.userData?.presentationRoomLight && 'intensity' in object) {
+          roomLights.current.push(object)
+        }
+      })
+    }
+    for (const light of roomLights.current) {
+      light.intensity =
+        (light.userData.presentationIntensities?.[displayStage] ?? 0) * level
+    }
+    const look = STAGE_LOOK_PRESETS[displayStage] ?? STAGE_LOOK_PRESETS.home
+    scene.environmentIntensity =
+      look.environment.intensity * THREE.MathUtils.lerp(0.25, 1, level)
+  })
+
+  return null
 }
 
 /**
@@ -787,6 +844,7 @@ export function Scene() {
       />
 
       <RoomEnvironment stage={stage} controller={environmentController} />
+      <RoomLightRig />
       <StageAtmosphere stage={stage} />
       <ShadowLifecycle />
       <CRTScreen onTexture={setScreenTexture} deskY={DESK_Y} />

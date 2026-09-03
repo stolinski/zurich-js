@@ -13,6 +13,7 @@ import {
 } from '../terminal/theme.js'
 import { clearWrapCache } from '../terminal/session.js'
 import { ensureTerminalAssets } from '../terminal/assets.js'
+import { getTerminalVisual } from '../terminal/visuals.js'
 import {
   createContentTransition,
   paintSession,
@@ -326,6 +327,7 @@ export function CRTScreen({ onTexture, deskY }) {
   const glassMat = useRef()
   const index = useStore((s) => s.index)
   const step = useStore((s) => s.step)
+  const answers = useStore((s) => s.answers)
   const displayStage = usePresentationRuntime((state) => state.displayStage)
   const slide = slides[index]
   // Initial uniforms come from the deep-linked slide itself. Navigation still
@@ -361,7 +363,10 @@ export function CRTScreen({ onTexture, deskY }) {
 
   // Which session is on the glass, and how far through it. Shared with the
   // ?flat authoring renderer so the two can't drift — see terminal/playback.js.
-  const showing = useMemo(() => resolveSession(slides, index, step), [index, step])
+  const showing = useMemo(() => {
+    const resolved = resolveSession(slides, index, step)
+    return resolved ? { ...resolved, answers } : null
+  }, [answers, index, step])
 
   const initialNeedsMips = useRef(!slide?.camera?.fillScreen).current
   const { canvas, ctx, flatTexture, objectTexture } = useMemo(() => {
@@ -554,10 +559,21 @@ export function CRTScreen({ onTexture, deskY }) {
       const progress = sessionProgress(painted, elapsed.current)
       const spinning = painted.live && progress < 1 && step?.kind === 'think'
       const staticVisual = step?.kind === 'visual'
-      const animatedStep = ['user', 'say', 'think', 'tool'].includes(step?.kind)
+      // A visual that moves on the free-running clock (the walk, the grill's
+      // fire) repaints on a fixed cadence; everything else only when its state
+      // does.
+      const liveVisual =
+        (staticVisual && Boolean(getTerminalVisual(step.id).animated)) ||
+        step?.kind === 'grill'
+      const animatedStep = ['user', 'say', 'think', 'tool', 'pull', 'grill'].includes(
+        step?.kind
+      )
       const staticFrame = staticVisual || !animatedStep
       const identity = staticVisual ? `visual:${step.id}` : step?.kind ?? 'empty'
       const sourceSlide = slides.findIndex((candidate) => candidate.session === painted.script)
+      // A spinning reel or a flipping brain moves every frame; typed text only
+      // every few. Key those finely enough that the motion is not quantised.
+      const smooth = step?.kind === 'pull' || step?.kind === 'grill'
       const phase = staticVisual
         ? 'static'
         : !animatedStep
@@ -565,7 +581,7 @@ export function CRTScreen({ onTexture, deskY }) {
             ? 'done'
             : 'active'
           : painted.live
-            ? progress.toFixed(2)
+            ? progress.toFixed(smooth ? 3 : 2)
             : '1.00'
       const key =
         `${sourceSlide}:${identity}|${painted.step}|${phase}` +
@@ -573,7 +589,10 @@ export function CRTScreen({ onTexture, deskY }) {
         `|${view.reveal ? `${view.reveal.mode}:${view.reveal.progress.toFixed(3)}` : ''}` +
         // Without this the repaint cache would hold the un-highlighted frame:
         // the pointer changes the image, so it belongs in the image's identity.
-        `|h${hoveredChartRow() ?? ''}`
+        `|h${hoveredChartRow() ?? ''}` +
+        // The answers stamped on the grill, and the walk's clock.
+        `|a${painted.answers?.join(',') ?? ''}` +
+        `|t${liveVisual ? Math.floor(time.current * 24) : ''}`
 
       if (key !== lastPaint.current) {
         lastPaint.current = key

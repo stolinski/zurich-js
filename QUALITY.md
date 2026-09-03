@@ -143,7 +143,7 @@ A pass requires all of the following:
   vignette, tone mapping, or exposed background.
 
 **Required evidence:** settled captures for every slide plus 60fps recordings of
-`rob → reveal`, `cubicle-threshold → cubicle-wide`, and the
+`stopping-caveat → reveal`, `productivity-paradox → cubicle-wide`, and the
 entire phosphor handoff. Compare current FXAA, 2× composer MSAA at DPR 1.25, 4×
 composer MSAA at DPR 1, and 2× MSAA+FXAA on identical frames; do not accept an AA
 method based on reputation alone. A settled edge-region capture must reach
@@ -279,12 +279,12 @@ settled 1920×1080 captures with Rec.709 luma (the capture harness plus
 | Slide | Anchor |
 | --- | --- |
 | `reveal` | glass content reaches ≥ 250; frame p50 in 8–18 (room readable, still night) |
-| `q-stopping` / `stopping-sleep` / `three-zeros` (the glass-filling DATA run) | frame p50 in 4–26 AND p99.9 ≥ 200. Both, because they fail in opposite directions: p50 keeps the glass between the marks black, p99.9 keeps the marks at reading brightness. p99.9 rather than p99 — p99 tracks bright AREA and so moves with a chart's SHAPE, scoring a two-row cohort split at 168 against a five-bar scale's 205 when both were equally legible. This family had no anchor until 2026-08-31, which is how it shipped with post bypassed. |
+| `q-stopping` / `stopping-sleep` / `skills-enjoyment` (the glass-filling DATA run — since 2026-09-02 the tube wakes at `agent-session`, so every glass beat from the chat window on belongs to this family) | frame p50 in 4–26 AND p99.9 ≥ 200. Both, because they fail in opposite directions: p50 keeps the glass between the marks black, p99.9 keeps the marks at reading brightness. p99.9 rather than p99 — p99 tracks bright AREA and so moves with a chart's SHAPE, scoring a two-row cohort split at 168 against a five-bar scale's 205 when both were equally legible. This family had no anchor until 2026-08-31, which is how it shipped with post bypassed. |
 | `cubicle-wide` | troffer apertures clip (255 allowed); frame p50 in 40–62; pixels below 10 luma under 1% |
 | `agent-wall-near` | frame p95 ≥ 100; hero screen contains ≥ 250 |
 | `agent-wall` | frame p95 ≥ 95 (54 lit CRTs may not photograph as a dark room) |
 | `inside-glass` | p99.9 ≥ 130 with visible near-field grains ≥ 3× the size of mid-field grains |
-| flat harness slides | hot rungs ≥ 220; ghost rung ≥ 45 (the PHOSPHOR ladder floor is a projector constraint, not styling) |
+| flat slides (`cold-open`, `intro-syntax`, `intro-sentry`) and the `?flat` fallback | hot rungs ≥ 220; ghost rung ≥ 45 (the PHOSPHOR ladder floor is a projector constraint, not styling) |
 
 Emissive hierarchy is part of the gate: on every stage the brightest surface
 must be a screen or a fixture aperture, never a lit prop. The hero glass gets
@@ -301,7 +301,7 @@ The following evidence is mandatory before calling a visual pass complete:
 | `cold-open` | Fresh-load and warm title capture at all three reference sizes |
 | `intro-syntax`, `intro-sentry`, `intro-qr` | Local asset decode, monochrome treatment, and title-safe clearance |
 | `agent-session` | Harness legibility, vector stability, and the AUTOPLAY schedule: the exchange drives itself now, so the evidence is a recording of the whole ~12s run, not a settled still. One press of Enter or Backspace must still take it back. |
-| `reveal` | Settled still plus one continuous `rob → reveal` recording: the tube ramp and the pull-back are ONE move now, so early/mid/late frames of the flight are what prove no doubled glyphs and no late shader compile |
+| `reveal` | Settled still plus one continuous `stopping-caveat → reveal` recording: the tube ramp and the pull-back are ONE move now, so early/mid/late frames of the flight are what prove no doubled glyphs and no late shader compile |
 | `cubicle-wide` | Settled stills, clearance overlay, clay render, light-only render |
 | `agent-wall` | Settled still and moving shimmer/LOD check |
 | `inside-glass` | Frame sequence through the complete handoff, which is now ONE flight — the two held threshold waypoints in front of it were cut |

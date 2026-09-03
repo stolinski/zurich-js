@@ -225,6 +225,554 @@ function drawStatVisual(ctx, visual, draw = 1) {
 }
 
 /**
+ * A slot machine on the glass — three reels, a payline, and the prompt as the
+ * lever.
+ *
+ * `visual.pull` is the pull in progress (undefined for the idle machine) and
+ * `visual.progress` is 0→1 through it. Every reel position is a pure function
+ * of those two, so each rehearsal spins and lands identically. The reels stop
+ * in turn on an ease-out; a moving reel is driven dim, a settled reel drives
+ * its symbol up the ladder, and a paying line goes hot. Intensity is still the
+ * only hierarchy — the machine is drawn with the same three rungs as a chart.
+ */
+const REEL = Object.freeze({ width: 300, height: 380, gap: 64, pitch: 250 })
+// Fraction of the pull at which each reel comes to rest — left to right, the
+// last one late enough that the near-miss is watched, not glimpsed.
+const REEL_STOPS = Object.freeze([0.55, 0.75, 0.95])
+
+function reelPosition(visual, reel, pull, progress) {
+  const count = visual.symbols.length
+  const startSymbol = pull === 0 ? visual.idle[reel] : visual.pulls[pull - 1][reel]
+  const start = visual.symbols.indexOf(startSymbol)
+  const target = visual.symbols.indexOf(visual.pulls[pull][reel])
+  if (start < 0 || target < 0) {
+    throw new Error(`Slot machine pull ${pull} names a symbol that is not on the reel strip`)
+  }
+  const local = Math.min(1, Math.max(0, progress / REEL_STOPS[reel]))
+  const eased = 1 - Math.pow(1 - local, 3)
+  // Later reels spin longer, and every reel always travels forward to its
+  // target so the strip never appears to reverse.
+  const travel = (3 + reel) * count + ((target - start + count) % count)
+  return { position: start + travel * eased, settled: local >= 1 }
+}
+
+function drawSlotVisual(ctx, visual, draw = 1) {
+  const idle = visual.pull === undefined
+  const progress = idle ? 1 : Math.min(1, visual.progress ?? 1)
+  const count = visual.symbols.length
+  const total = REEL.width * 3 + REEL.gap * 2
+  const left = (TERMINAL.width - total) / 2
+  const top = TERMINAL.height / 2 - REEL.height / 2 - 40
+  const centerY = top + REEL.height / 2
+  const frameProgress = draw >= 1 ? 1 : easeInOut((draw - 0.05) / 0.4)
+  const symbolProgress = draw >= 1 ? 1 : easeInOut((draw - 0.4) / 0.5)
+  const outcome = idle ? visual.idle : visual.pulls[visual.pull]
+  const paying =
+    !idle && progress >= 1 && outcome.every((symbol) => symbol === outcome[0])
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  for (let reel = 0; reel < 3; reel++) {
+    const x = left + reel * (REEL.width + REEL.gap)
+    const { position, settled } = idle
+      ? { position: visual.symbols.indexOf(visual.idle[reel]), settled: true }
+      : reelPosition(visual, reel, visual.pull, progress)
+
+    if (symbolProgress > 0) {
+      ctx.save()
+      ctx.globalAlpha = symbolProgress
+      ctx.beginPath()
+      ctx.rect(x + 4, top + 4, REEL.width - 8, REEL.height - 8)
+      ctx.clip()
+      ctx.font = screenFont(190, 700)
+      ctx.fillStyle = !settled ? PHOSPHOR.dim : paying ? PHOSPHOR.hot : PHOSPHOR.phosphor
+      ctx.shadowColor = PHOSPHOR.phosphor
+      ctx.shadowBlur = !settled ? 0 : GLOW_RADIUS * (paying ? 1.4 : 0.8)
+      const first = Math.floor(position) - 1
+      for (let index = first; index <= first + 3; index++) {
+        const symbol = visual.symbols[((index % count) + count) % count]
+        ctx.fillText(symbol, x + REEL.width / 2, centerY + (index - position) * REEL.pitch)
+      }
+      ctx.shadowBlur = 0
+      // The drum: the strip curves away above and below the payline.
+      const veil = ctx.createLinearGradient(0, top, 0, top + REEL.height)
+      veil.addColorStop(0, 'rgba(11, 10, 6, 0.9)')
+      veil.addColorStop(0.3, 'rgba(11, 10, 6, 0)')
+      veil.addColorStop(0.7, 'rgba(11, 10, 6, 0)')
+      veil.addColorStop(1, 'rgba(11, 10, 6, 0.9)')
+      ctx.fillStyle = veil
+      ctx.fillRect(x, top, REEL.width, REEL.height)
+      ctx.restore()
+    }
+
+    if (frameProgress > 0) {
+      ctx.globalAlpha = frameProgress
+      ctx.lineWidth = 3
+      ctx.strokeStyle = PHOSPHOR.ghost
+      ctx.strokeRect(x, top, REEL.width, REEL.height)
+      ctx.globalAlpha = 1
+    }
+  }
+
+  // The payline, marked outside the reels so it never sits over a symbol.
+  if (frameProgress > 0) {
+    ctx.globalAlpha = frameProgress
+    const lineColor = paying ? PHOSPHOR.hot : PHOSPHOR.ghost
+    rule(ctx, left - 72, centerY, left - 24, centerY, lineColor, 4)
+    rule(ctx, left + total + 24, centerY, left + total + 72, centerY, lineColor, 4)
+    ctx.globalAlpha = 1
+  }
+
+  // The lever is the prompt. Idle, the machine waits on Enter like the harness
+  // does; a pull types the prompt in over its first fifth and leaves it dim.
+  if (symbolProgress <= 0) return
+  const promptY = top + REEL.height + 110
+  ctx.globalAlpha = symbolProgress
+  if (idle) {
+    chromeText(ctx, 'ENTER  PULL', TERMINAL.width / 2, promptY, {
+      size: 30,
+      align: 'center',
+      color: PHOSPHOR.ghost,
+    })
+  } else {
+    const line = `❯ ${visual.prompt}`
+    const shown = line.slice(0, Math.ceil(line.length * Math.min(1, progress / 0.2)))
+    ctx.font = screenFont(46, 500)
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = progress >= 1 ? PHOSPHOR.dim : PHOSPHOR.hot
+    ctx.shadowColor = PHOSPHOR.phosphor
+    ctx.shadowBlur = progress >= 1 ? 0 : GLOW_RADIUS * 0.8
+    const fullWidth = ctx.measureText(line).width
+    ctx.fillText(shown, (TERMINAL.width - fullWidth) / 2, promptY)
+    ctx.shadowBlur = 0
+  }
+  ctx.globalAlpha = 1
+}
+
+/**
+ * GRILL ME — a brain on a grill, in the slot machine's line-drawing idiom.
+ *
+ * `visual.question` is the question this step lands on (null once nothing is
+ * left) and `visual.progress` is 0→1 through the step: the brain is in the
+ * air for the first part and the question types in once it has landed. The
+ * answer that launched the flip (`visual.answers[step − 1]`) is stamped on
+ * the previous question while the brain is up. Pure in progress and the
+ * answers, so a rehearsal lands the same way every time.
+ */
+const GRILL = Object.freeze({
+  width: 920,
+  top: 900, // the front rim of the grate
+  depth: 110,
+  bars: 8,
+  legs: 96,
+  brain: 150, // half-width of the outline
+  jump: 330,
+  airShare: 0.68,
+})
+
+/**
+ * Walks an ellipse arc from `from` to `to` (canvas angles, clockwise) in
+ * `bumps` scallops, each bulging outward by `bulge` — the cauliflower edge
+ * that makes a silhouette read as a brain at any size.
+ */
+function traceScallops(ctx, X, Y, cx, cy, rx, ry, from, to, bumps, bulge) {
+  const sweep = (to - from) / bumps
+  const at = (angle, scale = 1) => [
+    cx + Math.cos(angle) * rx * scale,
+    cy + Math.sin(angle) * ry * scale,
+  ]
+  const [sx, sy] = at(from)
+  ctx.moveTo(X(sx, sy), Y(sx, sy))
+  for (let bump = 0; bump < bumps; bump++) {
+    const start = from + sweep * bump
+    const [mx, my] = at(start + sweep / 2, 1 + bulge)
+    const [ex, ey] = at(start + sweep)
+    ctx.quadraticCurveTo(X(mx, my), Y(mx, my), X(ex, ey), Y(ex, ey))
+  }
+}
+
+/**
+ * A brain in side profile, as line art: scalloped cerebrum, the meandering
+ * gyri inside it, a striped cerebellum tucked under the back, and the stem.
+ * Unit space is x −1…1, y −1 (top) … 1 (bottom), rotated by `angle` about
+ * the centre so the same drawing flips through the air.
+ */
+function drawBrain(ctx, cx, cy, size, angle, color, glow) {
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  const X = (x, y) => cx + (x * cos - y * sin) * size
+  const Y = (x, y) => cy + (x * sin + y * cos) * size
+  const line = (x1, y1, x2, y2) => {
+    ctx.beginPath()
+    ctx.moveTo(X(x1, y1), Y(x1, y1))
+    ctx.lineTo(X(x2, y2), Y(x2, y2))
+    ctx.stroke()
+  }
+
+  ctx.strokeStyle = color
+  ctx.lineWidth = 4
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+  ctx.shadowColor = PHOSPHOR.phosphor
+  ctx.shadowBlur = glow
+
+  // Cerebrum: one scalloped arc from where the cerebellum tucks in, under,
+  // up the front, over the top and down the back.
+  ctx.beginPath()
+  traceScallops(ctx, X, Y, -0.05, -0.15, 1.0, 0.72, Math.PI * 0.42, Math.PI * 2.1, 17, 0.14)
+  ctx.stroke()
+
+  // The lateral fissure: the fold that separates the temporal lobe, sweeping
+  // back from the front. It is the single line that most says "brain".
+  ctx.lineWidth = 3.5
+  ctx.beginPath()
+  ctx.moveTo(X(-0.98, 0.0), Y(-0.98, 0.0))
+  ctx.bezierCurveTo(X(-0.62, 0.08), Y(-0.62, 0.08), X(-0.3, 0.3), Y(-0.3, 0.3), X(0.12, 0.34), Y(0.12, 0.34))
+  ctx.stroke()
+
+  // Gyri: winding folds that follow the lobes as broken concentric rings,
+  // each wobbling on its own period so no two run parallel.
+  ctx.lineWidth = 2.6
+  const rings = [
+    { radius: 0.3, from: Math.PI * 0.62, to: Math.PI * 1.98, wobble: 5, gaps: 2 },
+    { radius: 0.52, from: Math.PI * 0.58, to: Math.PI * 2.02, wobble: 7, gaps: 3 },
+    { radius: 0.74, from: Math.PI * 0.6, to: Math.PI * 2.0, wobble: 9, gaps: 3 },
+  ]
+  for (const ring of rings) {
+    const span = ring.to - ring.from
+    const segments = ring.gaps + 1
+    for (let segment = 0; segment < segments; segment++) {
+      const start = ring.from + (span * segment) / segments + 0.08
+      const end = ring.from + (span * (segment + 1)) / segments - 0.08
+      ctx.beginPath()
+      for (let i = 0; i <= 18; i++) {
+        const angle = start + ((end - start) * i) / 18
+        const radius = ring.radius * (1 + 0.1 * Math.sin(angle * ring.wobble + ring.radius * 20))
+        const x = -0.05 + Math.cos(angle) * radius * 1.0
+        const y = -0.15 + Math.sin(angle) * radius * 0.72
+        if (i === 0) ctx.moveTo(X(x, y), Y(x, y))
+        else ctx.lineTo(X(x, y), Y(x, y))
+      }
+      ctx.stroke()
+    }
+  }
+
+  // Cerebellum: a smaller scalloped lobe under the back, with its stripes.
+  ctx.lineWidth = 4
+  ctx.beginPath()
+  traceScallops(ctx, X, Y, 0.6, 0.54, 0.36, 0.26, 0, Math.PI * 2, 9, 0.16)
+  ctx.closePath()
+  ctx.stroke()
+  ctx.lineWidth = 2.5
+  line(0.42, 0.42, 0.52, 0.72)
+  line(0.56, 0.36, 0.68, 0.74)
+  line(0.72, 0.36, 0.84, 0.7)
+
+  // Stem.
+  ctx.lineWidth = 4
+  line(0.18, 0.66, 0.08, 1.02)
+  line(0.34, 0.74, 0.26, 1.02)
+  line(0.08, 1.02, 0.26, 1.02)
+  ctx.shadowBlur = 0
+}
+
+/**
+ * The grill: charcoal fire underneath, tongues licking up between the bars,
+ * the grate in shallow perspective, and heat shimmer rising off it. The fire
+ * flickers gently on the free-running clock — fire that does not move is not
+ * fire — but nothing else here does.
+ */
+function drawGrill(ctx, left, time) {
+  const { width, top, depth, bars, legs } = GRILL
+  const inset = 44
+
+  // Flames first, so the grate is drawn over them and they read as coming up
+  // through it. Each tongue sways and breathes on its own phase.
+  for (let flame = 0; flame < 6; flame++) {
+    const x = left + width * (0.16 + 0.136 * flame)
+    const sway = Math.sin(time * 5.7 + flame * 1.9) * 12
+    const breath = Math.sin(time * 4.1 + flame * 2.6) * 22
+    const base = top + legs * 0.62
+    // Tall enough to clear the back rim: the tongues come up THROUGH the
+    // grate, and the grate is drawn over them so the bars cut across the fire.
+    // One rung under the brain on the ladder, so the fire frames it rather
+    // than competing with it.
+    const tip = top - depth - 44 - breath
+    const wide = 32
+    ctx.lineWidth = 3
+    ctx.strokeStyle = PHOSPHOR.dim
+    ctx.beginPath()
+    ctx.moveTo(x - wide, base)
+    ctx.bezierCurveTo(x - wide * 1.15, base - 100, x + sway - 12, tip + 130, x + sway, tip)
+    ctx.bezierCurveTo(x + sway + 12, tip + 130, x + wide * 1.15, base - 100, x + wide, base)
+    ctx.stroke()
+    // The brighter core of the tongue.
+    ctx.lineWidth = 2.5
+    ctx.strokeStyle = PHOSPHOR.phosphor
+    ctx.beginPath()
+    ctx.moveTo(x - wide * 0.4, base)
+    ctx.bezierCurveTo(x - wide * 0.5, base - 50, x + sway * 0.6 - 5, tip + 150, x + sway * 0.6, tip + 90)
+    ctx.bezierCurveTo(x + sway * 0.6 + 5, tip + 150, x + wide * 0.5, base - 50, x + wide * 0.4, base)
+    ctx.stroke()
+  }
+  // The coals: a row of dim stones between the legs.
+  ctx.strokeStyle = PHOSPHOR.dim
+  ctx.lineWidth = 3
+  for (let coal = 0; coal < 9; coal++) {
+    const x = left + 110 + coal * ((width - 220) / 8)
+    ctx.beginPath()
+    ctx.ellipse(x, top + legs * 0.62, 26, 14, 0, 0, Math.PI * 2)
+    ctx.stroke()
+  }
+
+  // Grate: rims front and back with the sides joining them, so the brain has
+  // a surface to sit ON rather than a line.
+  const grate = PHOSPHOR.dim
+  rule(ctx, left, top, left + width, top, grate, 5)
+  rule(ctx, left + inset, top - depth, left + width - inset, top - depth, grate, 3)
+  rule(ctx, left, top, left + inset, top - depth, grate, 3)
+  rule(ctx, left + width, top, left + width - inset, top - depth, grate, 3)
+  for (let bar = 1; bar <= bars; bar++) {
+    const t = bar / (bars + 1)
+    rule(ctx, left + t * width, top, left + inset + t * (width - inset * 2), top - depth, grate, 2)
+  }
+  rule(ctx, left + 70, top, left + 70, top + legs, grate, 5)
+  rule(ctx, left + width - 70, top, left + width - 70, top + legs, grate, 5)
+  rule(ctx, left + 70, top + legs, left + width - 70, top + legs, grate, 3)
+
+  // Heat: short broken wisps rising off the grate either side of the brain,
+  // drifting upward on the clock. Dashed and ghost-dim so they read as air,
+  // not as lines.
+  ctx.strokeStyle = PHOSPHOR.ghost
+  ctx.lineWidth = 2
+  ctx.setLineDash([7, 11])
+  ctx.lineDashOffset = -time * 40
+  for (const x of [left + 170, left + width - 170]) {
+    ctx.beginPath()
+    for (let y = top - depth - 14; y > top - depth - 150; y -= 6) {
+      const rise = (top - depth - 14 - y) / 136
+      const wave = Math.sin(y * 0.05 + time * 2.2 + x) * 8 * (1 - rise * 0.5)
+      if (y === top - depth - 14) ctx.moveTo(x + wave, y)
+      else ctx.lineTo(x + wave, y)
+    }
+    ctx.stroke()
+  }
+  ctx.setLineDash([])
+  ctx.lineDashOffset = 0
+}
+
+function drawGrillVisual(ctx, visual, draw = 1, time = 0) {
+  const step = visual.step ?? 0
+  const progress = Math.min(1, visual.progress ?? 1)
+  const answers = visual.answers ?? []
+  const left = (TERMINAL.width - GRILL.width) / 2
+  const frameProgress = draw >= 1 ? 1 : easeInOut((draw - 0.05) / 0.5)
+  if (frameProgress <= 0) return
+
+  ctx.globalAlpha = frameProgress
+  chromeText(ctx, visual.title, TERMINAL.width / 2, 250, {
+    size: 92,
+    weight: 700,
+    align: 'center',
+    baseline: 'middle',
+    color: PHOSPHOR.hot,
+  })
+  drawGrill(ctx, left, time)
+
+  // The flip: up, one full turn, and down onto the grate; then the question.
+  // It cooks UPSIDE DOWN — crown on the bars, stem in the air — so the rest
+  // pose is a half turn and every flip is one full turn from there. The crown
+  // of the scalloped cerebrum is 0.97 of the size below the centre once it is
+  // inverted; that is what sits on the grate's mid-depth.
+  const air = Math.min(1, progress / GRILL.airShare)
+  const restY = GRILL.top - GRILL.depth * 0.5 - GRILL.brain * 0.97
+  const brainY = restY - GRILL.jump * Math.sin(Math.PI * air)
+  const landed = air >= 1
+  drawBrain(
+    ctx,
+    TERMINAL.width / 2,
+    brainY,
+    GRILL.brain,
+    Math.PI + Math.PI * 2 * air,
+    landed ? PHOSPHOR.hot : PHOSPHOR.dim,
+    landed ? GLOW_RADIUS * 0.9 : 0
+  )
+
+  const lineY = GRILL.top + GRILL.legs + 120
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  if (!landed && step > 0) {
+    // The answer that launched this flip, stamped on the question it answered
+    // and fading as the brain climbs.
+    const previous = visual.questions[step - 1]
+    const answer = answers[step - 1]
+    ctx.globalAlpha = frameProgress * (1 - air)
+    ctx.font = screenFont(44, 500)
+    const stamp = answer ? `   ${answer.toUpperCase()}` : ''
+    const line = `❯ ${previous}`
+    const width = ctx.measureText(line + stamp).width
+    ctx.textAlign = 'left'
+    ctx.fillStyle = PHOSPHOR.dim
+    ctx.fillText(line, (TERMINAL.width - width) / 2, lineY)
+    if (answer) {
+      ctx.fillStyle = PHOSPHOR.hot
+      ctx.shadowColor = PHOSPHOR.phosphor
+      ctx.shadowBlur = GLOW_RADIUS * 0.8
+      ctx.fillText(stamp, (TERMINAL.width - width) / 2 + ctx.measureText(line).width, lineY)
+      ctx.shadowBlur = 0
+    }
+  } else if (landed && visual.question !== null && visual.question !== undefined) {
+    // Landed: the question types in, then the two keys that answer it.
+    const typing = Math.min(1, (progress - GRILL.airShare) / (1 - GRILL.airShare))
+    const line = `❯ ${visual.questions[visual.question]}`
+    const shown = line.slice(0, Math.ceil(line.length * easeInOut(typing)))
+    ctx.font = screenFont(44, 500)
+    ctx.textAlign = 'left'
+    ctx.fillStyle = PHOSPHOR.hot
+    ctx.shadowColor = PHOSPHOR.phosphor
+    ctx.shadowBlur = GLOW_RADIUS * 0.8
+    const fullWidth = ctx.measureText(line).width
+    ctx.fillText(shown, (TERMINAL.width - fullWidth) / 2, lineY)
+    ctx.shadowBlur = 0
+    if (typing >= 1) {
+      chromeText(ctx, 'Y  YES   ·   N  NO', TERMINAL.width / 2, lineY + 74, {
+        size: 28,
+        align: 'center',
+        baseline: 'middle',
+        color: PHOSPHOR.ghost,
+      })
+    }
+  } else if (landed) {
+    // Nothing left to ask: the tally, dim, and the brain at rest.
+    const yes = answers.filter((answer) => answer === 'yes').length
+    const no = answers.filter((answer) => answer === 'no').length
+    chromeText(ctx, `${yes} yes   ·   ${no} no`, TERMINAL.width / 2, lineY, {
+      size: 34,
+      align: 'center',
+      baseline: 'middle',
+      color: PHOSPHOR.dim,
+    })
+  }
+  ctx.globalAlpha = 1
+}
+
+/**
+ * GO FOR A WALK — one line over a perspective line drawing of a path through
+ * simple line trees, walked along at walking pace. The only catalog form that
+ * moves on the free-running clock; every tree's place and height is seeded
+ * from its index, so the walk is the same walk every time.
+ */
+const WALK = Object.freeze({
+  horizon: 720,
+  focal: 760,
+  eyeHeight: 1.7,
+  pathHalf: 1.6,
+  treeOffset: 3.8,
+  spacing: 7,
+  depth: 84,
+  near: 1.4,
+  speed: 1.5, // units per second — an unhurried walk
+})
+
+function drawTree(ctx, baseX, baseY, height, scale, color, alpha) {
+  const trunkWidth = Math.max(1.5, 3.2 * scale)
+  ctx.globalAlpha = alpha
+  ctx.strokeStyle = color
+  ctx.lineWidth = trunkWidth
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  ctx.moveTo(baseX, baseY)
+  ctx.lineTo(baseX, baseY - height)
+  ctx.stroke()
+  // Four bare branches, alternating sides, each a straight stroke angled up.
+  ctx.lineWidth = Math.max(1, trunkWidth * 0.6)
+  for (let branch = 0; branch < 4; branch++) {
+    const at = baseY - height * (0.42 + branch * 0.15)
+    const side = branch % 2 === 0 ? -1 : 1
+    const reach = height * (0.3 - branch * 0.05)
+    ctx.beginPath()
+    ctx.moveTo(baseX, at)
+    ctx.lineTo(baseX + side * reach, at - reach * 0.75)
+    ctx.stroke()
+  }
+}
+
+function drawWalkVisual(ctx, visual, draw = 1, time = 0) {
+  const cx = TERMINAL.width / 2
+  const sceneProgress = draw >= 1 ? 1 : easeInOut((draw - 0.05) / 0.5)
+  const project = (x, y, z) => ({
+    x: cx + (x / z) * WALK.focal,
+    y: WALK.horizon + ((WALK.eyeHeight - y) / z) * WALK.focal,
+    scale: WALK.focal / z,
+  })
+
+  if (sceneProgress > 0) {
+    ctx.globalAlpha = sceneProgress
+    // Horizon and the path's two edges, converging on the vanishing point.
+    rule(ctx, FRAME.left, WALK.horizon, FRAME.right, WALK.horizon, PHOSPHOR.ghost, 2)
+    for (const side of [-1, 1]) {
+      const near = project(side * WALK.pathHalf, 0, WALK.near)
+      rule(ctx, near.x, near.y, cx, WALK.horizon, PHOSPHOR.dim, 3)
+    }
+
+    // Trees, far to near so the close ones overdraw. Each recycles to the far
+    // end of the depth as it walks past the camera.
+    const count = Math.floor(WALK.depth / WALK.spacing)
+    const trees = []
+    for (let side of [-1, 1]) {
+      for (let index = 0; index < count; index++) {
+        const seed = ((index * 97 + (side > 0 ? 41 : 0)) * 2654435761) % 1000 / 1000
+        const travel = (index * WALK.spacing - time * WALK.speed) % WALK.depth
+        const z = ((travel % WALK.depth) + WALK.depth) % WALK.depth + WALK.near
+        trees.push({
+          side,
+          z,
+          x: side * (WALK.treeOffset + seed * 2.4),
+          height: 3.0 + seed * 2.4,
+        })
+      }
+    }
+    trees.sort((a, b) => b.z - a.z)
+    for (const tree of trees) {
+      const base = project(tree.x, 0, tree.z)
+      const top = project(tree.x, tree.height, tree.z)
+      const distanceFade = 1 - smoothRange(tree.z, WALK.depth * 0.35, WALK.depth)
+      const nearFade = smoothRange(tree.z, WALK.near, WALK.near + 2.4)
+      drawTree(
+        ctx,
+        base.x,
+        base.y,
+        base.y - top.y,
+        base.scale / (WALK.focal / WALK.near),
+        PHOSPHOR.phosphor,
+        sceneProgress * distanceFade * nearFade
+      )
+    }
+    ctx.globalAlpha = 1
+  }
+
+  // The line, typed in as a statement is.
+  const typeProgress = draw >= 1 ? 1 : easeInOut((draw - 0.1) / 0.8)
+  const shown = visual.text.slice(0, Math.ceil(visual.text.length * typeProgress))
+  if (!shown) return
+  ctx.font = screenFont(100, 700)
+  ctx.fillStyle = PHOSPHOR.hot
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.shadowColor = PHOSPHOR.phosphor
+  ctx.shadowBlur = GLOW_RADIUS * 0.8
+  const fullWidth = ctx.measureText(visual.text).width
+  ctx.fillText(shown, (TERMINAL.width - fullWidth) / 2, 300)
+  ctx.shadowBlur = 0
+}
+
+function smoothRange(value, edge0, edge1) {
+  const t = Math.min(1, Math.max(0, (value - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
+}
+
+/**
  * Labelled nodes joined by directed edges — the closing 3R image.
  *
  * Node positions are authored in the catalog as fractions of the screen, so the
@@ -642,13 +1190,16 @@ function drawChartVisual(ctx, visual, draw = 1) {
   )
 }
 
-function drawVisual(ctx, visual, draw = 1) {
+function drawVisual(ctx, visual, draw = 1, time = 0) {
   if (visual.kind === 'title') drawTitle(ctx, visual, draw)
   else if (visual.kind === 'asset') drawAssetVisual(ctx, visual)
   else if (visual.kind === 'chart') return drawChartVisual(ctx, visual, draw)
   else if (visual.kind === 'tweet') drawTweetVisual(ctx, visual, draw)
   else if (visual.kind === 'statement') drawStatementVisual(ctx, visual, draw)
   else if (visual.kind === 'stat') drawStatVisual(ctx, visual, draw)
+  else if (visual.kind === 'slot') drawSlotVisual(ctx, visual, draw)
+  else if (visual.kind === 'grill') drawGrillVisual(ctx, visual, draw, time)
+  else if (visual.kind === 'walk') drawWalkVisual(ctx, visual, draw, time)
   else if (visual.kind === 'diagram') drawDiagramVisual(ctx, visual, draw)
   else throw new Error(`Unknown terminal visual kind: ${visual.kind}`)
   return []
@@ -760,7 +1311,7 @@ export function paintTerminal(ctx, frame, time, { drawCaret = true, reveal = nul
   if (frame.visual) {
     // Recorded even mid-sweep: the rows are already in their final places, so
     // the pointer keeps working while the beam draws them in.
-    recordChartRegions(drawVisual(ctx, frame.visual, draw))
+    recordChartRegions(drawVisual(ctx, frame.visual, draw, time))
     if (reveal) applyRasterWipe(ctx, reveal)
     return
   }
