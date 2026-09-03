@@ -33,6 +33,9 @@ METRES_PER_SCENE_UNIT = 1.0 / SCENE_UNITS_PER_METRE
 FLOOR_Z = -34.34 * METRES_PER_SCENE_UNIT
 CEILING_Z = 42.0 * METRES_PER_SCENE_UNIT
 DESK_TOP_Z = -8.34 * METRES_PER_SCENE_UNIT
+# The wool desk mat (build_desk) is 6 mm thick and sits 1 mm proud of the top;
+# anything on the mat is seated here, not on the desk.
+DESK_MAT_TOP_Z = DESK_TOP_Z + 0.007
 BACK_WALL_Y = 64.0 * METRES_PER_SCENE_UNIT
 FRONT_Y = -35.0 * METRES_PER_SCENE_UNIT
 ROOM_HALF_WIDTH = 78.0 * METRES_PER_SCENE_UNIT
@@ -472,9 +475,13 @@ def seat_on(objects: list[bpy.types.Object], surface_z: float, gap: float = 0.00
         if obj.type == "MESH"
         for corner in obj.bound_box
     )
+    lift = Vector((0.0, 0.0, surface_z + gap - lowest))
     for obj in objects:
         if obj.parent is None or obj.parent not in objects:
-            obj.location.z += surface_z + gap - lowest
+            # A child's location is in its parent's space, and imported
+            # anchors are often rotated; move it by the world lift expressed there.
+            delta = lift if obj.parent is None else obj.parent.matrix_world.to_3x3().inverted() @ lift
+            obj.location += delta
 
 
 def build_floor(target: bpy.types.Collection, material: bpy.types.Material) -> None:
@@ -780,7 +787,8 @@ def build_desk(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]
     )
 
     # Low right-side credenza is background furniture, not an isolated prop.
-    credenza_x, credenza_y = 1.76, 1.73
+    # Held off the back wall far enough that the plant on it clears the wall.
+    credenza_x, credenza_y = 1.76, 1.57
     add_box(
         "Credenza carcass",
         (1.20, 0.36, 0.54),
@@ -821,11 +829,13 @@ def build_desk(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]
 
 
 def build_keyboard(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]) -> None:
-    keyboard_x, keyboard_y = -0.03, -0.235
+    # Centred under the glass, which also keeps it clear of the binder.
+    keyboard_x, keyboard_y = 0.0, -0.235
+    # On the mat, so its base clears the mat's top rather than sitting in it.
     add_box(
         "Keyboard chassis",
         (0.48, 0.17, 0.022),
-        (keyboard_x, keyboard_y, DESK_TOP_Z + 0.018),
+        (keyboard_x, keyboard_y, DESK_MAT_TOP_Z + 0.015),
         mats["keyboard"],
         target,
         rotation=(math.radians(-2.0), 0, math.radians(-1.5)),
@@ -848,7 +858,7 @@ def build_keyboard(target: bpy.types.Collection, mats: dict[str, bpy.types.Mater
             add_box(
                 f"Keycap {row + 1:02d}-{column + 1:02d}",
                 (width, 0.025, 0.012),
-                (x, y, DESK_TOP_Z + 0.035),
+                (x, y, DESK_MAT_TOP_Z + 0.032),
                 mats["keycap"],
                 target,
                 bevel=0.004,
@@ -907,22 +917,23 @@ def build_shelving(target: bpy.types.Collection, mats: dict[str, bpy.types.Mater
             )
             cursor += width + 0.005
 
-    # Floating shelves on the back wall hold a sparse, believable history. The
-    # books stand ON the lower shelf, packed from its left end and set back
-    # from its front edge; the upper shelf clears the tallest of them.
+    # Floating shelves on the back wall hold a sparse, believable history. They
+    # fit the wall between the door casing and the acoustic panel; the books
+    # stand ON the lower shelf, packed from its left end and set back from its
+    # front edge, and the upper shelf clears the tallest of them.
     shelf_y = BACK_WALL_Y - 0.14
     lower_shelf_z = FLOOR_Z + 1.78
     upper_shelf_z = FLOOR_Z + 2.10
     for z in (lower_shelf_z, upper_shelf_z):
         add_box(
             "Floating walnut shelf",
-            (0.70, 0.17, 0.035),
-            (-0.96, shelf_y, z),
+            (0.40, 0.17, 0.035),
+            (-0.97, shelf_y, z),
             mats["slat"],
             target,
             bevel=0.007,
         )
-    cursor = -1.28
+    cursor = -1.15
     for index in range(7):
         width = random.uniform(0.026, 0.047)
         height = random.uniform(0.16, 0.23)
@@ -979,11 +990,13 @@ def build_chair(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
     # Reuse the approved production task-chair silhouette rather than dressing up
     # a stack of rounded boxes. Blender owns the broad upholstery/frame/metal
     # separation that the original UV-less CAD export could not carry itself.
+    # Pushed back from the desk's front edge: any closer and the backrest
+    # passes through the top.
     imported = import_glb(
         MODEL_DIR / "office-chair.glb",
         "Home task chair",
         target,
-        location=(-0.98, -0.70, FLOOR_Z),
+        location=(-0.98, -0.80, FLOOR_Z),
         rotation=(-math.pi / 2, 0, math.radians(8)),
     )
     for obj in imported:
@@ -1002,22 +1015,75 @@ def build_chair(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
             polygon.material_index = 0 if center.z > 0.43 else 2 if 0.18 < center.z < 0.42 and radial < 0.075 else 1
 
 
+def build_mouse(
+    target: bpy.types.Collection,
+    mats: dict[str, bpy.types.Material],
+    location: tuple[float, float, float],
+    yaw: float,
+) -> None:
+    """A modern wireless-shaped mouse, modelled rather than imported.
+
+    The CAD mouse read as a lump at any distance. A squashed sphere sunk a
+    third of the way into the mat gives the smooth dome a real mouse has, and
+    the seam, the wheel and a cable are all the detail a desk shot can use.
+    """
+    x, y, z = location
+    cos, sin = math.cos(yaw), math.sin(yaw)
+    local = lambda dx, dy: (x + dx * cos - dy * sin, y + dx * sin + dy * cos)
+
+    bpy.ops.mesh.primitive_uv_sphere_add(
+        segments=64, ring_count=32, radius=1.0, location=(x, y, z + 0.012), rotation=(0, 0, yaw)
+    )
+    shell = bpy.context.object
+    shell.name = "Mouse shell"
+    shell.scale = (0.031, 0.056, 0.024)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    for polygon in shell.data.polygons:
+        polygon.use_smooth = True
+    shell.data.materials.append(mats["mouse"])
+    move_to_collection(shell, target)
+
+    seam_x, seam_y = local(0.0, 0.03)
+    add_box(
+        "Mouse button seam",
+        (0.0015, 0.05, 0.006),
+        (seam_x, seam_y, z + 0.032),
+        mats["black"],
+        target,
+        rotation=(0, 0, yaw),
+    )
+    wheel_x, wheel_y = local(0.0, 0.026)
+    add_cylinder(
+        "Mouse wheel",
+        0.007,
+        0.005,
+        (wheel_x, wheel_y, z + 0.033),
+        mats["rubber"],
+        target,
+        rotation=(0, math.pi / 2, yaw),
+        vertices=32,
+    )
+    tail_x, tail_y = local(0.0, 0.05)
+    add_curve(
+        "Mouse cable",
+        [
+            (tail_x, tail_y, z + 0.004),
+            (tail_x + 0.06, tail_y + 0.22, z + 0.002),
+            (tail_x + 0.10, tail_y + 0.50, DESK_TOP_Z + 0.002),
+            (tail_x + 0.13, tail_y + 0.72, DESK_TOP_Z - 0.12),
+        ],
+        0.0025,
+        mats["rubber"],
+        target,
+    )
+
+
 def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]) -> None:
     build_keyboard(target, mats)
-    # Every imported prop is seated on the measured desk top (see seat_on):
-    # the stationery set's origin sat 26 mm below its own base, which sank
-    # its pencil cup into the desk.
-    seat_on(
-        import_glb(
-            MODEL_DIR / "mouse.glb",
-            "Wired mouse",
-            target,
-            location=(0.52, -0.24, DESK_TOP_Z),
-            rotation=(-math.pi / 2, 0, math.radians(-8)),
-            material=mats["mouse"],
-        ),
-        DESK_TOP_Z,
-    )
+    # Every imported prop is seated on the measured surface it stands on (see
+    # seat_on): the stationery set's origin sat 26 mm below its own base,
+    # which sank its pencil cup into the desk.
+    build_mouse(target, mats, (0.52, -0.24, DESK_MAT_TOP_Z), math.radians(-8))
     seat_on(
         import_glb(
             MODEL_DIR / "mug.glb",
@@ -1034,11 +1100,12 @@ def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
     # keeps its leather and paper maps; the lamp is exported as the dark
     # painted metal the old lamp was, because its stock orange enamel would be
     # the one saturated colour in an amber room.
+    # On the mat, left of the keyboard, seated on the mat's top.
     binder = import_glb_group(
         ASSET_DIR / "binder_notebook" / "binder_notebook_1k.gltf",
         "Binder notebook",
         target,
-        location=(-0.72, -0.18, DESK_TOP_Z),
+        location=(-0.695, -0.18, DESK_MAT_TOP_Z),
         rotation=(0, 0, math.radians(-11)),
     )
     # The asset ships a closed and an open copy on top of each other; a desk
@@ -1047,15 +1114,29 @@ def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
     binder = [obj for obj in binder if obj not in open_copies]
     for obj in open_copies:
         bpy.data.objects.remove(obj, do_unlink=True)
-    seat_on(binder, DESK_TOP_Z)
+    seat_on(binder, DESK_MAT_TOP_Z)
+    # The lamp's own mount is a 4 cm stem, so it stands on a weighted disc;
+    # yawed so the head reaches over the desk toward the keyboard rather than
+    # the wall (measured: at −110° the head sits 13 cm toward +x of the base).
+    lamp_x, lamp_y = -0.97, 0.20
+    add_cylinder(
+        "Lamp base weight",
+        0.085,
+        0.014,
+        (lamp_x, lamp_y, DESK_TOP_Z + 0.007),
+        mats["lamp"],
+        target,
+        vertices=64,
+        bevel=0.003,
+    )
     lamp = import_glb_group(
         ASSET_DIR / "desk_lamp_arm_01" / "desk_lamp_arm_01_1k.gltf",
         "Arm lamp",
         target,
-        location=(-0.97, 0.20, DESK_TOP_Z),
-        rotation=(0, 0, math.radians(24)),
+        location=(lamp_x, lamp_y, DESK_TOP_Z),
+        rotation=(0, 0, math.radians(-110)),
     )
-    seat_on(lamp, DESK_TOP_Z)
+    seat_on(lamp, DESK_TOP_Z + 0.014)
     for obj in lamp:
         if obj.type != "MESH":
             continue
@@ -1065,6 +1146,15 @@ def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
             material["export_base_color"] = rgba("#36413f")
             material["export_roughness"] = 0.36
             material["export_metallic"] = 0.56
+            # The asset ships with its bulb lit. At 3am the monitor is the only
+            # light in the room, so the lamp is off.
+            bsdf = material.node_tree.nodes.get("Principled BSDF") if material.use_nodes else None
+            if bsdf is not None:
+                strength = bsdf.inputs.get("Emission Strength")
+                if strength is not None:
+                    for link in list(strength.links):
+                        material.node_tree.links.remove(link)
+                    strength.default_value = 0.0
     # Contemporary details: phone face-down, pencil, and a small interface box.
     add_box(
         "Phone face down",
@@ -1076,17 +1166,19 @@ def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
         bevel=0.012,
         segments=5,
     )
-    seat_on(
-        import_glb_group(
-            ASSET_DIR / "stationery_supplies.glb",
-            "Poly Haven stationery",
-            target,
-            location=(-0.61, 0.15, DESK_TOP_Z),
-            rotation=(math.pi / 2, 0, math.radians(-6)),
-            scale=0.9,
-        ),
-        DESK_TOP_Z,
+    stationery = import_glb_group(
+        ASSET_DIR / "stationery_supplies.glb",
+        "Poly Haven stationery",
+        target,
+        location=(-0.61, 0.15, DESK_TOP_Z),
+        rotation=(math.pi / 2, 0, math.radians(-6)),
+        scale=0.9,
     )
+    # The set's pieces sit at different heights above its own origin (the
+    # pencils 35 mm above the cup's base), so each one is seated on its own.
+    for obj in stationery:
+        if obj.type == "MESH":
+            seat_on([obj], DESK_TOP_Z)
     add_box(
         "Audio interface",
         (0.19, 0.13, 0.045),
@@ -1359,14 +1451,16 @@ def main() -> None:
     build_architecture(export, mats)
     build_desk(export, mats)
     build_shelving(export, mats)
-    # On the credenza, seated on its measured top rather than a guessed height.
+    # On the credenza, seated on its top, and scaled so its leaves clear the
+    # back wall and the window frame (at full size they ran 16 cm into both).
     seat_on(
         import_glb_group(
             ASSET_DIR / "potted_plant_02.glb",
             "Poly Haven potted plant",
             export,
-            location=(1.76, 1.72, FLOOR_Z + 0.59),
+            location=(1.76, 1.56, FLOOR_Z + 0.59),
             rotation=(0, 0, math.radians(-18)),
+            scale=0.78,
         ),
         FLOOR_Z + 0.58,
     )
