@@ -20,7 +20,7 @@ from pathlib import Path
 
 import bmesh
 import bpy
-from mathutils import Vector
+from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE_DIR = Path(__file__).resolve().parent
@@ -465,6 +465,19 @@ def import_glb_group(
     for obj in imported:
         move_to_collection(obj, target)
     return [anchor, *imported]
+
+
+def world_bounds(obj: bpy.types.Object) -> tuple[float, float, float, float, float, float]:
+    """(min x, max x, min y, max y, min z, max z) of an object's box in world space."""
+    points = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
+    return (
+        min(p.x for p in points),
+        max(p.x for p in points),
+        min(p.y for p in points),
+        max(p.y for p in points),
+        min(p.z for p in points),
+        max(p.z for p in points),
+    )
 
 
 def seat_on(objects: list[bpy.types.Object], surface_z: float, gap: float = 0.0015) -> None:
@@ -1016,9 +1029,11 @@ def build_shelving(target: bpy.types.Collection, mats: dict[str, bpy.types.Mater
     # fit the wall between the door casing and the acoustic panel; the books
     # stand ON the lower shelf, packed from its left end and set back from its
     # front edge, and the upper shelf clears the tallest of them.
+    # Low enough that the books are in frame on the reveal and boundaries
+    # cameras rather than cut by the top of it.
     shelf_y = BACK_WALL_Y - 0.14
-    lower_shelf_z = FLOOR_Z + 1.78
-    upper_shelf_z = FLOOR_Z + 2.10
+    lower_shelf_z = FLOOR_Z + 1.63
+    upper_shelf_z = FLOOR_Z + 1.95
     for z in (lower_shelf_z, upper_shelf_z):
         add_box(
             "Floating walnut shelf",
@@ -1222,23 +1237,71 @@ def build_mouse(
     )
 
 
+def build_mug(
+    target: bpy.types.Collection,
+    mats: dict[str, bpy.types.Material],
+    location: tuple[float, float, float],
+    yaw: float,
+) -> None:
+    """A lathed mug: a slight taper, a rolled lip, a thick base, coffee 14 mm
+    below the rim, and a handle that plunges into the wall. Replaces a
+    49k-triangle CAD lathe with straight sides and a pipe for a handle.
+    """
+    x, y, z = location
+    profile = [
+        (0.0, 0.0), (0.030, 0.0), (0.037, 0.004), (0.039, 0.030), (0.040, 0.060),
+        (0.0415, 0.092), (0.0405, 0.096), (0.037, 0.096), (0.036, 0.090),
+        (0.0355, 0.040), (0.033, 0.012), (0.0, 0.010),
+    ]
+    bm = bmesh.new()
+    verts = [bm.verts.new((radius, 0.0, height)) for radius, height in profile]
+    edges = [bm.edges.new((verts[index], verts[index + 1])) for index in range(len(verts) - 1)]
+    bmesh.ops.spin(bm, geom=verts + edges, cent=(0, 0, 0), axis=(0, 0, 1), angle=math.tau, steps=64, use_merge=True)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+    mesh = bpy.data.meshes.new("Mug body")
+    bm.to_mesh(mesh)
+    bm.free()
+    for polygon in mesh.polygons:
+        polygon.use_smooth = True
+    mesh.materials.append(mats["ceramic"])
+    body = bpy.data.objects.new("Ceramic mug", mesh)
+    body.location = (x, y, z + 0.001)
+    body.rotation_mode = "XYZ"
+    body.rotation_euler = (0, 0, yaw)
+    target.objects.link(body)
+
+    bpy.ops.mesh.primitive_circle_add(vertices=64, radius=0.0352, fill_type="NGON", location=(x, y, z + 0.001 + 0.082))
+    coffee = bpy.context.object
+    coffee.name = "Mug coffee"
+    coffee.data.materials.append(mats["coffee"])
+    move_to_collection(coffee, target)
+
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.027, minor_radius=0.0065, major_segments=48, minor_segments=16)
+    handle = bpy.context.object
+    handle.name = "Mug handle"
+    bm = bmesh.new()
+    bm.from_mesh(handle.data)
+    # Keep the outer half of the ring, cut at its centre plane so both ends
+    # terminate inside the wall's thickness rather than a visible 2 mm short.
+    bmesh.ops.delete(bm, geom=[vertex for vertex in bm.verts if vertex.co.x < 0.0], context="VERTS")
+    bm.to_mesh(handle.data)
+    bm.free()
+    for polygon in handle.data.polygons:
+        polygon.use_smooth = True
+    handle.data.materials.append(mats["ceramic"])
+    handle.parent = body
+    handle.location = (0.036, 0.0, 0.052)
+    handle.rotation_euler = (math.pi / 2, 0, 0)
+    move_to_collection(handle, target)
+
+
 def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]) -> None:
     build_keyboard(target, mats)
     # Every imported prop is seated on the measured surface it stands on (see
     # seat_on): the stationery set's origin sat 26 mm below its own base,
     # which sank its pencil cup into the desk.
     build_mouse(target, mats, (0.52, -0.24, DESK_MAT_TOP_Z), math.radians(172))
-    seat_on(
-        import_glb(
-            MODEL_DIR / "mug.glb",
-            "Ceramic mug",
-            target,
-            location=(0.83, 0.01, DESK_TOP_Z),
-            rotation=(-math.pi / 2, 0, math.radians(18)),
-            material=mats["ceramic"],
-        ),
-        DESK_TOP_Z,
-    )
+    build_mug(target, mats, (0.83, 0.01, DESK_TOP_Z), math.radians(18))
     # The notebook and the lamp are Poly Haven (CC0) models in place of the
     # CAD parts, which read as extruded blocks at any distance. The binder
     # keeps its leather and paper maps; the lamp is exported as the dark
@@ -1323,6 +1386,46 @@ def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
     for obj in stationery:
         if obj.type == "MESH":
             seat_on([obj], DESK_TOP_Z)
+    # The pens and pencils stand in the cup, which is what the cup is for;
+    # loose on the desk beside an empty cup, the cup read as a stray mug. Each
+    # is measured, reparented to the world, stood on its long axis with a
+    # small lean, ringed inside the cup, and its point set on the cup's floor.
+    # The eraser stays on the desk.
+    bpy.context.view_layer.update()
+    cup = next(obj for obj in stationery if obj.type == "MESH" and obj.name.endswith("pencilcup"))
+    cup_box = world_bounds(cup)
+    cup_centre = Vector(((cup_box[0] + cup_box[1]) / 2, (cup_box[2] + cup_box[3]) / 2, 0.0))
+    cup_floor = cup_box[4] + 0.006
+    writing = [
+        obj
+        for obj in stationery
+        if obj.type == "MESH" and ("pen" in obj.name or "pencil" in obj.name) and "cup" not in obj.name
+    ]
+    for index, obj in enumerate(writing):
+        placed = obj.matrix_world.copy()
+        obj.parent = None
+        obj.matrix_world = placed
+        bpy.context.view_layer.update()
+        box = world_bounds(obj)
+        centre = Vector(((box[0] + box[1]) / 2, (box[2] + box[3]) / 2, (box[4] + box[5]) / 2))
+        extents = (box[1] - box[0], box[3] - box[2], box[5] - box[4])
+        long_axis = extents.index(max(extents))
+        upright = (
+            Matrix.Rotation(math.radians(-90), 4, "Y")
+            if long_axis == 0
+            else Matrix.Rotation(math.radians(90), 4, "X")
+            if long_axis == 1
+            else Matrix.Identity(4)
+        )
+        angle = index * math.tau / len(writing)
+        lean = Matrix.Rotation(
+            math.radians(9), 4, Vector((math.cos(angle + math.pi / 2), math.sin(angle + math.pi / 2), 0.0))
+        )
+        obj.matrix_world = Matrix.Translation(cup_centre) @ lean @ upright @ Matrix.Translation(-centre) @ obj.matrix_world
+        bpy.context.view_layer.update()
+        box = world_bounds(obj)
+        ring = Vector((math.cos(angle) * 0.013, math.sin(angle) * 0.013, cup_floor - box[4]))
+        obj.matrix_world = Matrix.Translation(ring) @ obj.matrix_world
     add_box(
         "Audio interface",
         (0.19, 0.13, 0.045),
@@ -1390,66 +1493,68 @@ def build_lookdev_monitor(target: bpy.types.Collection, mats: dict[str, bpy.type
         add_box(f"Screen grid {index}", (0.0015, 0.002, 0.13), (x, -0.031, -0.002), dim, target)
 
 
+def three_to_blender(x: float, y: float, z: float) -> tuple[float, float, float]:
+    """A point in the deck's scene units (X width, Y up, screen faces +Z) in metres here."""
+    return (x * METRES_PER_SCENE_UNIT, -z * METRES_PER_SCENE_UNIT, y * METRES_PER_SCENE_UNIT)
+
+
 def build_lighting(target: bpy.types.Collection) -> None:
-    # The glass is the key. The doorway and window are quiet separators, never fill.
+    """The deck's home rig, not a lookdev invention.
+
+    Every source here is one of the five in `src/scene/Scene.jsx` at the
+    same place, size, colour and aim, so a render from this file predicts
+    what the talk shows. Powers were calibrated by rendering the boundaries
+    camera against the deck's own boundaries capture (2026-09-02). The old
+    rig had a 48 W key 5 cm from the glass and three returns the deck does
+    not have; under it every dark shell rendered beige.
+    """
+    # The screen itself: a rectangle the size of the glass, coplanar with it.
     add_area_light(
         "Screen key",
-        (0.0, -0.055, 0.02),
-        (0.0, -0.75, DESK_TOP_Z),
-        48.0,
-        "#ffd993",
-        0.52,
-        0.30,
+        three_to_blender(0, 0, 0.02),
+        three_to_blender(0, 0, 40),
+        32.0,
+        "#ffe4a8",
+        0.520,
+        0.2925,
         target,
     )
+    fill = bpy.data.lights.new("Local fill", "POINT")
+    fill.energy = 1.2
+    fill.color = rgba("#ffdf9e")[:3]
+    fill.shadow_soft_size = 0.03
+    fill_object = bpy.data.objects.new("Local fill", fill)
+    target.objects.link(fill_object)
+    fill_object.location = three_to_blender(0, 0.4, 1.15)
+    # The doorway: a cold spot raking across the room; the only caster.
+    doorway = bpy.data.lights.new("Doorway", "SPOT")
+    doorway.energy = 420.0
+    doorway.color = rgba("#b3c0bd")[:3]
+    doorway.spot_size = 1.24
+    doorway.spot_blend = 0.85
+    doorway.shadow_soft_size = 0.08
+    doorway_object = bpy.data.objects.new("Doorway", doorway)
+    target.objects.link(doorway_object)
+    doorway_object.location = three_to_blender(-46, 40, -30)
+    aim_at(doorway_object, three_to_blender(4, -8.34, 4))
     add_area_light(
-        "Doorway return",
-        (-1.67, BACK_WALL_Y + 0.54, FLOOR_Z + 1.25),
-        (-0.35, 0.05, DESK_TOP_Z - 0.18),
-        56.0,
-        "#aab9b8",
-        0.78,
-        1.70,
-        target,
-    )
-    add_area_light(
-        "Window moon return",
-        (1.36, BACK_WALL_Y + 0.14, FLOOR_Z + 1.55),
-        (0.60, 0.20, FLOOR_Z + 0.60),
-        14.0,
-        "#8d9ca3",
-        1.10,
-        0.95,
-        target,
-    )
-    add_area_light(
-        "Desk screen bounce",
-        (0.0, -0.02, DESK_TOP_Z + 0.04),
-        (0.0, 0.42, 0.06),
+        "Opposite rim",
+        three_to_blender(34, 17, -18),
+        three_to_blender(2, -2, -5),
         10.0,
-        "#c89345",
-        1.55,
-        0.54,
+        "#909b98",
+        18 * METRES_PER_SCENE_UNIT,
+        28 * METRES_PER_SCENE_UNIT,
         target,
     )
     add_area_light(
-        "Screen wall return",
-        (0.0, -0.34, DESK_TOP_Z + 0.12),
-        (0.05, BACK_WALL_Y - 0.12, FLOOR_Z + 1.35),
-        95.0,
-        "#a67b3a",
-        1.8,
-        0.72,
-        target,
-    )
-    add_area_light(
-        "Door slit return",
-        (-1.56, BACK_WALL_Y - 0.22, FLOOR_Z + 1.12),
-        (-0.62, -0.55, FLOOR_Z + 0.52),
-        24.0,
-        "#91a5a5",
-        0.18,
-        1.45,
+        "Back wall",
+        three_to_blender(-8, 10, -44),
+        three_to_blender(-8, 10, -62),
+        14.0,
+        "#6c7671",
+        50 * METRES_PER_SCENE_UNIT,
+        32 * METRES_PER_SCENE_UNIT,
         target,
     )
 
@@ -1521,6 +1626,7 @@ def build_materials() -> dict[str, bpy.types.Material]:
         # highlight and read as an egg.
         "mouse": principled_material("Mouse shell", "#2b302d", 0.62, coat=0.10),
         "ceramic": principled_material("Bone ceramic", "#a39a86", 0.29, coat=0.56),
+        "coffee": principled_material("Black coffee", "#120a04", 0.12, coat=0.4),
         "leather": textured_material("Worn leather", "#554335", "#79624e", 0.59, scale=18.0, detail=6.0, bump_strength=0.12, bump_distance=0.0015),
         "lamp": principled_material("Lamp painted metal", "#36413f", 0.36, metallic=0.56),
         "phone": principled_material("Phone graphite", "#181d1c", 0.28, metallic=0.52, coat=0.26),
@@ -1555,14 +1661,17 @@ def configure_scene() -> None:
     scene.render.film_transparent = False
     scene.render.use_file_extension = True
 
+    # A faint cool wash standing in for the deck's dark-room environment map,
+    # which is what keeps its shadows from going to absolute black.
     scene.world.color = rgba("#030403")[:3]
     scene.world.use_nodes = True
     background = scene.world.node_tree.nodes.get("Background")
-    background.inputs["Color"].default_value = rgba("#080a09")
-    background.inputs["Strength"].default_value = 0.014
+    background.inputs["Color"].default_value = (0.55, 0.62, 0.62, 1.0)
+    background.inputs["Strength"].default_value = 0.035
 
+    scene.view_settings.view_transform = "AgX"
     scene.view_settings.look = "AgX - Medium High Contrast"
-    scene.view_settings.exposure = 0.15
+    scene.view_settings.exposure = 0.45
     scene.view_settings.gamma = 1.0
     scene.camera.data.lens = scene.camera.data.lens
 
