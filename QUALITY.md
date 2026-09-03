@@ -186,7 +186,7 @@ wide angle.** A quality-bar pass requires A-level evidence, not a relative bump.
 
 ### Hero CRT
 
-- Housing has intentional compound curvature, panel breaks, vents with thickness,
+- Housing has intentional compound curvature, tight 90s corners, panel breaks,
   recessed controls, labeled/legible control hierarchy, strain relief, cable
   route, stand articulation, base contact, and a bezel opening that matches the
   live glass numerically and visually.

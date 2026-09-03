@@ -1373,12 +1373,14 @@ def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
         bevel=0.012,
         segments=5,
     )
+    # The set is Blender-authored and imports upright; the 90° roll it used to
+    # be given laid the cup on its side with its mouth toward the camera.
     stationery = import_glb_group(
         ASSET_DIR / "stationery_supplies.glb",
         "Poly Haven stationery",
         target,
         location=(-0.61, 0.15, DESK_TOP_Z),
-        rotation=(math.pi / 2, 0, math.radians(-6)),
+        rotation=(0, 0, math.radians(-6)),
         scale=0.9,
     )
     # The set's pieces sit at different heights above its own origin (the

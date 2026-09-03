@@ -14,8 +14,8 @@ import {
  *
  * The housing is AUTHORED GEOMETRY, not primitives. Since 2026-09-02 it is
  * modelled in Blender by `blender/home-office/build_monitor.py` (a lofted
- * shell, a stepped fascia, a chin, conformed vent strips, and an integrated
- * stand) and exported to `public/models/crt-monitor.glb`. Before that it was
+ * shell with tight 90s corners, a stepped fascia, a chin, clean sides, and an
+ * integrated stand) and exported to `public/models/crt-monitor.glb`. Before that it was
  * a nurb CAD part (`parts/crt_monitor.py`), and before that JavaScript
  * primitives, which have a hard ceiling: no true fillets, no continuous loft.
  *
@@ -31,7 +31,7 @@ import {
 
 const MODEL = '/models/crt-monitor.glb'
 
-// Must match parts/crt_monitor.py. The screen's width sets the scale; its
+// Must match build_monitor.py. The screen's width sets the scale; its
 // centre sits `SCREEN_CENTRE_MM` below the housing's midline because the chin
 // is deeper than the top bezel, so the model shifts up by that much to land the
 // glass on the origin.
@@ -66,24 +66,19 @@ function segmentHousingGeometry(source) {
   const position = geometry.attributes.position
   if (!index || !position) return geometry
 
-  const buckets = [[], [], [], []]
+  const buckets = [[], [], []]
   for (let offset = 0; offset < index.count; offset += 3) {
     const a = index.getX(offset)
     const b = index.getX(offset + 1)
     const c = index.getX(offset + 2)
-    const x = (position.getX(a) + position.getX(b) + position.getX(c)) / 3
     const y = (position.getY(a) + position.getY(b) + position.getY(c)) / 3
     const z = (position.getZ(a) + position.getZ(b) + position.getZ(c)) / 3
-    // CAD remains one watertight solid, but manufactured subassemblies need
-    // distinct broad reflection response. The stand/base occupies the lower
-    // band; the stepped face and bezel live at the front of the tube. The
-    // vent fields get their own near-black matte bucket: the boolean slot
-    // cuts tessellate the curved side into ragged slivers whose rims catch
-    // the doorway light as torn dashes — a material that cannot highlight is
-    // the honest fix, and the slots keep their structure as dark recesses.
-    const ventField =
-      Math.abs(x) > 262 && y > 2 && y < 96 && z > -220 && z < -122
-    const materialIndex = ventField ? 3 : y < -180 ? 2 : z > -36 ? 1 : 0
+    // One mesh, but manufactured subassemblies need distinct broad
+    // reflection response. The stand/base occupies the lower band; the
+    // stepped face and bezel live at the front of the tube; the rest is
+    // shell. (The CAD part's vent cuts had a fourth, near-black bucket; the
+    // Blender housing has clean sides.)
+    const materialIndex = y < -180 ? 2 : z > -36 ? 1 : 0
     buckets[materialIndex].push(a, b, c)
   }
 
@@ -129,22 +124,9 @@ export function Monitor() {
         roughness: 0.46,
         metalness: 0.025,
       }),
-      // Vents remain near-black: they are recesses, and a lit recess is what
-      // made the boolean cut rims read as torn dashes.
-      new THREE.MeshStandardMaterial({
-        color: '#131417',
-        roughness: 0.94,
-        metalness: 0,
-        envMapIntensity: 0.25,
-      }),
     ]
       .map(varyRoughnessByWear)
-      // The vents are recesses and read as absence, so they stay smooth; giving
-      // a near-black cavity a highlight to break up is how the boolean cut rims
-      // came back as torn dashes.
-      .map((material, index) =>
-        index === 3 ? material : addMouldedGrain(material)
-      )
+      .map(addMouldedGrain)
     root.traverse((o) => {
       if (o.isMesh) {
         // Segment while indexed, then crease the normals (the CAD's per-face
@@ -236,36 +218,6 @@ export function Monitor() {
         scale={SCALE}
         position={[0, -CAD.screenCentreMm * SCALE, (CAD.recessDepthMm - 2) * SCALE]}
       />
-
-      {/* Dark baffles immediately behind the real CAD vent cuts. An open hole
-          through a solid model sees the blue doorway/environment and glows like
-          a second screen; manufactured vents lead into a black labyrinth. The
-          baffle keeps the slot interiors dark while their cut rims still catch
-          the moving highlight that makes them read as geometry. */}
-      {[-1, 1].map((side) => (
-        <mesh key={side} position={[side * 8.05, 1.95, -5.02]}>
-          <boxGeometry args={[0.2, 3.25, 3.1]} />
-          <meshBasicMaterial color="#010203" />
-        </mesh>
-      ))}
-      {[-1, 1].flatMap((side) =>
-        [20, 38, 56, 74].map((ventY) => (
-          <mesh
-            key={`${side}-${ventY}`}
-            position={[
-              side * 8.58,
-              (ventY - CAD.screenCentreMm) * SCALE,
-              (-176 + CAD.recessDepthMm - 2) * SCALE,
-            ]}
-          >
-            {/* Inboard of the shell: at ±8.78 these poked through the housing
-                silhouette as little black tabs at oblique angles. */}
-            <boxGeometry args={[0.3, 0.19, 2.42]} />
-            <meshBasicMaterial color="#010203" />
-          </mesh>
-        ))
-      )}
-
 
       {/* Separate inserts sit inside the CAD recesses, so the controls read as
           buttons rather than three strangely illuminated holes in the shell. */}

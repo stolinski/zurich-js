@@ -381,9 +381,11 @@ counting. `src/index.css` is small for the same reason.
   Y up, screen facing +Z) that `Monitor.jsx` consumes unchanged. The contract
   it keeps is in that script's docstring: the 523 × 295 opening at Y −17, the
   −12 pocket floor, the −288 stand underside, the chin control positions, and
-  the coordinate buckets `Monitor.jsx` assigns materials by. The vents are
-  proud strips conformed to the loft rather than boolean cuts, so the old
-  torn-rim problem and its louver baffles no longer apply.
+  the coordinate buckets `Monitor.jsx` assigns materials by. The sides are
+  clean — no vents: boolean cuts read as torn rims and conformed strips read
+  as stickers, so the vent bucket and its louver baffles are gone from
+  `Monitor.jsx`. Corners are tight (14 mm on the face, 6 mm at the opening);
+  the first pass at 38 / 12 read as a rounded 2000s appliance.
 - **Quality per frame beats brute-force resolution.** DPR caps at 1.25, FXAA
   resolves edges after one shaded scene sample, variance shadow maps update only
   when a stage swaps, and repeated office/monitor assets stay instanced. Preserve

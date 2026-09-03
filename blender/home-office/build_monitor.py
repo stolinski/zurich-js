@@ -17,11 +17,12 @@ The contract this must keep (see parts/crt_monitor.md and Monitor.jsx):
   • the controls sit on the chin at Y = −175, X = −222 / −194 / −161, flush
     with Z = 0 (the deck supplies the inserts and the status light);
   • Monitor.jsx buckets materials by position: stand below Y = −180, face
-    in front of Z = −36, vents at |X| > 262 within Y 2…96 / Z −220…−122.
+    in front of Z = −36, the rest is shell.
 
 It replaced the nurb CAD part on 2026-09-02: a five-station loft with a
-stepped fascia, a chin, proud vent strips conformed to the loft, and an
-integrated base/turntable/pedestal/tilt-barrel stand.
+stepped fascia, a chin, and an integrated base/turntable/pedestal/tilt-barrel
+stand. Corners are tight (14 mm on the face, 6 mm at the opening): the first
+pass at 38 / 12 read as a rounded 2000s appliance, not a 90s tube.
 """
 
 from __future__ import annotations
@@ -38,20 +39,22 @@ OUTPUT_PATH = ROOT / "public" / "models" / "crt-monitor.glb"
 
 CORNER_SEGMENTS = 12
 # Shell loft stations, front to rear: (depth Z, half width, half height, centre Y, corner radius).
+# Tight corners at the front: a 90s housing is crisp, and softening it past
+# ~15 mm read as a 2000s appliance. The radii open up only as the tube
+# gathers toward the neck.
 STATIONS = (
-    (0, 304.5, 208, -34.5, 38),
-    (-116, 302, 206, -34.5, 44),
-    (-230, 250, 176, -30, 66),
-    (-360, 186, 142, -22, 78),
-    (-470, 132, 106, -14, 68),
-    (-500, 112, 92, -12, 60),
+    (0, 304.5, 208, -34.5, 14),
+    (-116, 302, 206, -34.5, 18),
+    (-230, 250, 176, -30, 30),
+    (-360, 186, 142, -22, 44),
+    (-470, 132, 106, -14, 48),
+    (-500, 112, 92, -12, 44),
 )
-OPENING = (261.5, 147.5, -17, 12)  # half width, half height, centre Y, corner radius
-FASCIA = (287.5, 163.5, -7, 20)
-FASCIA_DEPTH = 8
+OPENING = (261.5, 147.5, -17, 6)  # half width, half height, centre Y, corner radius
+FASCIA = (287.5, 163.5, -7, 10)
+FASCIA_DEPTH = 10
 POCKET_FLOOR = -12
 STAND_DEPTH = -240
-VENT_HEIGHTS = (20, 38, 56, 74)
 
 
 def cad(x: float, y: float, z: float) -> Vector:
@@ -114,14 +117,6 @@ def cylinder(bm: bmesh.types.BMesh, radius: float, length: float, cx: float, cz:
     return created
 
 
-def half_width_at(z: float) -> float:
-    for (z0, w0, *_), (z1, w1, *_) in zip(STATIONS, STATIONS[1:]):
-        if z0 >= z >= z1:
-            t = (z0 - z) / (z0 - z1)
-            return w0 + (w1 - w0) * t
-    return STATIONS[-1][1]
-
-
 def build_housing() -> bpy.types.Object:
     bm = bmesh.new()
 
@@ -155,20 +150,8 @@ def build_housing() -> bpy.types.Object:
         cylinder(bm, 48, 10, side * 155, STAND_DEPTH, -214, axis="X", segments=40)
     bmesh.ops.recalc_face_normals(bm, faces=[face for face in bm.faces if face not in shell_faces])
 
-    # Vents: four strips a side, 82 mm long, proud of the loft by 0.6 mm and
-    # conformed to it. Monitor.jsx buckets this region near-black.
-    samples = [-138 - 82 * i / 6 for i in range(7)]
-    for side in (-1, 1):
-        for vent_y in VENT_HEIGHTS:
-            rows = [
-                [bm.verts.new(cad(side * (half_width_at(z) + 0.6), y, z)) for z in samples]
-                for y in (vent_y, vent_y + 8)
-            ]
-            for i in range(6):
-                quad = [rows[0][i], rows[0][i + 1], rows[1][i + 1], rows[1][i]]
-                if side < 0:
-                    quad.reverse()
-                bm.faces.new(quad)
+    # No side vents: proud strips read as stickers and cuts read as torn rims.
+    # The shell's sides stay clean, the way the FW900's do.
 
     mesh = bpy.data.meshes.new("crt_monitor")
     bm.to_mesh(mesh)
