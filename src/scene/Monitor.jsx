@@ -12,28 +12,21 @@ import {
 /**
  * THE MONITOR — a widescreen Trinitron, in the spirit of the Sony GDM-FW900.
  *
- * The housing is AUTHORED GEOMETRY, not primitives. It's modelled as CAD in
- * `parts/crt_monitor.py` (nurb / build123d — a real B-rep kernel) and exported
- * to `public/models/crt-monitor.glb`. An earlier version of this file assembled
- * the whole thing out of `ExtrudeGeometry` and `BoxGeometry` in JavaScript, and
- * that has a hard ceiling: no true fillets, no continuous loft, and every edge
- * either perfectly sharp or faked with a bevel parameter. A kernel gives real
- * chamfers on every convex edge, and the thin bright line along a chamfer is
- * most of what tells the eye a housing is moulded plastic rather than a box.
+ * The housing is AUTHORED GEOMETRY, not primitives. Since 2026-09-02 it is
+ * modelled in Blender by `blender/home-office/build_monitor.py` (a lofted
+ * shell, a stepped fascia, a chin, conformed vent strips, and an integrated
+ * stand) and exported to `public/models/crt-monitor.glb`. Before that it was
+ * a nurb CAD part (`parts/crt_monitor.py`), and before that JavaScript
+ * primitives, which have a hard ceiling: no true fillets, no continuous loft.
  *
  * TO CHANGE THE SHAPE, edit the Python and re-export — do not rebuild it here:
- *     nurb dev                          # viewer at :7373, live
- *     nurb export crt-monitor --formats glb
- *     cp build/crt_monitor.glb public/models/crt-monitor.glb
+ *     blender --background --factory-startup --python blender/home-office/build_monitor.py
  *
- * `nurb check` will report overhangs, "too big" and bed-grip findings. Those
- * are printability rules and this part is never printed — ignore them. The one
- * finding that DOES matter is "not one piece": it means a boolean failed to
- * merge and part of the housing is floating.
- *
- * The CAD is modelled at true scale in mm with the same axis convention the
- * scene uses (X width, Y up, screen facing +Z), so the only transform needed
- * here is a uniform scale and a shift to put the glass on the origin.
+ * The model is at true scale in mm with the same axis convention the scene
+ * uses (X width, Y up, screen facing +Z), so the only transform needed here is
+ * a uniform scale and a shift to put the glass on the origin. The opening,
+ * pocket depth, stand underside, control positions and the material buckets
+ * below are the contract the Blender script keeps.
  */
 
 const MODEL = '/models/crt-monitor.glb'

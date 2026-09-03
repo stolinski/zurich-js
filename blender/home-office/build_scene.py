@@ -1470,11 +1470,13 @@ def build_lookdev_monitor(target: bpy.types.Collection, mats: dict[str, bpy.type
         location=(0.0, -0.010, 0.017),
         material=mats["crt"],
     )
-    # Placeholder glass and terminal marks exist only for Blender lighting/rendering.
+    # Placeholder glass and terminal marks exist only for Blender lighting and
+    # rendering. They sit where the live glass does: inside the pocket, 2 mm
+    # behind the deck's screen plane, not proud of the fascia.
     add_box(
         "Lookdev glass",
         (0.520, 0.008, 0.2925),
-        (0, -0.026, 0),
+        (0, -0.004, 0),
         mats["screen_black"],
         target,
         bevel=0.020,
@@ -1483,14 +1485,14 @@ def build_lookdev_monitor(target: bpy.types.Collection, mats: dict[str, bpy.type
     amber = mats["screen_amber"]
     dim = mats["screen_dim"]
     # A restrained facsimile of the held chart supplies realistic emissive distribution.
-    add_box("Screen title", (0.21, 0.002, 0.009), (-0.115, -0.032, 0.092), amber, target, bevel=0.001)
-    add_box("Screen subtitle", (0.15, 0.002, 0.004), (-0.145, -0.032, 0.072), dim, target, bevel=0.001)
+    add_box("Screen title", (0.21, 0.002, 0.009), (-0.115, -0.0095, 0.092), amber, target, bevel=0.001)
+    add_box("Screen subtitle", (0.15, 0.002, 0.004), (-0.145, -0.0095, 0.072), dim, target, bevel=0.001)
     for row, (width, z) in enumerate(((0.19, 0.022), (0.075, -0.055))):
-        add_box(f"Screen label {row}", (0.12, 0.002, 0.004), (-0.145, -0.032, z), dim, target, bevel=0.001)
-        add_box(f"Screen bar {row}", (width, 0.002, 0.013), (0.055 - (0.19 - width) / 2, -0.032, z), amber, target, bevel=0.002)
+        add_box(f"Screen label {row}", (0.12, 0.002, 0.004), (-0.145, -0.0095, z), dim, target, bevel=0.001)
+        add_box(f"Screen bar {row}", (width, 0.002, 0.013), (0.055 - (0.19 - width) / 2, -0.0095, z), amber, target, bevel=0.002)
     for index in range(5):
         x = -0.03 + index * 0.047
-        add_box(f"Screen grid {index}", (0.0015, 0.002, 0.13), (x, -0.031, -0.002), dim, target)
+        add_box(f"Screen grid {index}", (0.0015, 0.002, 0.13), (x, -0.0090, -0.002), dim, target)
 
 
 def three_to_blender(x: float, y: float, z: float) -> tuple[float, float, float]:

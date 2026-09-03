@@ -1,5 +1,10 @@
 # crt_monitor
 
+> **Superseded 2026-09-02.** The deck's `public/models/crt-monitor.glb` is now
+> exported by `blender/home-office/build_monitor.py`, which keeps every
+> contract listed under "Don't" below (opening, pocket floor, stand underside,
+> control centres, runtime scale). This CAD part is kept for history.
+
 ## What it is
 
 The hero monitor for "The True Cost of AI Coding" — a widescreen CRT using the

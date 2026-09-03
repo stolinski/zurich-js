@@ -375,11 +375,15 @@ counting. `src/index.css` is small for the same reason.
   roughness is most of what reads as lifeless clay. The home environment map
   also carries STRUCTURED sources (window panes, door slit) because a
   gradient-only environment gives every specular a shapeless wash.
-- **CAD boolean cut rims tessellate curved faces into ragged slivers** that
-  catch light as torn dashes (the monitor's vent slots). Do not fight the
-  tessellation — cover the cut with manufactured geometry the way a real
-  housing does (`Monitor.jsx` louver blades over the vent fields, thick
-  enough in x to bridge the shell's curvature).
+- **The hero CRT housing is Blender-authored too** (since 2026-09-02):
+  `blender/home-office/build_monitor.py` lofts the shell, steps the fascia,
+  and exports `public/models/crt-monitor.glb` in the CAD frame (mm, X width,
+  Y up, screen facing +Z) that `Monitor.jsx` consumes unchanged. The contract
+  it keeps is in that script's docstring: the 523 × 295 opening at Y −17, the
+  −12 pocket floor, the −288 stand underside, the chin control positions, and
+  the coordinate buckets `Monitor.jsx` assigns materials by. The vents are
+  proud strips conformed to the loft rather than boolean cuts, so the old
+  torn-rim problem and its louver baffles no longer apply.
 - **Quality per frame beats brute-force resolution.** DPR caps at 1.25, FXAA
   resolves edges after one shaded scene sample, variance shadow maps update only
   when a stage swaps, and repeated office/monitor assets stay instanced. Preserve
