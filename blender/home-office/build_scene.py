@@ -10,17 +10,49 @@ Run:
 
 The script saves ``home-office.blend`` beside itself and writes look-development
 renders under ``quality-artifacts/blender-home/lookdev``.
+
+Primitives, materials, imports, seating, lights, cameras and the desk props
+(keyboard, mouse, mug) come from ``blender/lib``; this file is the home room
+itself.
 """
 
 from __future__ import annotations
 
 import math
 import random
+import sys
 from pathlib import Path
 
-import bmesh
 import bpy
 from mathutils import Matrix, Vector
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from lib.deskprops import KEYBOARD_DEPTH, build_keyboard, build_mouse, build_mug  # noqa: E402
+from lib.setkit import (  # noqa: E402
+    METRES_PER_SCENE_UNIT,
+    SCENE_UNITS_PER_METRE,
+    add_area_light,
+    add_box,
+    add_curve,
+    add_cylinder,
+    aim_at,
+    clean_scene,
+    collection,
+    import_glb,
+    import_glb_group,
+    make_camera,
+    mapped_surface_material,
+    move_to_collection,
+    pbr_image_material,
+    principled_material,
+    rgba,
+    seat_on,
+    set_input,
+    textured_material,
+    three_to_blender,
+    world_bounds,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE_DIR = Path(__file__).resolve().parent
@@ -28,9 +60,6 @@ MODEL_DIR = ROOT / "public" / "models"
 ASSET_DIR = SOURCE_DIR / "assets"
 RENDER_DIR = ROOT / "quality-artifacts" / "blender-home" / "lookdev"
 BLEND_PATH = SOURCE_DIR / "home-office.blend"
-
-SCENE_UNITS_PER_METRE = 16.0 / 0.520
-METRES_PER_SCENE_UNIT = 1.0 / SCENE_UNITS_PER_METRE
 FLOOR_Z = -34.34 * METRES_PER_SCENE_UNIT
 CEILING_Z = 42.0 * METRES_PER_SCENE_UNIT
 DESK_TOP_Z = -8.34 * METRES_PER_SCENE_UNIT
@@ -42,465 +71,6 @@ FRONT_Y = -35.0 * METRES_PER_SCENE_UNIT
 ROOM_HALF_WIDTH = 78.0 * METRES_PER_SCENE_UNIT
 
 random.seed(0x3A0F11CE)
-
-
-def smoothstep(edge0: float, edge1: float, value: float) -> float:
-    t = min(1.0, max(0.0, (value - edge0) / (edge1 - edge0)))
-    return t * t * (3.0 - 2.0 * t)
-
-
-def clean_scene() -> None:
-    bpy.ops.object.select_all(action="SELECT")
-    bpy.ops.object.delete(use_global=False)
-    for datablocks in (
-        bpy.data.meshes,
-        bpy.data.curves,
-        bpy.data.materials,
-        bpy.data.cameras,
-        bpy.data.lights,
-    ):
-        for datablock in list(datablocks):
-            if datablock.users == 0:
-                datablocks.remove(datablock)
-
-
-def collection(name: str) -> bpy.types.Collection:
-    result = bpy.data.collections.new(name)
-    bpy.context.scene.collection.children.link(result)
-    return result
-
-
-def move_to_collection(obj: bpy.types.Object, target: bpy.types.Collection) -> None:
-    for owner in list(obj.users_collection):
-        owner.objects.unlink(obj)
-    target.objects.link(obj)
-
-
-def set_input(node: bpy.types.Node, name: str, value) -> None:
-    socket = node.inputs.get(name)
-    if socket is not None:
-        socket.default_value = value
-
-
-def rgba(hex_value: str, alpha: float = 1.0) -> tuple[float, float, float, float]:
-    """Convert display-authored sRGB hex into Blender's linear scene values."""
-    value = hex_value.lstrip("#")
-
-    def linear(channel: int) -> float:
-        encoded = channel / 255
-        return encoded / 12.92 if encoded <= 0.04045 else ((encoded + 0.055) / 1.055) ** 2.4
-
-    return tuple(linear(int(value[index:index + 2], 16)) for index in (0, 2, 4)) + (alpha,)
-
-
-def principled_material(
-    name: str,
-    color: str,
-    roughness: float,
-    metallic: float = 0.0,
-    *,
-    coat: float = 0.0,
-    emission: str | None = None,
-    emission_strength: float = 0.0,
-) -> bpy.types.Material:
-    material = bpy.data.materials.new(name)
-    material.use_nodes = True
-    bsdf = material.node_tree.nodes.get("Principled BSDF")
-    set_input(bsdf, "Base Color", rgba(color))
-    set_input(bsdf, "Roughness", roughness)
-    set_input(bsdf, "Metallic", metallic)
-    set_input(bsdf, "Coat Weight", coat)
-    set_input(bsdf, "Coat Roughness", max(0.08, roughness * 0.55))
-    if emission:
-        set_input(bsdf, "Emission Color", rgba(emission))
-        set_input(bsdf, "Emission Strength", emission_strength)
-    # The glTF exporter cannot serialize Blender procedural nodes. Preserve an
-    # explicit physical fallback for export_scene.py instead of letting linked
-    # sockets silently become white runtime materials.
-    material["export_base_color"] = list(rgba(color))
-    material["export_roughness"] = roughness
-    material["export_metallic"] = metallic
-    return material
-
-
-def textured_material(
-    name: str,
-    color_a: str,
-    color_b: str,
-    roughness: float,
-    *,
-    scale: float,
-    detail: float,
-    bump_strength: float,
-    bump_distance: float,
-    metallic: float = 0.0,
-) -> bpy.types.Material:
-    material = principled_material(name, color_a, roughness, metallic)
-    nodes = material.node_tree.nodes
-    links = material.node_tree.links
-    bsdf = nodes.get("Principled BSDF")
-
-    texcoord = nodes.new("ShaderNodeTexCoord")
-    noise = nodes.new("ShaderNodeTexNoise")
-    noise.inputs["Scale"].default_value = scale
-    noise.inputs["Detail"].default_value = detail
-    noise.inputs["Roughness"].default_value = 0.72
-    ramp = nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].color = rgba(color_a)
-    ramp.color_ramp.elements[1].color = rgba(color_b)
-    bump = nodes.new("ShaderNodeBump")
-    bump.inputs["Strength"].default_value = bump_strength
-    bump.inputs["Distance"].default_value = bump_distance
-
-    links.new(texcoord.outputs["Generated"], noise.inputs["Vector"])
-    links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
-    links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
-    links.new(noise.outputs["Fac"], bump.inputs["Height"])
-    links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
-    return material
-
-
-def wood_material(name: str, light: str, dark: str, roughness: float, phase: float = 0.0) -> bpy.types.Material:
-    material = principled_material(name, light, roughness)
-    nodes = material.node_tree.nodes
-    links = material.node_tree.links
-    bsdf = nodes.get("Principled BSDF")
-
-    texcoord = nodes.new("ShaderNodeTexCoord")
-    mapping = nodes.new("ShaderNodeMapping")
-    mapping.inputs["Scale"].default_value = (1.2, 7.5, 1.8)
-    mapping.inputs["Location"].default_value = (phase, phase * 0.37, 0.0)
-    noise = nodes.new("ShaderNodeTexNoise")
-    noise.inputs["Scale"].default_value = 3.2
-    noise.inputs["Detail"].default_value = 7.0
-    noise.inputs["Roughness"].default_value = 0.78
-    noise.inputs["Distortion"].default_value = 0.32
-    wave = nodes.new("ShaderNodeTexWave")
-    wave.wave_type = "BANDS"
-    wave.bands_direction = "Y"
-    wave.inputs["Scale"].default_value = 34.0
-    wave.inputs["Distortion"].default_value = 6.0
-    wave.inputs["Detail"].default_value = 4.0
-    mix = nodes.new("ShaderNodeMixRGB")
-    mix.blend_type = "MULTIPLY"
-    mix.inputs[0].default_value = 0.36
-    ramp = nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].color = rgba(dark)
-    ramp.color_ramp.elements[1].color = rgba(light)
-    bump = nodes.new("ShaderNodeBump")
-    bump.inputs["Strength"].default_value = 0.16
-    bump.inputs["Distance"].default_value = 0.002
-
-    links.new(texcoord.outputs["Generated"], mapping.inputs["Vector"])
-    links.new(mapping.outputs["Vector"], noise.inputs["Vector"])
-    links.new(mapping.outputs["Vector"], wave.inputs["Vector"])
-    links.new(noise.outputs["Fac"], mix.inputs[1])
-    links.new(wave.outputs["Color"], mix.inputs[2])
-    links.new(mix.outputs["Color"], ramp.inputs["Fac"])
-    links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
-    links.new(mix.outputs["Color"], bump.inputs["Height"])
-    links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
-    return material
-
-
-def mapped_surface_material(
-    name: str,
-    color: str,
-    roughness: float,
-    texture_dir: Path,
-    *,
-    repeats: tuple[float, float, float],
-    normal_strength: float,
-    use_diffuse: bool = False,
-    metallic: float = 0.0,
-    coat: float = 0.0,
-) -> bpy.types.Material:
-    """Add UV-mapped relief to a tinted, glTF-compatible surface."""
-    material = principled_material(name, color, roughness, metallic, coat=coat)
-    nodes = material.node_tree.nodes
-    links = material.node_tree.links
-    bsdf = nodes.get("Principled BSDF")
-
-    texcoord = nodes.new("ShaderNodeTexCoord")
-    mapping = nodes.new("ShaderNodeMapping")
-    mapping.inputs["Scale"].default_value = repeats
-    links.new(texcoord.outputs["UV"], mapping.inputs["Vector"])
-
-    if use_diffuse:
-        diffuse = nodes.new("ShaderNodeTexImage")
-        diffuse.image = bpy.data.images.load(str(texture_dir / "diffuse.jpg"), check_existing=True)
-        diffuse.extension = "REPEAT"
-        links.new(mapping.outputs["Vector"], diffuse.inputs["Vector"])
-        links.new(diffuse.outputs["Color"], bsdf.inputs["Base Color"])
-
-    roughness_map = nodes.new("ShaderNodeTexImage")
-    roughness_map.image = bpy.data.images.load(str(texture_dir / "roughness.jpg"), check_existing=True)
-    roughness_map.image.colorspace_settings.name = "Non-Color"
-    roughness_map.extension = "REPEAT"
-    links.new(mapping.outputs["Vector"], roughness_map.inputs["Vector"])
-    links.new(roughness_map.outputs["Color"], bsdf.inputs["Roughness"])
-
-    normal = nodes.new("ShaderNodeTexImage")
-    normal.image = bpy.data.images.load(str(texture_dir / "normal.jpg"), check_existing=True)
-    normal.image.colorspace_settings.name = "Non-Color"
-    normal.extension = "REPEAT"
-    normal_map = nodes.new("ShaderNodeNormalMap")
-    normal_map.inputs["Strength"].default_value = normal_strength
-    links.new(mapping.outputs["Vector"], normal.inputs["Vector"])
-    links.new(normal.outputs["Color"], normal_map.inputs["Color"])
-    links.new(normal_map.outputs["Normal"], bsdf.inputs["Normal"])
-    return material
-
-
-def pbr_image_material(
-    name: str,
-    texture_dir: Path,
-    *,
-    repeats: tuple[float, float, float] = (1.0, 1.0, 1.0),
-    normal_strength: float = 0.75,
-) -> bpy.types.Material:
-    """Build an export-safe local PBR material from authored texture maps."""
-    material = principled_material(name, "#ffffff", 0.62)
-    nodes = material.node_tree.nodes
-    links = material.node_tree.links
-    bsdf = nodes.get("Principled BSDF")
-
-    texcoord = nodes.new("ShaderNodeTexCoord")
-    mapping = nodes.new("ShaderNodeMapping")
-    mapping.inputs["Scale"].default_value = repeats
-    links.new(texcoord.outputs["UV"], mapping.inputs["Vector"])
-
-    diffuse = nodes.new("ShaderNodeTexImage")
-    diffuse.image = bpy.data.images.load(str(texture_dir / "diffuse.jpg"), check_existing=True)
-    diffuse.extension = "REPEAT"
-    links.new(mapping.outputs["Vector"], diffuse.inputs["Vector"])
-    links.new(diffuse.outputs["Color"], bsdf.inputs["Base Color"])
-
-    roughness = nodes.new("ShaderNodeTexImage")
-    roughness.image = bpy.data.images.load(str(texture_dir / "roughness.png"), check_existing=True)
-    roughness.image.colorspace_settings.name = "Non-Color"
-    roughness.extension = "REPEAT"
-    links.new(mapping.outputs["Vector"], roughness.inputs["Vector"])
-    links.new(roughness.outputs["Color"], bsdf.inputs["Roughness"])
-
-    normal = nodes.new("ShaderNodeTexImage")
-    normal.image = bpy.data.images.load(str(texture_dir / "normal-gl.jpg"), check_existing=True)
-    normal.image.colorspace_settings.name = "Non-Color"
-    normal.extension = "REPEAT"
-    normal_map = nodes.new("ShaderNodeNormalMap")
-    normal_map.inputs["Strength"].default_value = normal_strength
-    links.new(mapping.outputs["Vector"], normal.inputs["Vector"])
-    links.new(normal.outputs["Color"], normal_map.inputs["Color"])
-    links.new(normal_map.outputs["Normal"], bsdf.inputs["Normal"])
-    return material
-
-
-def add_box(
-    name: str,
-    dimensions: tuple[float, float, float],
-    location: tuple[float, float, float],
-    material: bpy.types.Material,
-    target: bpy.types.Collection,
-    *,
-    rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
-    bevel: float = 0.0,
-    segments: int = 3,
-) -> bpy.types.Object:
-    bpy.ops.mesh.primitive_cube_add(location=location, rotation=rotation)
-    obj = bpy.context.object
-    obj.name = name
-    obj.dimensions = dimensions
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    obj.data.materials.append(material)
-    if bevel > 0:
-        modifier = obj.modifiers.new("Manufactured edge", "BEVEL")
-        modifier.width = bevel
-        modifier.segments = segments
-        modifier.limit_method = "ANGLE"
-    move_to_collection(obj, target)
-    return obj
-
-
-def add_cylinder(
-    name: str,
-    radius: float,
-    depth: float,
-    location: tuple[float, float, float],
-    material: bpy.types.Material,
-    target: bpy.types.Collection,
-    *,
-    rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
-    vertices: int = 48,
-    bevel: float = 0.0,
-) -> bpy.types.Object:
-    bpy.ops.mesh.primitive_cylinder_add(
-        vertices=vertices,
-        radius=radius,
-        depth=depth,
-        location=location,
-        rotation=rotation,
-    )
-    obj = bpy.context.object
-    obj.name = name
-    obj.data.materials.append(material)
-    for polygon in obj.data.polygons:
-        polygon.use_smooth = True
-    if bevel > 0:
-        modifier = obj.modifiers.new("Edge radius", "BEVEL")
-        modifier.width = bevel
-        modifier.segments = 3
-    move_to_collection(obj, target)
-    return obj
-
-
-def add_curve(
-    name: str,
-    points: list[tuple[float, float, float]],
-    radius: float,
-    material: bpy.types.Material,
-    target: bpy.types.Collection,
-) -> bpy.types.Object:
-    curve = bpy.data.curves.new(name, "CURVE")
-    curve.dimensions = "3D"
-    curve.resolution_u = 16
-    curve.bevel_depth = radius
-    curve.bevel_resolution = 4
-    spline = curve.splines.new("BEZIER")
-    spline.bezier_points.add(len(points) - 1)
-    for handle, point in zip(spline.bezier_points, points):
-        handle.co = point
-        handle.handle_left_type = "AUTO"
-        handle.handle_right_type = "AUTO"
-    obj = bpy.data.objects.new(name, curve)
-    target.objects.link(obj)
-    obj.data.materials.append(material)
-    return obj
-
-
-def aim_at(obj: bpy.types.Object, target: tuple[float, float, float], track_axis: str = "-Z") -> None:
-    direction = Vector(target) - obj.location
-    obj.rotation_euler = direction.to_track_quat(track_axis, "Y").to_euler()
-
-
-def add_area_light(
-    name: str,
-    location: tuple[float, float, float],
-    target_point: tuple[float, float, float],
-    energy: float,
-    color: str,
-    size: float,
-    size_y: float,
-    target: bpy.types.Collection,
-) -> bpy.types.Object:
-    data = bpy.data.lights.new(name, "AREA")
-    data.energy = energy
-    data.color = rgba(color)[:3]
-    data.shape = "RECTANGLE"
-    data.size = size
-    data.size_y = size_y
-    obj = bpy.data.objects.new(name, data)
-    target.objects.link(obj)
-    obj.location = location
-    aim_at(obj, target_point)
-    return obj
-
-
-def import_glb(
-    path: Path,
-    name: str,
-    target: bpy.types.Collection,
-    *,
-    scale: float = 0.001,
-    location: tuple[float, float, float] = (0.0, 0.0, 0.0),
-    rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
-    material: bpy.types.Material | None = None,
-) -> list[bpy.types.Object]:
-    before = set(bpy.data.objects)
-    bpy.ops.import_scene.gltf(filepath=str(path))
-    imported = [obj for obj in bpy.data.objects if obj not in before]
-    root_objects = [obj for obj in imported if obj.parent is None]
-    for obj in root_objects:
-        obj.scale = (scale, scale, scale)
-        obj.location = location
-        # glTF roots import in quaternion mode. Writing rotation_euler without
-        # switching modes is silently ignored, which left every Z-up CAD desk
-        # prop standing on end in the first look-development render.
-        obj.rotation_mode = "XYZ"
-        obj.rotation_euler = rotation
-    for obj in imported:
-        move_to_collection(obj, target)
-        if obj.type == "MESH":
-            if material:
-                obj.data.materials.clear()
-                obj.data.materials.append(material)
-            for polygon in obj.data.polygons:
-                polygon.use_smooth = True
-    if imported:
-        imported[0].name = name
-    return imported
-
-
-def import_glb_group(
-    path: Path,
-    name: str,
-    target: bpy.types.Collection,
-    *,
-    scale: float = 1.0,
-    location: tuple[float, float, float] = (0.0, 0.0, 0.0),
-    rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
-) -> list[bpy.types.Object]:
-    """Import a multi-root GLB under one anchor without collapsing offsets."""
-    before = set(bpy.data.objects)
-    bpy.ops.import_scene.gltf(filepath=str(path))
-    imported = [obj for obj in bpy.data.objects if obj not in before]
-    roots = [obj for obj in imported if obj.parent is None]
-    anchor = bpy.data.objects.new(name, None)
-    target.objects.link(anchor)
-    for obj in roots:
-        obj.parent = anchor
-    anchor.location = location
-    anchor.rotation_mode = "XYZ"
-    anchor.rotation_euler = rotation
-    anchor.scale = (scale, scale, scale)
-    for obj in imported:
-        move_to_collection(obj, target)
-    return [anchor, *imported]
-
-
-def world_bounds(obj: bpy.types.Object) -> tuple[float, float, float, float, float, float]:
-    """(min x, max x, min y, max y, min z, max z) of an object's box in world space."""
-    points = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
-    return (
-        min(p.x for p in points),
-        max(p.x for p in points),
-        min(p.y for p in points),
-        max(p.y for p in points),
-        min(p.z for p in points),
-        max(p.z for p in points),
-    )
-
-
-def seat_on(objects: list[bpy.types.Object], surface_z: float, gap: float = 0.0015) -> None:
-    """Drop an imported group so its lowest vertex rests on a surface.
-
-    Imported assets keep their origin wherever their author left it, so a
-    location alone sinks some into the desk and floats others above it. The
-    measured world-space bottom is the only placement that always sits.
-    """
-    bpy.context.view_layer.update()
-    lowest = min(
-        (obj.matrix_world @ Vector(corner)).z
-        for obj in objects
-        if obj.type == "MESH"
-        for corner in obj.bound_box
-    )
-    lift = Vector((0.0, 0.0, surface_z + gap - lowest))
-    for obj in objects:
-        if obj.parent is None or obj.parent not in objects:
-            # A child's location is in its parent's space, and imported
-            # anchors are often rotated; move it by the world lift expressed there.
-            delta = lift if obj.parent is None else obj.parent.matrix_world.to_3x3().inverted() @ lift
-            obj.location += delta
 
 
 def build_floor(target: bpy.types.Collection, material: bpy.types.Material) -> None:
@@ -847,133 +417,6 @@ def build_desk(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]
         )
 
 
-KEY_UNIT = 0.01905
-# A 60% board: 61 keys in five rows at the standard pitch, with the real
-# widths for Backspace, Tab, Caps, Enter, both Shifts and the bottom row.
-KEY_ROWS = (
-    (1,) * 13 + (2,),
-    (1.5,) + (1,) * 12 + (1.5,),
-    (1.75,) + (1,) * 11 + (2.25,),
-    (2.25,) + (1,) * 10 + (2.75,),
-    (1.25,) * 3 + (6.25,) + (1.25,) * 4,
-)
-# OEM profile: the number row is tallest, the home row lowest.
-KEY_ROW_HEIGHTS = (0.0116, 0.0106, 0.0098, 0.0102, 0.0094)
-
-
-def build_keyboard(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]) -> None:
-    """A compact mechanical keyboard, modelled.
-
-    The old board was a grid of identical pillows on a slab, and a keyboard
-    is a specific object: a 60% layout at 19.05 mm pitch with the right
-    modifier widths, tapered caps in a row profile, a dark plate showing in
-    the gaps, a low case at a typing angle with a recess the caps sit in.
-    Everything hangs off one rig empty pivoted at the front edge on the mat,
-    so the tilt raises the back; the exporter bakes the world transforms.
-    """
-    bezel = 0.0055
-    width = 15 * KEY_UNIT + 2 * bezel
-    depth = 5 * KEY_UNIT + 2 * bezel
-    case_height = 0.0135
-    recess = 0.0045
-    # Centred under the glass, which also keeps it clear of the binder.
-    rig = bpy.data.objects.new("Keyboard", None)
-    target.objects.link(rig)
-    rig.location = (0.0, -0.235 - depth / 2, DESK_MAT_TOP_Z)
-    rig.rotation_mode = "XYZ"
-    rig.rotation_euler = (math.radians(4.5), 0, math.radians(-1.5))
-
-    def mesh_object(
-        name: str,
-        bm: bmesh.types.BMesh,
-        material: bpy.types.Material,
-        location: tuple[float, float, float] = (0.0, 0.0, 0.0),
-    ) -> bpy.types.Object:
-        mesh = bpy.data.meshes.new(name)
-        bm.to_mesh(mesh)
-        bm.free()
-        for polygon in mesh.polygons:
-            polygon.use_smooth = True
-        mesh.materials.append(material)
-        obj = bpy.data.objects.new(name, mesh)
-        obj.parent = rig
-        obj.location = location
-        target.objects.link(obj)
-        return obj
-
-    # The case: a bevelled block whose top is inset by the bezel and pushed
-    # down into a recess, so the plate and the cap bases sit inside it.
-    bm = bmesh.new()
-    bmesh.ops.create_cube(bm, size=1.0)
-    for vertex in bm.verts:
-        vertex.co = Vector((
-            vertex.co.x * width,
-            (vertex.co.y + 0.5) * depth,
-            (vertex.co.z + 0.5) * case_height,
-        ))
-    bmesh.ops.bevel(bm, geom=bm.edges[:], offset=0.0025, segments=4, affect="EDGES")
-    bm.faces.ensure_lookup_table()
-
-    def face_height(face: bmesh.types.BMFace) -> float:
-        return face.calc_center_median().z
-
-    top = max(bm.faces, key=face_height)
-    bmesh.ops.inset_individual(bm, faces=[top], thickness=bezel - 0.0025, depth=0.0)
-    for vertex in top.verts:
-        vertex.co.z -= recess
-    mesh_object("Keyboard case", bm, mats["keyboard"])
-
-    bm = bmesh.new()
-    bmesh.ops.create_cube(bm, size=1.0)
-    for vertex in bm.verts:
-        vertex.co = Vector((
-            vertex.co.x * (width - 2 * bezel + 0.002),
-            bezel - 0.001 + (vertex.co.y + 0.5) * (depth - 2 * bezel + 0.002),
-            case_height - recess + (vertex.co.z + 0.5) * 0.003,
-        ))
-    mesh_object("Keyboard plate", bm, mats["keyboard_plate"])
-
-    for row, widths in enumerate(KEY_ROWS):
-        cy = depth - bezel - (row + 0.5) * KEY_UNIT
-        x = -15 * KEY_UNIT / 2
-        for column, units in enumerate(widths):
-            cap_w = units * KEY_UNIT - 0.0032
-            cap_d = KEY_UNIT - 0.0032
-            cap_h = KEY_ROW_HEIGHTS[row]
-            bm = bmesh.new()
-            bmesh.ops.create_cube(bm, size=1.0)
-            for vertex in bm.verts:
-                top_face = vertex.co.z > 0
-                sx, sy = (0.80, 0.74) if top_face else (1.0, 1.0)
-                vertex.co = Vector((
-                    vertex.co.x * cap_w * sx,
-                    vertex.co.y * cap_d * sy + (0.0009 if top_face else 0.0),
-                    (vertex.co.z + 0.5) * cap_h,
-                ))
-            bmesh.ops.bevel(bm, geom=bm.edges[:], offset=0.0011, segments=3, affect="EDGES")
-            mesh_object(
-                f"Keycap {row + 1:02d}-{column + 1:02d}",
-                bm,
-                mats["keycap"] if units == 1 else mats["keycap_mod"],
-                (x + units * KEY_UNIT / 2, cy, case_height - recess + 0.003),
-            )
-            x += units * KEY_UNIT
-
-    cable = add_curve(
-        "Keyboard cable",
-        [
-            (0.0, depth + 0.001, 0.008),
-            (0.03, depth + 0.10, -0.002),
-            (0.10, depth + 0.30, -0.03),
-            (0.16, depth + 0.55, -0.11),
-        ],
-        0.0022,
-        mats["rubber"],
-        target,
-    )
-    cable.parent = rig
-
-
 def build_shelving(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]) -> None:
     # Side-wall bookcase catches the oblique return camera and supplies a near edge.
     x = ROOM_HALF_WIDTH - 0.23
@@ -1125,182 +568,18 @@ def build_chair(target: bpy.types.Collection, mats: dict[str, bpy.types.Material
             polygon.material_index = 0 if center.z > 0.43 else 2 if 0.18 < center.z < 0.42 and radial < 0.075 else 1
 
 
-def build_mouse(
-    target: bpy.types.Collection,
-    mats: dict[str, bpy.types.Material],
-    location: tuple[float, float, float],
-    yaw: float,
-) -> None:
-    """A modern mouse, modelled rather than imported.
-
-    The CAD mouse read as a lump and a squashed sphere read as an egg. This
-    is a bevelled block with a palm hump two-thirds back, a lower and
-    narrower nose, and a flat base: the block's soft shoulders and flatter
-    top are what make it read as a product. The button split, the seam
-    across, and the wheel are ray-cast onto the finished surface, so they sit
-    on it whatever the profile does. The nose points away from the sitter
-    (local −y), toward the glass.
-    """
-    length, width, height = 0.118, 0.064, 0.037
-
-    def profile(t: float) -> float:  # height along the length, 0 nose … 1 back
-        return 0.50 + 0.50 * math.exp(-(((t - 0.66) / 0.32) ** 2))
-
-    def taper(t: float) -> float:  # width along the length
-        return 0.76 + 0.24 * smoothstep(0.05, 0.72, t) - 0.14 * smoothstep(0.86, 1.0, t)
-
-    bm = bmesh.new()
-    bmesh.ops.create_cube(bm, size=1.0)
-    bmesh.ops.bevel(bm, geom=bm.edges[:], offset=0.42, segments=12, affect="EDGES", profile=0.62)
-    for vertex in bm.verts:
-        x, y, z = vertex.co
-        t = y + 0.5
-        vertex.co = Vector((x * width * taper(t), y * length, (z + 0.5) * height * profile(t)))
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
-    mesh = bpy.data.meshes.new("Mouse body")
-    bm.to_mesh(mesh)
-    bm.free()
-    for polygon in mesh.polygons:
-        polygon.use_smooth = True
-    body = bpy.data.objects.new("Mouse body", mesh)
-    body.location = location
-    body.rotation_mode = "XYZ"
-    body.rotation_euler = (0, 0, yaw)
-    mesh.materials.append(mats["mouse"])
-    target.objects.link(body)
-    bpy.context.view_layer.update()
-
-    def surface_z(local_x: float, local_y: float) -> float:
-        hit, point, _normal, _index = body.ray_cast(
-            Vector((local_x, local_y, height * 2)), Vector((0, 0, -1))
-        )
-        return point.z if hit else 0.0
-
-    def world(local_x: float, local_y: float, local_z: float) -> tuple[float, float, float]:
-        return tuple(body.matrix_world @ Vector((local_x, local_y, local_z)))
-
-    nose = -length / 2
-    split_end = nose + 0.46 * length
-    add_curve(
-        "Mouse button split",
-        [
-            world(0.0, y, surface_z(0.0, y) + 0.0003)
-            for y in (nose + 0.004 + (split_end - nose - 0.004) * i / 12 for i in range(13))
-        ],
-        0.0011,
-        mats["black"],
-        target,
-    )
-    half_width = (width / 2) * taper(0.46) * 0.96
-    add_curve(
-        "Mouse button seam",
-        [
-            world(x, split_end, surface_z(x, split_end) + 0.0003)
-            for x in (-half_width + 2 * half_width * i / 14 for i in range(15))
-        ],
-        0.0011,
-        mats["black"],
-        target,
-    )
-    wheel_y = nose + 0.26 * length
-    wheel_top = surface_z(0.0, wheel_y)
-    add_box(
-        "Mouse wheel slot",
-        (0.011, 0.025, 0.012),
-        world(0.0, wheel_y, wheel_top - 0.0065),
-        mats["black"],
-        target,
-        rotation=(0, 0, yaw),
-    )
-    add_cylinder(
-        "Mouse wheel",
-        0.009,
-        0.0045,
-        world(0.0, wheel_y, wheel_top - 0.006),
-        mats["rubber"],
-        target,
-        rotation=(0, math.pi / 2, yaw),
-        vertices=48,
-    )
-    x, y, z = location
-    add_curve(
-        "Mouse cable",
-        [
-            world(0.0, nose - 0.001, 0.005),
-            world(0.05, nose - 0.16, 0.002),
-            world(0.09, nose - 0.45, DESK_TOP_Z - z + 0.002),
-            world(0.13, nose - 0.70, DESK_TOP_Z - z - 0.12),
-        ],
-        0.0022,
-        mats["rubber"],
-        target,
-    )
-
-
-def build_mug(
-    target: bpy.types.Collection,
-    mats: dict[str, bpy.types.Material],
-    location: tuple[float, float, float],
-    yaw: float,
-) -> None:
-    """A lathed mug: a slight taper, a rolled lip, a thick base, coffee 14 mm
-    below the rim, and a handle that plunges into the wall. Replaces a
-    49k-triangle CAD lathe with straight sides and a pipe for a handle.
-    """
-    x, y, z = location
-    profile = [
-        (0.0, 0.0), (0.030, 0.0), (0.037, 0.004), (0.039, 0.030), (0.040, 0.060),
-        (0.0415, 0.092), (0.0405, 0.096), (0.037, 0.096), (0.036, 0.090),
-        (0.0355, 0.040), (0.033, 0.012), (0.0, 0.010),
-    ]
-    bm = bmesh.new()
-    verts = [bm.verts.new((radius, 0.0, height)) for radius, height in profile]
-    edges = [bm.edges.new((verts[index], verts[index + 1])) for index in range(len(verts) - 1)]
-    bmesh.ops.spin(bm, geom=verts + edges, cent=(0, 0, 0), axis=(0, 0, 1), angle=math.tau, steps=64, use_merge=True)
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
-    mesh = bpy.data.meshes.new("Mug body")
-    bm.to_mesh(mesh)
-    bm.free()
-    for polygon in mesh.polygons:
-        polygon.use_smooth = True
-    mesh.materials.append(mats["ceramic"])
-    body = bpy.data.objects.new("Ceramic mug", mesh)
-    body.location = (x, y, z + 0.001)
-    body.rotation_mode = "XYZ"
-    body.rotation_euler = (0, 0, yaw)
-    target.objects.link(body)
-
-    bpy.ops.mesh.primitive_circle_add(vertices=64, radius=0.0352, fill_type="NGON", location=(x, y, z + 0.001 + 0.082))
-    coffee = bpy.context.object
-    coffee.name = "Mug coffee"
-    coffee.data.materials.append(mats["coffee"])
-    move_to_collection(coffee, target)
-
-    bpy.ops.mesh.primitive_torus_add(major_radius=0.027, minor_radius=0.0065, major_segments=48, minor_segments=16)
-    handle = bpy.context.object
-    handle.name = "Mug handle"
-    bm = bmesh.new()
-    bm.from_mesh(handle.data)
-    # Keep the outer half of the ring, cut at its centre plane so both ends
-    # terminate inside the wall's thickness rather than a visible 2 mm short.
-    bmesh.ops.delete(bm, geom=[vertex for vertex in bm.verts if vertex.co.x < 0.0], context="VERTS")
-    bm.to_mesh(handle.data)
-    bm.free()
-    for polygon in handle.data.polygons:
-        polygon.use_smooth = True
-    handle.data.materials.append(mats["ceramic"])
-    handle.parent = body
-    handle.location = (0.036, 0.0, 0.052)
-    handle.rotation_euler = (math.pi / 2, 0, 0)
-    move_to_collection(handle, target)
-
-
 def build_props(target: bpy.types.Collection, mats: dict[str, bpy.types.Material]) -> None:
-    build_keyboard(target, mats)
+    # Centred under the glass, which also keeps it clear of the binder.
+    build_keyboard(
+        target,
+        mats,
+        location=(0.0, -0.235 - KEYBOARD_DEPTH / 2, DESK_MAT_TOP_Z),
+        rotation=(math.radians(4.5), 0, math.radians(-1.5)),
+    )
     # Every imported prop is seated on the measured surface it stands on (see
     # seat_on): the stationery set's origin sat 26 mm below its own base,
     # which sank its pencil cup into the desk.
-    build_mouse(target, mats, (0.52, -0.24, DESK_MAT_TOP_Z), math.radians(172))
+    build_mouse(target, mats, (0.52, -0.24, DESK_MAT_TOP_Z), math.radians(172), desk_top_z=DESK_TOP_Z)
     build_mug(target, mats, (0.83, 0.01, DESK_TOP_Z), math.radians(18))
     # The notebook and the lamp are Poly Haven (CC0) models in place of the
     # CAD parts, which read as extruded blocks at any distance. The binder
@@ -1497,11 +776,6 @@ def build_lookdev_monitor(target: bpy.types.Collection, mats: dict[str, bpy.type
         add_box(f"Screen grid {index}", (0.0015, 0.002, 0.13), (x, -0.0090, -0.002), dim, target)
 
 
-def three_to_blender(x: float, y: float, z: float) -> tuple[float, float, float]:
-    """A point in the deck's scene units (X width, Y up, screen faces +Z) in metres here."""
-    return (x * METRES_PER_SCENE_UNIT, -z * METRES_PER_SCENE_UNIT, y * METRES_PER_SCENE_UNIT)
-
-
 def build_lighting(target: bpy.types.Collection) -> None:
     """The deck's home rig, not a lookdev invention.
 
@@ -1561,28 +835,6 @@ def build_lighting(target: bpy.types.Collection) -> None:
         32 * METRES_PER_SCENE_UNIT,
         target,
     )
-
-
-def make_camera(
-    name: str,
-    position: tuple[float, float, float],
-    target_point: tuple[float, float, float],
-    target: bpy.types.Collection,
-    fov_degrees: float = 35.0,
-) -> bpy.types.Object:
-    data = bpy.data.cameras.new(name)
-    data.sensor_fit = "VERTICAL"
-    data.sensor_height = 32.0
-    data.lens = data.sensor_height / (2 * math.tan(math.radians(fov_degrees) / 2))
-    data.dof.use_dof = False
-    data.lens_unit = "MILLIMETERS"
-    data.clip_start = 0.01
-    data.clip_end = 100.0
-    obj = bpy.data.objects.new(name, data)
-    target.objects.link(obj)
-    obj.location = position
-    aim_at(obj, target_point)
-    return obj
 
 
 def build_materials() -> dict[str, bpy.types.Material]:

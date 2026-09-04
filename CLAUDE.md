@@ -198,24 +198,68 @@ talk needs the same beat to land the same way at every rehearsal.
   lands exactly where the slide declared.
 - `Stages.jsx` — home, cubicle, monitor wall, and phosphor contexts. Every set
   stays mounted and its GPU programs are compiled before presentation; a shift
-  is only a visibility change, never an asset load.
-- **The home set is authored in Blender** (since 2026-09-02).
-  `blender/home-office/build_scene.py` builds `home-office.blend` at true
-  metric scale on the same spatial contract as the old CAD room (desk top at
-  −8.34, floor −34.34, ceiling 42, walls ±78/−64/35 in scene units), and
-  `export_scene.py` writes `public/models/home-office.glb`: modifiers applied,
-  transforms baked, meshes merged by material, no lights or cameras, ~210k
-  triangles, 15 MB. `HomeOffice.jsx` scales the metric root by 16/0.52 and
-  re-materials ten named surfaces with the talk's shared plaster/linen/wood
-  maps so the stage look presets stay in charge. Every imported prop is placed
-  with `seat_on`, which measures the asset's lowest vertex and rests it on the
-  surface — origins in downloaded assets are wherever their author left them.
-  The lamp and the notebook are Poly Haven CC0 models (`assets/`); the lamp
-  exports as dark painted metal because its stock orange enamel would be the
-  one saturated colour in an amber room. `Room.jsx` now only supplies
-  `DESK_Y`/`OFFICE_FLOOR_Y`; the CAD home set (its `Room` component, the
-  home branch of `Props`, and the desk/lamp/notebook GLBs) was retired on
-  2026-09-03 and lives in git.
+  is only a visibility change, never an asset load. The cubicle stage keeps
+  its light rig, baked irradiance receivers and contact patches here;
+  everything visible in the cubicle and the wall is a Blender export.
+- **All three sets are authored in Blender** (home since 2026-09-02, cubicle
+  and wall since 2026-09-03). Each has a build script that rebuilds its
+  `.blend` from scratch at true metric scale on the deck's spatial contract
+  (32.5 mm per scene unit; desk top at −8.34, office floor −29.54, office
+  ceiling 33.3, aisle ±29, bays every 42 from −20; wall cells on a 20 × 16.5
+  pitch inside ±94 / ±43 / −42) and an `export_scene.py` that writes the GLB:
+  modifiers applied, transforms baked, meshes merged by material set, no
+  lights or cameras. The shared kit is `blender/lib/`: `setkit.py`
+  (primitives, materials, imports, `seat_on`, world-scale `box_project_uv`,
+  fitted UVs, data-level `bake_object_transform`/`crease_by_angle`, lights,
+  cameras), `deskprops.py` (the keyboard, mouse and mug every workstation
+  carries), `export.py` (the pipeline). `blender/tools/inspect_set.py`
+  prints bounds and an AABB clip sweep for a built set; run it before an
+  export.
+  - `blender/home-office` → `home-office.glb` → `HomeOffice.jsx` (~180k
+    triangles). Poly Haven CC0 lamp/notebook/plant/stationery in `assets/`.
+  - `blender/office` → `office.glb` → `CubicleOffice.jsx` (~165k). A panel
+    system with shared posts, caps, raceways, beltline rails and two-tone
+    fabric tiles split at the beltline; laminate tops on steel C-frames that
+    stand on the floor (columns, feet, rear beam, modesty panel — the first
+    pass hung them on panel cleats and the hangers read as legs stopping in
+    mid-air); keyboard trays; the CAD chair and pedestal stood up and
+    material-bucketed in Blender (full-res in the hero bay, decimated in the
+    banks); the hero CRT housing decimated into every bay; a suspended
+    ceiling with modelled tees, recessed one-by-two-tile troffers and return
+    grilles on the same 16-unit grid the runtime ceiling map paints
+    (`ceiling.js` `gridOrigin`); occupancy dressing (desk phone, waste bins,
+    pinned notes, power strip, a copier and a wall clock at the aisle's end)
+    and double doors at the far end.
+  - `blender/wall` → `wall.glb` → `AgentVault.jsx` (~170k). Floor-to-ceiling
+    steel racks with shared uprights, a shelf and a decimated hero housing
+    per cell, rear panels, per-cell power cables, cable bundles, ladder trays
+    overhead, a trench cover on the floor. The wings sit at 72/66/59 rather
+    than the old 78/69/60 because a 620 mm rack turned toward the camera
+    reaches further than a 270 mm box did, and the cell pitch is 20 units
+    rather than 19.2 because a 609 mm housing has to clear the uprights.
+  - **Agent screens come from the GLB.** Each set's build writes the screen
+    placements (three.js units and yaw) into the scene's `agent_screens`
+    extra; `AgentMonitors.jsx` reads them, seeds variant/phase/drive, and
+    draws the one instanced shader plane. The housings are in the export, so
+    the screens cannot drift from them. The office fixture layout is the one
+    thing mirrored in JS (`OFFICE_FIXTURES`), because the environment map and
+    the ceiling wash need it before the GLB has loaded.
+  - The runtime components re-material every named surface with the talk's
+    shared maps (plaster/linen/wood/carpet, the laminate fleck print, the
+    carpet tile field, the ceiling maps); a surface with no finish throws, so
+    a new Blender material cannot silently ship as white. UVs are authored in
+    metres (box projection at one tile per metre, fitted 0–1 on the floor and
+    ceiling slabs), so a runtime repeat is tiles per metre. Fitted maps are
+    sampled with `flipY` off: the exporter flips V, and that puts a painted
+    map's top row at the slab's far end where the painters put it.
+  - Every imported prop is placed with `seat_on`, which measures the asset's
+    lowest vertex and rests it on the surface — origins in downloaded assets
+    are wherever their author left them. The lamp exports as dark painted
+    metal because its stock orange enamel would be the one saturated colour
+    in an amber room. `Room.jsx` now only supplies `DESK_Y`/`OFFICE_FLOOR_Y`;
+    the CAD home set, the procedural cubicle (`OfficeDetails`, `Props`, the
+    instanced panel/worktop/frame system) and the box-built wall live in git
+    (retired 2026-09-03).
 - `Effects.jsx` — restrained bloom, vignette, explicit ACES filmic tone mapping,
   FXAA, and banding dither. **All of it zeroes on a `fillScreen` slide.**
   EffectComposer forces the renderer to `NoToneMapping`, so ACES must live in
@@ -367,21 +411,27 @@ counting. `src/index.css` is small for the same reason.
 - **Nurb GLBs have no UV channel.** Do not box-project a tiled normal over a
   compound prop: projection seams and repeated grain look worse than a clean
   material and de-index the mesh. Macro textures belong on geometry with an
-  intentional projection (the home desk has directional planar UVs; the chair
-  cushions get per-cushion planar fabric UVs in `segmentChairGeometry`). Small
-  CAD props use authored edges plus physically distinct broad roughness.
+  intentional projection (the office chair's upholstery gets a 620 mm box
+  projection in the Blender build; the worktops and partitions carry metre
+  UVs). Small CAD props use authored edges plus physically distinct broad
+  roughness.
 - **Nurb GLBs also ship per-face normals, and `mergeVertices` cannot smooth
   them** — it compares every attribute, so coincident vertices carrying
-  different face normals never merge and recomputed normals stay flat. All CAD
-  surface finishing lives in `lib/propSurface.js` and applies to the monitor
-  housing and every desk prop: `toCreasedNormals` at 40° (lathe facets shade
-  round, chamfers stay crisp), the `weatherGeometry` pass (per-vertex cavity
-  darkening, convex-edge wear, seeded mottle — no UVs required), and
-  `varyRoughnessByWear`, which drives ROUGHNESS from that same vertex data so
-  grimy cavities scatter light and handled edges tighten it. Uniform
-  roughness is most of what reads as lifeless clay. The home environment map
-  also carries STRUCTURED sources (window panes, door slit) because a
-  gradient-only environment gives every specular a shapeless wash.
+  different face normals never merge and recomputed normals stay flat. In
+  Blender, `crease_by_angle` marks edges over 40° sharp before export (a CAD
+  box shaded fully smooth is a gradient blob — the office's first build); at
+  runtime the same idea is `lib/propSurface.js`, applied to the hero housing
+  and to the exported bay/wall housings: `toCreasedNormals` at 40° (lathe
+  facets shade round, chamfers stay crisp), the `weatherGeometry` pass
+  (per-vertex cavity darkening, convex-edge wear, seeded mottle — no UVs
+  required), and `varyRoughnessByWear`, which drives ROUGHNESS from that same
+  vertex data so grimy cavities scatter light and handled edges tighten it.
+  Uniform roughness is most of what reads as lifeless clay. The home
+  environment map also carries STRUCTURED sources (window panes, door slit)
+  because a gradient-only environment gives every specular a shapeless wash.
+  The office map's troffer apertures are a reflection budget scaled to the
+  fixtures' AREA: when the recessed lenses grew to one tile by two, the
+  aperture radiance came down by the same 3.3× or the laminate clipped white.
 - **The hero CRT housing is Blender-authored too** (since 2026-09-02):
   `blender/home-office/build_monitor.py` lofts the shell, steps the fascia,
   and exports `public/models/crt-monitor.glb` in the CAD frame (mm, X width,
@@ -392,7 +442,9 @@ counting. `src/index.css` is small for the same reason.
   clean — no vents: boolean cuts read as torn rims and conformed strips read
   as stickers, so the vent bucket and its louver baffles are gone from
   `Monitor.jsx`. Corners are tight (14 mm on the face, 6 mm at the opening);
-  the first pass at 38 / 12 read as a rounded 2000s appliance.
+  the first pass at 38 / 12 read as a rounded 2000s appliance. The same GLB
+  is the source for every distant housing: the office and wall builds import
+  it, crease it, and decimate it to a third for the bays and the cells.
 - **Quality per frame beats brute-force resolution.** DPR caps at 1.25, FXAA
   resolves edges after one shaded scene sample, variance shadow maps update only
   when a stage swaps, and repeated office/monitor assets stay instanced. Preserve

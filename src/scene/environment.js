@@ -241,10 +241,14 @@ function paintRoom(size = 512) {
 
 /** Radiance of each office surface. Linear, and deliberately far apart. */
 const OFFICE_ENV_RADIANCE = Object.freeze({
-  // ~250:1 over the walls. A real troffer against a painted shell is more, but
+  // ~75:1 over the walls. A real troffer against a painted shell is more, but
   // this is a reflection budget, not a photometric one: past roughly this ratio
   // the aperture stops reading as a lamp and starts clipping to a white blob.
-  aperture: [21.6, 23.2, 22.6],
+  // Scaled down by 3.3 when the Blender office's recessed troffers grew from
+  // 26×6 units to one tile by two (16×32): the map's irradiance is aperture
+  // radiance times aperture area, and at the old value the larger lenses
+  // drove the laminate to display white.
+  aperture: [6.5, 7.0, 6.8],
   ceilingTile: [0.27, 0.286, 0.277],
   // The lens washes its own tile and the two beside it. Without this the
   // fixtures read as stickers on a flat ceiling, which is exactly how the

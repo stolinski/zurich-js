@@ -4,12 +4,13 @@ import { mulberry32 } from '../lib/rng.js'
 /**
  * The suspended ceiling, as filtered texture.
  *
- * `OfficeDetails` models a real T-grid and correctly fades it out once a member
- * projects below ~1.5px (QUALITY Q1 — thin repeated geometry is a projector
- * moiré generator). But it faded to NOTHING, so at every wide framing the
- * ceiling became a flat dark plane with lit rectangles floating in it. Q1 allows
- * a member to disappear when it "becomes a filtered texture"; this is that
- * texture, and the modeled grid now crossfades into it instead of into a void.
+ * The Blender office models a real T-grid and `CubicleOffice` correctly fades
+ * it out once a member projects below ~1.5px (QUALITY Q1 — thin repeated
+ * geometry is a projector moiré generator). But faded to NOTHING, at every wide
+ * framing the ceiling became a flat dark plane with lit rectangles floating in
+ * it. Q1 allows a member to disappear when it "becomes a filtered texture";
+ * this is that texture, and the modeled grid crossfades into it instead of
+ * into a void.
  *
  * It also carries the TROFFER WASH. A recessed fluorescent always brightens the
  * tile around its lens — the lens is proud of the grid and mineral fibre is
@@ -29,7 +30,7 @@ import { mulberry32 } from '../lib/rng.js'
  * @param {Array<[number, number, number]>} fixtures world fixture positions
  * @param {object} fixtureSize   world footprint of one diffuser
  */
-function paintCeiling({ plane, fixtures, fixtureSize, tileSpacing }, size = 1024) {
+function paintCeiling({ plane, fixtures, fixtureSize, tileSpacing, gridOrigin }, size = 1024) {
   const canvas = document.createElement('canvas')
   const aspect = plane.depth / plane.width
   canvas.width = size
@@ -41,22 +42,29 @@ function paintCeiling({ plane, fixtures, fixtureSize, tileSpacing }, size = 1024
   const toU = (x) => (x / plane.width + 0.5) * canvas.width
   const toV = (z) => ((z - plane.centerZ) / plane.depth + 0.5) * canvas.height
 
-  return { canvas, ctx, pxPerUnit, pzPerUnit, toU, toV, tileSpacing }
+  return { canvas, ctx, pxPerUnit, pzPerUnit, toU, toV, tileSpacing, gridOrigin }
+}
+
+/** The first grid line at or before `start`, on a lattice through `origin`. */
+function firstGridLine(origin, start, spacing) {
+  return origin + Math.floor((start - origin) / spacing) * spacing
 }
 
 /** Mineral-fibre tiles with a seeded per-tile value shift, plus the T-bar. */
 function paintTiles(target, plane) {
-  const { canvas, ctx, pxPerUnit, toU, toV, tileSpacing } = target
+  const { canvas, ctx, pxPerUnit, toU, toV, tileSpacing, gridOrigin } = target
   const rand = mulberry32(0x0ce111a6)
+  const firstX = firstGridLine(gridOrigin[0], -plane.width / 2, tileSpacing)
+  const firstZ = firstGridLine(gridOrigin[1], plane.centerZ - plane.depth / 2, tileSpacing)
 
   ctx.fillStyle = '#8d938f'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
   // Real tiles are never one value. The variation is small and low-frequency,
   // which is exactly what survives minification.
-  for (let x = -plane.width / 2; x < plane.width / 2; x += tileSpacing) {
+  for (let x = firstX; x < plane.width / 2; x += tileSpacing) {
     for (
-      let z = plane.centerZ - plane.depth / 2;
+      let z = firstZ;
       z < plane.centerZ + plane.depth / 2;
       z += tileSpacing
     ) {
@@ -81,14 +89,10 @@ function paintTiles(target, plane) {
   // into a glowing wireframe rather than a ceiling.
   const barPx = Math.max(1, 0.74 * pxPerUnit)
   ctx.fillStyle = 'rgba(74, 80, 78, 0.72)'
-  for (let x = -plane.width / 2; x <= plane.width / 2; x += tileSpacing) {
+  for (let x = firstX; x <= plane.width / 2; x += tileSpacing) {
     ctx.fillRect(toU(x) - barPx / 2, 0, barPx, canvas.height)
   }
-  for (
-    let z = plane.centerZ - plane.depth / 2;
-    z <= plane.centerZ + plane.depth / 2;
-    z += tileSpacing
-  ) {
+  for (let z = firstZ; z <= plane.centerZ + plane.depth / 2; z += tileSpacing) {
     ctx.fillRect(0, toV(z) - barPx / 2, canvas.width, barPx)
   }
 }
@@ -100,11 +104,13 @@ function paintWash(target, fixtures, fixtureSize) {
   ctx.fillStyle = '#000000'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-  // Elongated along the fixture's own long axis, because the spill from a 4ft
-  // lens is not circular. One radial gradient drawn into a squashed space is
-  // the ellipse: scale y so a circle of radiusPx becomes reachZ deep.
-  const radiusPx = fixtureSize.width * 1.9 * pxPerUnit
-  const depthPx = fixtureSize.depth * 6.4 * pzPerUnit
+  // Elongated along the fixture's own long axis, because the spill from a
+  // recessed lens is not circular. One radial gradient drawn into a squashed
+  // space is the ellipse: scale y so a circle of radiusPx becomes depthPx deep.
+  // The reach is about one and a half fixture lengths each way along the
+  // long axis and two widths across it.
+  const radiusPx = fixtureSize.width * 2.6 * pxPerUnit
+  const depthPx = fixtureSize.depth * 1.9 * pzPerUnit
 
   ctx.globalCompositeOperation = 'lighter'
   for (const [x, , z] of fixtures) {
@@ -136,16 +142,24 @@ function finish(canvas, colorSpace, anisotropy) {
 
 /**
  * Build the ceiling's colour map and the emissive wash map for one plane.
- * The caller owns disposal.
+ * `gridOrigin` is one world (x, z) that a grid line passes through, so the
+ * painted tees land on the modeled ones. The caller owns disposal.
  */
-export function makeCeilingMaps({ plane, fixtures, fixtureSize, tileSpacing = 16, anisotropy = 8 }) {
+export function makeCeilingMaps({
+  plane,
+  fixtures,
+  fixtureSize,
+  tileSpacing = 16,
+  gridOrigin = [-plane.width / 2, plane.centerZ - plane.depth / 2],
+  anisotropy = 8,
+}) {
   // The colour map needs enough resolution to draw a 24mm tee; the wash is
   // nothing but smooth gradients, so it runs at a quarter of the footprint and
   // keeps the resident texture budget (QUALITY Q3, ≤80 MiB total) intact.
-  const tiles = paintCeiling({ plane, fixtures, fixtureSize, tileSpacing }, 1024)
+  const tiles = paintCeiling({ plane, fixtures, fixtureSize, tileSpacing, gridOrigin }, 1024)
   paintTiles(tiles, plane)
 
-  const wash = paintCeiling({ plane, fixtures, fixtureSize, tileSpacing }, 512)
+  const wash = paintCeiling({ plane, fixtures, fixtureSize, tileSpacing, gridOrigin }, 512)
   paintWash(wash, fixtures, fixtureSize)
 
   return {

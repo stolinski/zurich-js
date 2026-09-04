@@ -27,7 +27,7 @@ import { mulberry32 } from '../lib/rng.js'
  *
  * Seeded, so what is rehearsed is what the room sees.
  */
-export function makeLaminateMap({ tileUnits = 10, size = 512 } = {}) {
+export function makeLaminateMap({ size = 512 } = {}) {
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = size
   const ctx = canvas.getContext('2d')
@@ -61,10 +61,10 @@ export function makeLaminateMap({ tileUnits = 10, size = 512 } = {}) {
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping
-  // The worktop is 40 units across, so this lands one tile per `tileUnits` of
-  // desk. Anisotropy matters more here than anywhere else in the set: the desk
-  // is the surface most often seen at a grazing angle.
-  texture.repeat.set(40 / tileUnits, 38 / tileUnits)
+  // The consumer sets the repeat against its own UVs (the Blender worktops
+  // carry metre-scale UVs, so one tile every 325 mm). Anisotropy matters more
+  // here than anywhere else in the set: the desk is the surface most often
+  // seen at a grazing angle.
   texture.anisotropy = 8
   texture.needsUpdate = true
   return texture

@@ -225,8 +225,9 @@ rather than announcing the whole object in one frame. Repaint via `SHELL` in
 the cold open fills a projector with no letterbox.
 
 **Built:** a Blender-authored monitor housing and home room (`blender/home-office`,
-`scene/HomeOffice.jsx`), CAD keyboard, mouse, and mug for the cubicle
-(`scene/Props.jsx`), `scene/Scene.jsx` (composition + stage-aware lighting), and a single
+`scene/HomeOffice.jsx`), a Blender-authored office and wall on the same kit
+(`blender/office` → `scene/CubicleOffice.jsx`, `blender/wall` →
+`scene/AgentVault.jsx`, since 2026-09-03), `scene/Scene.jsx` (composition + stage-aware lighting), and a single
 square-on `reveal` where the housing arriving around an already-accepted image
 is the point. The three-quarter and profile waypoints that once followed it were
 cut: they re-explained the same fact from two more angles, and the punchline
@@ -327,11 +328,13 @@ viewport, then swaps while occluded. This works forward and backward; nonlocal
 and avoids a visible scenery cross-fade.
 
 **The architecture that makes this affordable:** distant sessions are rendered
-for **silhouette and rhythm**, not legibility. The wall is one instanced chassis
-draw plus one instanced custom-shader screen draw. Seeded per-instance phase,
-line shape, and drive make every agent differ without 54 canvases, textures, or
-lights. A single broad area source represents their already-fused aggregate
-spill. The hero keeps its full-resolution session canvas and full tube shader.
+for **silhouette and rhythm**, not legibility. The wall's racks and housings
+are one Blender export merged by material (a dozen draws), and every screen
+is one instanced custom-shader draw whose placements the export carries as a
+scene extra. Seeded per-instance phase, line shape, and drive make every agent
+differ without 54 canvases, textures, or lights. A single broad area source
+represents their already-fused aggregate spill. The hero keeps its
+full-resolution session canvas and full tube shader.
 
 ### Phase 3 — Into the glass ✅ (first pass)
 
