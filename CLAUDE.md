@@ -478,6 +478,16 @@ counting. `src/index.css` is small for the same reason.
   resolves edges after one shaded scene sample, variance shadow maps update only
   when a stage swaps, and repeated office/monitor assets stay instanced. Preserve
   those economics when adding detail.
+- **The render loop is capped at 60 fps.** `FrameCap.jsx` owns the loop
+  (`<Canvas frameloop="never">`) and calls R3F's `advance` only once a full
+  frame interval has passed, so a 120 Hz laptop panel renders half the frames
+  and the 60 Hz projector renders every one. The deck is GPU-bound (a settled
+  slide holds Chrome's GPU process at 99%), and load is pixels × frames/s.
+  Everything animated eases on `useFrame`'s real delta, so a skipped frame
+  moves the picture the same distance as two rendered ones. In never-mode R3F
+  derives that delta from the timestamp handed to `advance` in whatever unit it
+  is given; FrameCap passes SECONDS (animation-frame timestamps are ms) and
+  seeds the clock one frame behind the first timestamp.
 - **Do not bolt on progressive path tracing.** Camera flights and the animated
   terminal texture invalidate accumulation, and the wall/phosphor architecture
   depends on instancing that the primary WebGL path tracer does not support.

@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber'
 import { Scene } from './scene/Scene.jsx'
 import { CameraRig } from './scene/CameraRig.jsx'
 import { Effects } from './scene/Effects.jsx'
+import { FrameCap } from './scene/FrameCap.jsx'
 import { FlatScreen } from './ui/FlatScreen.jsx'
 import { Overlay } from './ui/Overlay.jsx'
 import { useKeyboardNav } from './state/useKeyboardNav.js'
@@ -53,8 +54,12 @@ export default function App() {
             toneMapping: THREE.NoToneMapping,
           }}
           camera={{ position: [0, 0, 9.65], fov: 50, near: 0.1, far: 4000 }}
+          // FrameCap owns the loop: the stage is 60 Hz, and a 120 Hz laptop
+          // panel would otherwise render twice the frames for nothing.
+          frameloop="never"
         >
           <color attach="background" args={['#04060a']} />
+          <FrameCap fps={60} />
           <Suspense fallback={null}>
             <Scene />
           </Suspense>
