@@ -38,10 +38,12 @@ export default function App() {
           shadows="percentage"
           // The composer resolves edges with a final FXAA pass. Rendering its
           // targets at Retina 2× meant four times the pixels before bloom and was the
-          // main reason a laptop sounded distressed. Cap DPR at 1.25; the CRT
-          // texture itself remains 2560×1440 and the procedural Nyquist guards
-          // preserve its close detail.
-          dpr={QUALITY_AA_PROFILE?.dpr ?? [1, 1.5]}
+          // main reason a laptop sounded distressed. Cap DPR at 1.25 — the value
+          // QUALITY.md's gates were measured at; the code had drifted to 1.5,
+          // which is 44% more pixels than the documented cap on a Retina panel
+          // and identical on the 1080p projector. The CRT texture itself remains
+          // 2560×1440 and the procedural Nyquist guards preserve its close detail.
+          dpr={QUALITY_AA_PROFILE?.dpr ?? [1, 1.25]}
           gl={{
             // Antialiasing lives on the composer's target, not the unused
             // default framebuffer.
