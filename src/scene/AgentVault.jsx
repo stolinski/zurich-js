@@ -46,15 +46,17 @@ function makeSurfaceFinishers({ plaster }) {
     'Vault floor': () => concrete('#1d2523', 0.94),
     'Vault ceiling': () => concrete('#1a2120', 0.95),
     'Vault wall': () => concrete('#1d2523', 0.94),
-    'Rack upright': () => standard({ color: '#18201f', roughness: 0.46, metalness: 0.52 }),
-    'Rack shelf': () => standard({ color: '#141a1b', roughness: 0.5, metalness: 0.4 }),
-    'Rack panel': () => standard({ color: '#12181a', roughness: 0.84, metalness: 0.12 }),
-    'Cable tray': () => standard({ color: '#4a5250', roughness: 0.5, metalness: 0.6 }),
-    'Cable bundle': () => standard({ color: '#0c0d0d', roughness: 0.8 }),
-    'Power cable': () => standard({ color: '#0a0b0d', roughness: 0.62, metalness: 0.05 }),
+    // The wall stays symmetrical; structured screen-bank reflections make its
+    // manufactured container legible without filling the room with more lights.
+    'Rack upright': () => standard({ color: '#222b29', roughness: 0.42, metalness: 0.48, envMapIntensity: 1.25 }),
+    'Rack shelf': () => standard({ color: '#1b2322', roughness: 0.5, metalness: 0.36, envMapIntensity: 1.1 }),
+    'Rack panel': () => standard({ color: '#12181a', roughness: 0.84, metalness: 0.12, envMapIntensity: 0.55 }),
+    'Cable tray': () => standard({ color: '#59615e', roughness: 0.44, metalness: 0.58, envMapIntensity: 1.35 }),
+    'Cable bundle': () => standard({ color: '#0c0d0d', roughness: 0.8, envMapIntensity: 0.35 }),
+    'Power cable': () => standard({ color: '#0a0b0d', roughness: 0.62, metalness: 0.05, envMapIntensity: 0.45 }),
     // Checker plate a shade off the floor, not polished steel: at metalness
     // 0.55 it caught the spill as a bright wedge running at the camera.
-    'Trench cover': () => standard({ color: '#20262a', roughness: 0.62, metalness: 0.28 }),
+    'Trench cover': () => standard({ color: '#303735', roughness: 0.58, metalness: 0.24, envMapIntensity: 1.05 }),
     // The hero shell's colour and moulded tooth. The grain's periods are in
     // OBJECT units: the hero mesh is millimetres, this export is metres, so
     // the hero's 0.09 / 0.82 become 0.00009 / 0.00082 here — at the hero's

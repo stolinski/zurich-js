@@ -1,0 +1,29 @@
+{
+  "width": 1024,
+  "height": 1418,
+  "range": 8.0,
+  "maximumRadiance": 3.8257906436920166,
+  "clippedTexels": 0,
+  "sha256": "259dfee0159854415cc80d17d135fd1c8d208e8959c94e24010ed9e3028cd400",
+  "source": "blender/office/office.blend",
+  "sourceSha256": "c398a38c074f79cffcfc408146704ab791f94c9218283134be480b483a77ba4a",
+  "surfaceContractSha256": "7edf7d7bb8b6573be3fbe1d920912e3229fb974de9c2cc9a012a4d942a8cce3f",
+  "engine": "Cycles",
+  "samples": 256,
+  "seed": 202054686,
+  "passes": [
+    "direct",
+    "indirect"
+  ],
+  "albedo": false,
+  "encoding": "sRGB-encoded linear radiance divided by range",
+  "uv": "fitted floor UV0; runtime flipY=false",
+  "boundsMetres": [
+    -4.224999904632568,
+    4.224999904632568,
+    -3.25,
+    8.449999809265137,
+    -0.9800499677658081,
+    -0.9600499868392944
+  ]
+}

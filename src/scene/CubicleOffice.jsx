@@ -7,6 +7,9 @@ import { makeCeilingMaps } from './ceiling.js'
 import { makeCarpetTileMap } from './carpet.js'
 import { makeLaminateMap } from './laminate.js'
 import { addMouldedGrain } from '../lib/propSurface.js'
+import { makeProfiledSurface, SURFACE_TEXTURES } from '../lib/surfaceProfiles.js'
+import { applyBakedDiffuse, configureBakedDiffuse } from '../lib/bakedDiffuse.js'
+import floorBake from '../../public/textures/lightmaps/office-floor-cycles.json'
 import {
   AgentMonitors,
   readAgentScreens,
@@ -30,8 +33,13 @@ export const OFFICE_GRID_ORIGIN = Object.freeze([8, -4])
  * the environment map and the ceiling wash need them before the GLB has
  * loaded.
  */
+const OFFICE_FIXTURE_ZS = Object.freeze([12, -36, -84, -132, -180])
+const OFFICE_FIXTURE_DRIVES = Object.freeze([1, 0.12, 0.9, 0.1, 0.06])
+
 export const OFFICE_FIXTURES = Object.freeze(
-  [-16, 16].flatMap((x) => [12, -36, -84, -132, -180].map((z) => [x, 33.1, z]))
+  [-16, 16].flatMap((x) =>
+    OFFICE_FIXTURE_ZS.map((z, index) => [x, 33.1, z, OFFICE_FIXTURE_DRIVES[index]])
+  )
 )
 export const OFFICE_FIXTURE_SIZE = Object.freeze({ width: 16, depth: 32 })
 
@@ -77,49 +85,18 @@ function relief(material, maps, repeat, normalScale, { diffuse = false } = {}) {
  * the fabric weave tiled once per metre (FABRIC_DENSITY 0.031/unit), the
  * laminate fleck every 325 mm, the plaster tooth under it every 72 mm.
  */
-function makeSurfaceFinishers({ plaster, linen, carpet, ceilingMaps, carpetTiles, laminatePrint }) {
+function makeSurfaceFinishers({ plaster, linen, carpet, ceilingMaps, carpetTiles, laminatePrint, bakedFloor }) {
   const physical = (params) => new THREE.MeshPhysicalMaterial(params)
   const standard = (params) => new THREE.MeshStandardMaterial(params)
   return {
-    'Cubicle fabric': () =>
-      relief(
-        physical({
-          color: '#777873',
-          roughness: 0.86,
-          metalness: 0,
-          sheen: 0.45,
-          sheenColor: new THREE.Color('#b7b8b1'),
-          sheenRoughness: 0.8,
-          envMapIntensity: 0.64,
-        }),
-        linen,
-        [0.95, 0.95],
-        0.5,
-        { diffuse: true }
-      ),
-    // The tile below the beltline, a step darker: the tone break at desk
-    // height is what reads as a panel system rather than a slab.
-    'Cubicle fabric lower': () =>
-      relief(
-        physical({
-          color: '#575b59',
-          roughness: 0.88,
-          metalness: 0,
-          sheen: 0.4,
-          sheenColor: new THREE.Color('#9a9c96'),
-          sheenRoughness: 0.82,
-          envMapIntensity: 0.6,
-        }),
-        linen,
-        [0.95, 0.95],
-        0.5,
-        { diffuse: true }
-      ),
+    'Cubicle fabric': () => makeProfiledSurface('Cubicle fabric', { linen }),
+    // The tile below the beltline is one reflectance step darker.
+    'Cubicle fabric lower': () => makeProfiledSurface('Cubicle fabric lower', { linen }),
     // Satin anodised cap, not a mirror: at higher metalness the rails broke
     // into crawling dashes along every panel top at the wide framings.
     'Partition frame': () =>
       physical({
-        color: '#5f6462',
+        color: '#515b59',
         roughness: 0.55,
         metalness: 0.25,
         clearcoat: 0.04,
@@ -127,14 +104,14 @@ function makeSurfaceFinishers({ plaster, linen, carpet, ceilingMaps, carpetTiles
         envMapIntensity: 0.7,
       }),
     'Partition raceway': () =>
-      standard({ color: '#474c4a', roughness: 0.62, metalness: 0.18 }),
+      standard({ color: '#363f3d', roughness: 0.62, metalness: 0.18 }),
     // `map` is the fleck print (laminate.js); the plaster set supplies the
     // tooth under it, which is what stops the largest bright surface in the
     // room returning one uniform value under every highlight.
     'Laminate worktop': () => {
       const material = relief(
         physical({
-          color: '#9f9b91',
+          color: '#989188',
           roughness: 0.61,
           metalness: 0,
           clearcoat: 0.08,
@@ -150,14 +127,13 @@ function makeSurfaceFinishers({ plaster, linen, carpet, ceilingMaps, carpetTiles
     },
     'Desk steel': () =>
       physical({
-        color: '#475052',
+        color: '#394346',
         roughness: 0.4,
         metalness: 0.58,
         clearcoat: 0.025,
         clearcoatRoughness: 0.55,
         envMapIntensity: 0.94,
       }),
-    'Keyboard tray': () => standard({ color: '#2a2f2e', roughness: 0.62, metalness: 0.1 }),
     // Relief keeps the fine photographic repeat; the tile field carries the
     // metre-scale structure the wide framings actually resolve.
     'Carpet tile': () => {
@@ -168,7 +144,7 @@ function makeSurfaceFinishers({ plaster, linen, carpet, ceilingMaps, carpetTiles
         0.38
       )
       material.map = carpetTiles
-      return material
+      return applyBakedDiffuse(material, bakedFloor, floorBake.range)
     },
     // Mineral fibre is a genuinely pale material and the single largest
     // surface in every wide framing; the painted map carries the tees and
@@ -188,21 +164,30 @@ function makeSurfaceFinishers({ plaster, linen, carpet, ceilingMaps, carpetTiles
     // the grid reflected the dark room and the ceiling read as a black cage.
     'Ceiling tee': () =>
       standard({
-        color: '#8f958f',
+        color: '#626966',
         roughness: 0.55,
         metalness: 0.12,
         transparent: true,
         depthWrite: false,
       }),
-    'Troffer frame': () => standard({ color: '#aeb6b2', roughness: 0.5, metalness: 0.2 }),
-    // Driven above display white: a fluorescent aperture is allowed to reach
-    // the ACES shoulder (QUALITY Q5).
-    'Troffer lens': () =>
+    'Troffer frame': () => standard({ color: '#818a86', roughness: 0.5, metalness: 0.2 }),
+    // Only the two rows backed by the broad runtime sources run at full output.
+    // Idle lenses remain installed and faintly alive, but dark gaps between
+    // pools keep the ceiling from becoming the brightest uniform plane.
+    'Troffer lens active': () =>
       standard({
         color: '#b8c2bd',
         emissive: '#bac8c1',
         emissiveIntensity: 2.1,
         roughness: 0.62,
+        metalness: 0,
+      }),
+    'Troffer lens idle': () =>
+      standard({
+        color: '#626b67',
+        emissive: '#7a8782',
+        emissiveIntensity: 0.24,
+        roughness: 0.72,
         metalness: 0,
       }),
     'Return grille': () => standard({ color: '#4b5353', roughness: 0.5, metalness: 0.38 }),
@@ -224,22 +209,7 @@ function makeSurfaceFinishers({ plaster, linen, carpet, ceilingMaps, carpetTiles
       physical({ color: '#202629', roughness: 0.7, metalness: 0.04, clearcoat: 0.02, clearcoatRoughness: 0.84, envMapIntensity: 0.7 }),
     // Contract upholstery is matte; a broad sheen lobe read as painted
     // plastic. Warm-biased because the cool office light pushes it neutral.
-    'Chair wool': () =>
-      relief(
-        physical({
-          color: '#5a554e',
-          roughness: 0.96,
-          metalness: 0,
-          sheen: 0.16,
-          sheenColor: new THREE.Color('#9c9890'),
-          sheenRoughness: 0.9,
-          envMapIntensity: 0.5,
-        }),
-        linen,
-        [1, 1],
-        0.95,
-        { diffuse: true }
-      ),
+    'Chair wool': () => makeProfiledSurface('Chair wool', { linen }),
     'Chair frame': () =>
       physical({ color: '#151a1d', roughness: 0.5, metalness: 0.025, clearcoat: 0.05, clearcoatRoughness: 0.74, envMapIntensity: 0.88 }),
     'Chair chrome': () =>
@@ -293,15 +263,13 @@ export function CubicleOffice({ active }) {
     normalMap: '/textures/painted-plaster/normal.jpg',
     roughnessMap: '/textures/painted-plaster/roughness.jpg',
   })
-  const linen = useTexture({
-    map: '/textures/rough-linen/diffuse.jpg',
-    normalMap: '/textures/rough-linen/normal.jpg',
-    roughnessMap: '/textures/rough-linen/roughness.jpg',
-  })
+  const linen = useTexture(SURFACE_TEXTURES.linen)
   const carpet = useTexture({
     normalMap: '/textures/office-carpet/normal.jpg',
     roughnessMap: '/textures/office-carpet/roughness.jpg',
   })
+  const floorBakeSource = useTexture('/textures/lightmaps/office-floor-cycles.png')
+  const bakedFloor = useMemo(() => configureBakedDiffuse(floorBakeSource), [floorBakeSource])
   // Painted once and resident from first mount: the footprint and the
   // fixture layout are authored constants, so nothing here can be built
   // during a navigation (QUALITY Q2).
@@ -324,7 +292,7 @@ export function CubicleOffice({ active }) {
 
   const office = useMemo(() => {
     const root = scene.clone(true)
-    const finishers = makeSurfaceFinishers({ plaster, linen, carpet, ...painted })
+    const finishers = makeSurfaceFinishers({ plaster, linen, carpet, bakedFloor, ...painted })
     const materialCache = new Map()
     const finish = (source) => {
       if (!materialCache.has(source)) {
@@ -351,7 +319,7 @@ export function CubicleOffice({ active }) {
       object.receiveShadow = true
     })
     return root
-  }, [carpet, linen, painted, plaster, scene])
+  }, [bakedFloor, carpet, linen, painted, plaster, scene])
 
   const placements = useMemo(
     () => seedAgentPlacements(readAgentScreens(scene), 0xc0b1c1e),
@@ -372,7 +340,10 @@ export function CubicleOffice({ active }) {
     // its narrow side is genuinely sampled; below that the painted tees on
     // the tiles carry it.
     const memberWidthPx = 0.74 * pixelsPerUnit
-    const opacity = THREE.MathUtils.smoothstep(memberWidthPx, 1.5, 3)
+    // The filtered map already carries the complete grid. Geometry contributes
+    // only a restrained parallax/highlight layer while genuinely resolved;
+    // allowing it to reach full opacity turned the wide shot into a ceiling cage.
+    const opacity = THREE.MathUtils.smoothstep(memberWidthPx, 3, 7) * 0.48
     material.opacity = opacity
     material.visible = opacity > 0.01
   })

@@ -113,8 +113,9 @@ function paintWash(target, fixtures, fixtureSize) {
   const depthPx = fixtureSize.depth * 1.9 * pzPerUnit
 
   ctx.globalCompositeOperation = 'lighter'
-  for (const [x, , z] of fixtures) {
+  for (const [x, , z, drive = 1] of fixtures) {
     ctx.save()
+    ctx.globalAlpha = drive
     ctx.translate(toU(x), toV(z))
     ctx.scale(1, depthPx / radiusPx)
     const wash = ctx.createRadialGradient(0, 0, 0, 0, 0, radiusPx)

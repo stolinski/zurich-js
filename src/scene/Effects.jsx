@@ -20,6 +20,7 @@ import {
   usePresentationRuntime,
 } from '../state/presentationRuntime.js'
 import { QUALITY_AA_PROFILE } from '../qualityProfile.js'
+import { createOutputPass } from '../lib/postOutput.js'
 import { STAGE_LOOK_PRESETS } from './environment.js'
 
 /**
@@ -95,6 +96,7 @@ export function Effects() {
   const warmupFrames = useRef(0)
   const postWarmed = useRef(false)
   const gl = useThree((state) => state.gl)
+  const camera = useThree((state) => state.camera)
   const index = useStore((state) => state.index)
   const displayStage = usePresentationRuntime((state) => state.displayStage)
   const slide = slides[index]
@@ -118,6 +120,12 @@ export function Effects() {
     effect.blendMode.opacity.value = initialPostMix.current
     return effect
   }, [])
+  // Explicit, resident pass boundary: FXAA's centre and neighbours must both
+  // be tone-mapped. Do not turn this back into consecutive <primitive> effects.
+  const outputPass = useMemo(
+    () => createOutputPass(camera, (QUALITY_AA_PROFILE?.fxaa ?? true) ? fxaa : null, dither),
+    [camera, dither, fxaa]
+  )
 
   useLayoutEffect(() => {
     // Leaving a settled glass-covering slide must enable the resident composer
@@ -200,11 +208,10 @@ export function Effects() {
         />
         <Vignette ref={vignette} offset={0.34} darkness={0} eskil={false} />
         <primitive object={toneMapping} />
-        {(QUALITY_AA_PROFILE?.fxaa ?? true) && <primitive object={fxaa} />}
-        <primitive object={dither} />
+        <primitive object={outputPass} />
       </>
     ),
-    [dither, exposure, fxaa, toneMapping]
+    [exposure, outputPass, toneMapping]
   )
 
   useFrame(() => {

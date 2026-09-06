@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import * as THREE from 'three'
 import { useGLTF, useTexture } from '@react-three/drei'
 import { SCREEN_SIZE } from './CRTScreen.jsx'
+import { makeProfiledSurface, SURFACE_PROFILES, SURFACE_TEXTURES } from '../lib/surfaceProfiles.js'
 
 const MODEL = '/models/home-office.glb'
 const METRES_TO_SCENE = SCREEN_SIZE.w / 0.52
@@ -25,13 +26,7 @@ const SURFACES = {
     repeat: [2.2, 2.2],
     normalScale: 0.36,
   },
-  'Oiled black walnut': {
-    maps: 'wood',
-    color: '#d1b49b',
-    repeat: [1.15, 0.58],
-    normalScale: 0.42,
-    diffuse: true,
-  },
+  'Oiled black walnut': SURFACE_PROFILES['Oiled black walnut'],
   'Smoked oak door': {
     maps: 'wood',
     color: '#594334',
@@ -82,6 +77,9 @@ function cloneTexture(source, repeat, colorSpace) {
 }
 
 function finishMaterial(source, profile, mapSets) {
+  if (profile && profile === SURFACE_PROFILES[source.name]) {
+    return makeProfiledSurface(source.name, mapSets)
+  }
   const material = source.clone()
   material.envMapIntensity = 0.9
   if (!profile) return material
@@ -124,16 +122,8 @@ export function HomeOffice() {
     normalMap: '/textures/painted-plaster/normal.jpg',
     roughnessMap: '/textures/painted-plaster/roughness.jpg',
   })
-  const linen = useTexture({
-    map: '/textures/rough-linen/diffuse.jpg',
-    normalMap: '/textures/rough-linen/normal.jpg',
-    roughnessMap: '/textures/rough-linen/roughness.jpg',
-  })
-  const wood = useTexture({
-    map: '/textures/wood-table/diffuse.jpg',
-    normalMap: '/textures/wood-table/normal.jpg',
-    roughnessMap: '/textures/wood-table/roughness.jpg',
-  })
+  const linen = useTexture(SURFACE_TEXTURES.linen)
+  const wood = useTexture(SURFACE_TEXTURES.wood)
 
   const homeOffice = useMemo(() => {
     const root = scene.clone(true)

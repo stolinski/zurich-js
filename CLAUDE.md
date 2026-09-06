@@ -217,19 +217,27 @@ talk needs the same beat to land the same way at every rehearsal.
   export.
   - `blender/home-office` → `home-office.glb` → `HomeOffice.jsx` (~180k
     triangles). Poly Haven CC0 lamp/notebook/plant/stationery in `assets/`.
-  - `blender/office` → `office.glb` → `CubicleOffice.jsx` (~165k). A panel
+  - `blender/office` → `office.glb` → `CubicleOffice.jsx` (~120k). Three
+    1.82 m bays per bank behind LOW dividers (880 mm; the outer runs and the
+    far panel stay at 1.43 m, the hero bay's sides at 1.02 m), each bay a
+    desk against its far divider with the CRT facing the camera and the
+    chair's back to us, so from the aisle the office reads as two receding
+    rows of lit workstations (Scott, 2026-09-06: the first cut kept the old
+    tall dividers and side-facing screens and "looked the same"). A panel
     system with shared posts, caps, raceways, beltline rails and two-tone
     fabric tiles split at the beltline; laminate tops on steel C-frames that
     stand on the floor (columns, feet, rear beam, modesty panel — the first
     pass hung them on panel cleats and the hangers read as legs stopping in
-    mid-air); keyboard trays; the CAD chair and pedestal stood up and
-    material-bucketed in Blender (full-res in the hero bay, decimated in the
-    banks); the hero CRT housing decimated into every bay; a suspended
-    ceiling with modelled tees, recessed one-by-two-tile troffers and return
-    grilles on the same 16-unit grid the runtime ceiling map paints
-    (`ceiling.js` `gridOrigin`); occupancy dressing (desk phone, waste bins,
-    pinned notes, power strip, a copier and a wall clock at the aisle's end)
-    and double doors at the far end.
+    mid-air); the CAD chair and pedestal stood up and material-bucketed in
+    Blender (full-res in the hero bay, decimated in the banks); the hero CRT
+    housing decimated into every bay; a suspended ceiling with modelled
+    tees, recessed one-by-two-tile troffers and return grilles on the same
+    16-unit grid the runtime ceiling map paints (`ceiling.js` `gridOrigin`);
+    occupancy dressing (desk phone, waste bins, pinned notes, power strip, a
+    copier and a wall clock at the aisle's end) and double doors at the far
+    end. The runtime light rig is one rect source per LIT troffer on the
+    two driven rows (`OFFICE_FIXTURES` drives), not bars across the aisle:
+    pools with dark intervals, and the idle rows over the far bays dark.
   - `blender/wall` → `wall.glb` → `AgentVault.jsx` (~170k). Floor-to-ceiling
     steel racks with shared uprights, a shelf and a decimated hero housing
     per cell, rear panels, per-cell power cables, cable bundles, ladder trays
@@ -316,6 +324,27 @@ in a 3D scene that stops being true:
   into the glass, which is where it belongs.
 
 Tune live in dev: `__crt.hold = true; __crt.uMaskStrength.value = 0.8`.
+
+### Shared surfaces and selective baking
+
+`src/scene/surfaceProfiles.json` is the first shared Blender/runtime material
+contract: cubicle upper/lower fabric, office chair wool and home walnut. It
+specifies local maps, tint × albedo, scalar × roughness, physical repeats and
+surface response. `blender/lib/setkit.py` and `src/lib/surfaceProfiles.js` both
+consume it; other materials have not all migrated yet.
+
+The office floor uses `blender/office/bake_floor.py`'s Cycles diffuse bake on its
+existing fitted UV0. It **replaces** the analytical floor pool/contact cards;
+it does not add illumination on top. Re-bake after geometry, light or contract
+changes. `public/textures/README.md` documents the radiance encoding and command.
+
+FXAA must remain an explicit output **pass** after ACES (`lib/postOutput.js`),
+not a fused effect sampling HDR neighbours against a tone-mapped centre.
+`pnpm test` covers these integration contracts; it is not visual acceptance.
+
+First-pass evidence and outstanding timing/AA gates:
+[`docs/set-integration-2026-09-05.md`](docs/set-integration-2026-09-05.md).
+The current integration is **not stage-approved**.
 
 ### The phosphor beats (after the glass)
 

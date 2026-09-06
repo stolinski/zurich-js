@@ -1,0 +1,40 @@
+{
+  "textureSets": {
+    "linen": {
+      "map": "/textures/rough-linen/diffuse-neutral.jpg",
+      "normalMap": "/textures/rough-linen/normal.jpg",
+      "roughnessMap": "/textures/rough-linen/roughness.jpg"
+    },
+    "wood": {
+      "map": "/textures/wood-table/diffuse.jpg",
+      "normalMap": "/textures/wood-table/normal.jpg",
+      "roughnessMap": "/textures/wood-table/roughness.jpg"
+    }
+  },
+  "surfaces": {
+    "Cubicle fabric": {
+      "maps": "linen", "color": "#90938b", "roughness": 0.96,
+      "repeat": [1, 1], "normalScale": 0.48, "diffuse": true,
+      "sheen": 0.22, "sheenColor": "#aaa89e", "sheenRoughness": 0.9,
+      "envMapIntensity": 0.6
+    },
+    "Cubicle fabric lower": {
+      "maps": "linen", "color": "#626760", "roughness": 0.98,
+      "repeat": [1, 1], "normalScale": 0.48, "diffuse": true,
+      "sheen": 0.18, "sheenColor": "#85887e", "sheenRoughness": 0.92,
+      "envMapIntensity": 0.55
+    },
+    "Chair wool": {
+      "maps": "linen", "color": "#756b60", "roughness": 0.98,
+      "repeat": [1, 1], "normalScale": 0.45, "diffuse": true,
+      "sheen": 0.16, "sheenColor": "#9c9890", "sheenRoughness": 0.9,
+      "envMapIntensity": 0.5
+    },
+    "Oiled black walnut": {
+      "maps": "wood", "color": "#bda58f", "roughness": 0.88,
+      "repeat": [1.15, 0.58], "normalScale": 0.28, "diffuse": true,
+      "clearcoat": 0.02, "clearcoatRoughness": 0.65,
+      "envMapIntensity": 0.8
+    }
+  }
+}

@@ -39,7 +39,10 @@ export const STAGE_LOOK_PRESETS = Object.freeze({
     // the room's own geometry, so turning it would slide the fixture rows off
     // the ceiling they belong to. 0.24 was the old borrowed-HDR level — near
     // enough to off that no office surface returned a highlight at all.
-    environment: { intensity: 0.5, rotation: [0, 0, 0] },
+    // 0.46, down from 0.5 when the ceiling bars became per-fixture pools: the
+    // map is broad fill by construction, and lower still it left the
+    // cubicle-wide median under the Q5b floor.
+    environment: { intensity: 0.46, rotation: [0, 0, 0] },
     // FogExp2 squares the density term, so 0.00115 was ~5% attenuation across
     // the ENTIRE aisle — the foreground partition, the hero bay and the fourth
     // bay back all landed on the same value and the set read as one flat plane.
@@ -59,7 +62,10 @@ export const STAGE_LOOK_PRESETS = Object.freeze({
     glassHaze: [0.055, 0.062, 0.06],
   },
   wall: {
-    environment: { intensity: 1, rotation: [0, 0, 0] },
+    // A wall-specific PMREM carries the reflected shape of the surrounding
+    // screen banks. It replaces the home room map without adding runtime
+    // lights, so symmetric racks read as steel in depth instead of black lines.
+    environment: { intensity: 0.72, rotation: [0, 0, 0] },
     // Same correction as the cubicle: 54 emitters at identical value is a
     // contact sheet. Depth attenuation is what turns the rack vault into
     // infrastructure receding away from the hero slot.
@@ -216,6 +222,70 @@ function paintRoom(size = 512) {
 }
 
 /**
+ * Reflections for the symmetric agent vault. The visible screens provide the
+ * direct image; this map contributes only their stable aggregate reflection to
+ * rack steel, trays, the trench, floor, and ceiling. Distinct banks around the
+ * horizon keep rough highlights directional instead of turning the room amber.
+ */
+function paintWall(size = 512) {
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size / 2
+  const ctx = canvas.getContext('2d')
+
+  const room = ctx.createLinearGradient(0, 0, 0, canvas.height)
+  room.addColorStop(0, '#080a09')
+  room.addColorStop(0.38, '#11120d')
+  room.addColorStop(0.56, '#17130a')
+  room.addColorStop(1, '#070806')
+  ctx.fillStyle = room
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  const floorBounce = ctx.createRadialGradient(
+    canvas.width * 0.5,
+    canvas.height * 0.82,
+    0,
+    canvas.width * 0.5,
+    canvas.height * 0.82,
+    canvas.width * 0.42
+  )
+  floorBounce.addColorStop(0, 'rgba(182, 132, 43, 0.2)')
+  floorBounce.addColorStop(0.5, 'rgba(125, 89, 30, 0.08)')
+  floorBounce.addColorStop(1, 'rgba(75, 51, 18, 0)')
+  ctx.fillStyle = floorBounce
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  const banks = [
+    { centre: 0.5, width: 0.22, skew: 0, drive: 0.58 },
+    { centre: 0.19, width: 0.16, skew: -0.018, drive: 0.74 },
+    { centre: 0.81, width: 0.16, skew: 0.018, drive: 0.74 },
+  ]
+  ctx.save()
+  ctx.globalCompositeOperation = 'lighter'
+  ctx.shadowColor = 'rgba(255, 193, 61, 0.5)'
+  ctx.shadowBlur = size * 0.012
+  for (const bank of banks) {
+    const cellW = (canvas.width * bank.width) / 5
+    const cellH = canvas.height * 0.052
+    const gapX = cellW * 0.18
+    const gapY = canvas.height * 0.018
+    const left = canvas.width * (bank.centre - bank.width / 2)
+    for (let row = 0; row < 5; row += 1) {
+      for (let column = 0; column < 5; column += 1) {
+        const x = left + column * cellW + gapX / 2 + row * bank.skew * canvas.width
+        const y = canvas.height * 0.34 + row * (cellH + gapY)
+        const alpha = bank.drive * (0.22 - row * 0.012)
+        ctx.fillStyle = `rgba(255, 213, 74, ${alpha})`
+        ctx.fillRect(x, y, cellW - gapX, cellH)
+      }
+    }
+  }
+  ctx.restore()
+
+  return canvas
+}
+
+/**
  * Bright commercial-office reflections, ray-cast from the room's own geometry.
  *
  * The office ran on a generic CC0 HDR of an unfinished daylit space at
@@ -332,17 +402,17 @@ function paintOffice(spec, size = 512) {
 
       if (axis === 1 && dy > 0) {
         addScaled(data, offset, R.ceilingTile, 1)
-        for (const [fx, , fz] of fixtures) {
+        for (const [fx, , fz, drive = 1] of fixtures) {
           const inX = 1 - smoothstep(halfW - 0.9, halfW + 0.9, Math.abs(hx - fx))
           const inZ = 1 - smoothstep(halfD - 0.5, halfD + 0.5, Math.abs(hz - fz))
-          if (inX > 0 && inZ > 0) addScaled(data, offset, R.aperture, inX * inZ)
+          if (inX > 0 && inZ > 0) addScaled(data, offset, R.aperture, inX * inZ * drive)
           const spreadX = (hx - fx) / (halfW * 2.6)
           const spreadZ = (hz - fz) / (halfD * 6.5)
           addScaled(
             data,
             offset,
             R.ceilingWash,
-            Math.exp(-(spreadX * spreadX + spreadZ * spreadZ))
+            Math.exp(-(spreadX * spreadX + spreadZ * spreadZ)) * drive
           )
         }
       } else if (axis === 1) {
@@ -403,12 +473,13 @@ export function makeRoomEnvironment(renderer, variant = 'home', officeSpec = nul
   pmrem.compileEquirectangularShader()
 
   const isOffice = variant === 'office'
+  const isWall = variant === 'wall'
   if (isOffice && !officeSpec) {
     throw new Error('makeRoomEnvironment: the office variant needs a room spec')
   }
   const source = isOffice
     ? paintOffice(officeSpec)
-    : new THREE.CanvasTexture(paintRoom())
+    : new THREE.CanvasTexture(isWall ? paintWall() : paintRoom())
   source.mapping = THREE.EquirectangularReflectionMapping
   // The office buffer is already linear radiance; only the canvas needs
   // decoding. Tagging the float texture sRGB would crush its top four stops.

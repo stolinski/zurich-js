@@ -9,10 +9,10 @@ const agentVert = /* glsl */ `
   attribute float aVariant;
   attribute float aPhase;
   attribute float aDrive;
-  varying vec2 vUv;
-  varying float vVariant;
-  varying float vPhase;
-  varying float vDrive;
+  out vec2 vUv;
+  flat out float vVariant;
+  flat out float vPhase;
+  flat out float vDrive;
 
   void main() {
     vUv = uv;
@@ -27,11 +27,15 @@ const agentVert = /* glsl */ `
 const agentFrag = /* glsl */ `
   precision highp float;
   uniform float uTime;
-  varying vec2 vUv;
-  varying float vVariant;
-  varying float vPhase;
-  varying float vDrive;
+  in vec2 vUv;
+  flat in float vVariant;
+  flat in float vPhase;
+  flat in float vDrive;
+  out vec4 outColor;
 
+  // Instance identity must NOT be perspective-interpolated. Even a constant
+  // varying accumulates raster rounding; the hash magnifies it into patches
+  // across one screen. Flat GLSL3 inputs keep each agent's seed truly constant.
   // Sinless hash. The previous sin-based hash fed sin() arguments in the
   // hundreds of thousands of radians (seed ≈ row + variant·53, scaled by ~92),
   // where GPU fast-math sin() is garbage — on Metal it collapsed to a constant
@@ -127,7 +131,7 @@ const agentFrag = /* glsl */ `
     float radial = sqrt(dot(fromCentre, fromCentre));
     float glassFall = 1.0 - 0.22 * pow(clamp(radial * 1.3, 0.0, 1.0), 2.2);
 
-    gl_FragColor = vec4(mix(black, phosphor, ink) * edge * glassFall, 1.0);
+    outColor = vec4(mix(black, phosphor, ink) * edge * glassFall, 1.0);
   }
 `
 
@@ -220,6 +224,7 @@ export function AgentMonitors({ placements, active = false }) {
         uniforms={uniforms}
         vertexShader={agentVert}
         fragmentShader={agentFrag}
+        glslVersion={THREE.GLSL3}
         toneMapped={false}
       />
     </instancedMesh>

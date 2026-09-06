@@ -34,21 +34,24 @@ const SCREEN_H = 9
  * patches — is positioned from the same constants.
  */
 const PANEL_TOP_Y = DESK_Y + 22.7
-const HERO_PANEL_TOP_Y = DESK_Y + 15.5
+// The hero bay's side panels are 1.02 m: taller than the dividers, low
+// enough that the near bays' screens show past them.
+const HERO_PANEL_TOP_Y = OFFICE_FLOOR_Y + 31.4
 const RACEWAY_TOP_Y = OFFICE_FLOOR_Y + 3.23
 const CAP_HEIGHT = 1.3
 const OFFICE_CEILING_Y = 33.3
 const AISLE_HALF_WIDTH = 29
 const BANK_OUTER_X = 76
-const BAY_EDGES_Z = [-20, -62, -104, -146]
+const BAY_EDGES_Z = [-20, -76, -132]
 const FAR_PANEL_Z = -190
-const BAY_CENTRES_Z = BAY_EDGES_Z.map((z, index) =>
-  ((index + 1 < BAY_EDGES_Z.length ? BAY_EDGES_Z[index + 1] : FAR_PANEL_Z) + z) / 2
-)
-// Worksurfaces: the hero top spans its bay; each bank top is 650 mm deep off
-// the aisle line. In scene units of 32.5 mm.
+// The far divider of each bay, which its desk stands against.
+const BAY_FAR_EDGES_Z = [...BAY_EDGES_Z.slice(1), FAR_PANEL_Z]
+// Dividers between bays are low (880 mm); the outer runs stay full height.
+const DIVIDER_TOP_Y = OFFICE_FLOOR_Y + 27.1
+// Worksurfaces: the hero top spans its bay; each bay desk is 1.41 m wide and
+// 850 mm deep against its far divider. In scene units of 32.5 mm.
 const HERO_TOP = { x: 0, z: -2.15, width: 55.7, depth: 27.7 }
-const BANK_TOP = { x: 39.9, width: 20, depth: 39.7 }
+const BAY_DESK = { x: 52.3, width: 43.5, depth: 26.2, backGap: 1.4 }
 
 /**
  * The office described to the environment painter, in the room's own frame.
@@ -76,14 +79,6 @@ export const OFFICE_ENVIRONMENT_SPEC = Object.freeze({
   worktopY: DESK_Y,
 })
 
-const CUBICLE_BAKED_FLOOR = [
-  {
-    position: [0, OFFICE_FLOOR_Y + 0.028, -80],
-    rotation: [-Math.PI / 2, 0, 0],
-    scale: [260, 360],
-  },
-]
-
 // The receivers sit a hair off each surface the Blender set models: the
 // worktops, the hero bay's side panels, and the transverse dividers' faces
 // toward the camera.
@@ -93,11 +88,11 @@ const CUBICLE_BAKED_SURFACES = [
     rotation: [-Math.PI / 2, 0, 0],
     scale: [HERO_TOP.width, HERO_TOP.depth],
   },
-  ...BAY_CENTRES_Z.flatMap((z) =>
+  ...BAY_FAR_EDGES_Z.flatMap((z) =>
     [-1, 1].map((side) => ({
-      position: [side * BANK_TOP.x, DESK_Y + 0.018, z],
+      position: [side * BAY_DESK.x, DESK_Y + 0.018, z + BAY_DESK.backGap + BAY_DESK.depth / 2],
       rotation: [-Math.PI / 2, 0, 0],
-      scale: [BANK_TOP.width, BANK_TOP.depth],
+      scale: [BAY_DESK.width, BAY_DESK.depth],
     }))
   ),
   ...[-1, 1].map((side) => ({
@@ -113,13 +108,13 @@ const CUBICLE_BAKED_SURFACES = [
     [-1, 1].map((side) => ({
       position: [
         side * ((AISLE_HALF_WIDTH + BANK_OUTER_X) / 2),
-        (RACEWAY_TOP_Y + PANEL_TOP_Y - CAP_HEIGHT) / 2,
+        (RACEWAY_TOP_Y + DIVIDER_TOP_Y - CAP_HEIGHT) / 2,
         z + 0.9,
       ],
       rotation: [0, 0, 0],
       scale: [
         (BANK_OUTER_X - AISLE_HALF_WIDTH) * 0.94,
-        (PANEL_TOP_Y - CAP_HEIGHT - RACEWAY_TOP_Y) * 0.9,
+        (DIVIDER_TOP_Y - CAP_HEIGHT - RACEWAY_TOP_Y) * 0.9,
       ],
     }))
   ),
@@ -141,15 +136,8 @@ const CUBICLE_DESK_CONTACTS_RADIAL = [
   [9.9, DESK_Y + 0.035, 1.85, 3.2, 3.2], // mug
 ]
 
-const CUBICLE_FLOOR_CONTACTS_RADIAL = [
-  [-43, OFFICE_FLOOR_Y + 0.035, 18, 22, 24, 0.18], // chair five-star base
-]
-
-const CUBICLE_FLOOR_CONTACTS_RECT = [
-  [15, OFFICE_FLOOR_Y + 0.035, -3, 14, 17], // hero pedestal
-  [-24.6, OFFICE_FLOOR_Y + 0.035, -12.9, 2.2, 17], // left desk foot
-  [24.6, OFFICE_FLOOR_Y + 0.035, -12.9, 2.2, 17], // right desk foot
-]
+// Floor contact and indirect illumination now come from the actual Blender
+// geometry's Cycles bake in CubicleOffice, not extra cards over the carpet.
 
 function OfficeShadowLight() {
   const light = useRef()
@@ -171,7 +159,7 @@ function OfficeShadowLight() {
       ref={light}
       position={[6, 31, 10]}
       color="#e8f2ed"
-      intensity={3400}
+      intensity={3000}
       distance={170}
       // 31.5° instead of 54°, on a 2048² map clamped to the occupied depth
       // range: ~20× the shadow texels per unit at the desk and floor. That is
@@ -216,24 +204,24 @@ function OfficeLighting() {
           nothing upward-facing gets the flat wash — raising THAT is what turns
           an office into one uniform gray, which is the whole reason this light
           is dim in the first place. */}
-      <hemisphereLight color="#dfe6e3" groundColor="#ffffff" intensity={0.12} />
+      <hemisphereLight color="#dfe6e3" groundColor="#ffffff" intensity={0.1} />
       <OfficeShadowLight />
-      <rectAreaLight
-        position={[0, 31.3, 6]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        width={58}
-        height={8}
-        color="#e5efea"
-        intensity={9.5}
-      />
-      <rectAreaLight
-        position={[0, 31.3, -78]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        width={58}
-        height={8}
-        color="#e5efea"
-        intensity={9}
-      />
+      {/* One source per LIT troffer, the size of its lens, on the two driven
+          rows (CubicleOffice's fixture drives). Two 58-unit bars across the
+          aisle lit the whole room to one value; these lay pools under the
+          fixtures with dark intervals between them, and the idle rows over
+          the far bays stay dark — ART-DIRECTION's fluorescent grammar. */}
+      {OFFICE_FIXTURES.filter(([, , , drive]) => drive >= 0.5).map(([x, y, z, drive]) => (
+        <rectAreaLight
+          key={`${x},${z}`}
+          position={[x, y - 1.7, z]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          width={OFFICE_FIXTURE_SIZE.width - 1.5}
+          height={OFFICE_FIXTURE_SIZE.depth - 1.5}
+          color="#e5efea"
+          intensity={11 * drive}
+        />
+      ))}
     </group>
   )
 }
@@ -242,16 +230,9 @@ function CubicleStage({ active }) {
   const irradianceSource = useTexture(
     '/textures/lightmaps/cubicle-irradiance.png'
   )
-  const floorIrradianceSource = useTexture(
-    '/textures/lightmaps/cubicle-floor-irradiance.png'
-  )
   const irradianceMap = useMemo(
     () => configureIrradianceTexture(irradianceSource),
     [irradianceSource]
-  )
-  const floorIrradianceMap = useMemo(
-    () => configureIrradianceTexture(floorIrradianceSource),
-    [floorIrradianceSource]
   )
 
   return (
@@ -262,12 +243,6 @@ function CubicleStage({ active }) {
           the Blender office. The eight bay screens are drawn inside it from
           the placements its build exported. */}
       <CubicleOffice active={active} />
-      <BakedIrradianceLayer
-        texture={floorIrradianceMap}
-        bounds={IRRADIANCE_BOUNDS.cubicle}
-        intensity={0.3}
-        placements={CUBICLE_BAKED_FLOOR}
-      />
       <BakedIrradianceLayer
         texture={irradianceMap}
         bounds={IRRADIANCE_BOUNDS.cubicle}
@@ -283,12 +258,6 @@ function CubicleStage({ active }) {
         shape="rect"
       />
       <ContactPatches patches={CUBICLE_DESK_CONTACTS_RADIAL} opacity={0.32} />
-      <ContactPatches
-        patches={CUBICLE_FLOOR_CONTACTS_RECT}
-        opacity={0.34}
-        shape="rect"
-      />
-      <ContactPatches patches={CUBICLE_FLOOR_CONTACTS_RADIAL} opacity={0.44} />
     </group>
   )
 }

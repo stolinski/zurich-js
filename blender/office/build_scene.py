@@ -89,9 +89,10 @@ DESK_Z = units(-8.34)
 CEILING_Z = units(33.3)
 AISLE_HALF = units(29.0)
 BANK_OUTER = units(76.0)
-# Transverse panel lines down both banks. The deck's fifth edge (−188) is
-# replaced by the far panel two units on, which closes the last bay itself.
-BAY_EDGES_Y = [units(20.0), units(62.0), units(104.0), units(146.0)]
+# Transverse divider lines down both banks: three bays of 56 units (1.82 m)
+# and a last one to the far panel. The first pass kept the old set's 42-unit
+# bays, and 1.365 m is too shallow for a desk with a chair in front of it.
+BAY_EDGES_Y = [units(20.0), units(76.0), units(132.0)]
 FAR_PANEL_Y = units(190.0)
 BAYS_Y = list(zip(BAY_EDGES_Y, BAY_EDGES_Y[1:] + [FAR_PANEL_Y]))
 SHELL_HALF_X = units(94.0)
@@ -102,14 +103,21 @@ FLOOR_WIDTH = units(260.0)
 FLOOR_DEPTH = units(360.0)
 HERO_PANEL_Y0 = units(-16.0)
 HERO_PANEL_Y1 = BAY_EDGES_Y[0]
-HERO_PANEL_TOP = units(-8.34 + 15.5)
+# Taller than the bay dividers, low enough that the near bays' screens show
+# past them from the aisle.
+HERO_PANEL_TOP = FLOOR_Z + 1.02
 BANK_PANEL_TOP = units(-8.34 + 22.7)
+# The dividers between bays are low (880 mm, 190 mm over the worksurface):
+# from a camera in the aisle every bay's screen and chair back shows over
+# them, so the office reads as two receding rows of lit workstations. The
+# outer runs and the far panel stay at full height and keep the room closed.
+DIVIDER_TOP = FLOOR_Z + 0.88
 OUTER_PANEL_Y0 = units(-28.0)
-# The bay screens sit at the aisle edge of each worksurface, facing across
-# the aisle: it is the one place a camera in the aisle can see them past the
-# transverse partitions (measured against the cubicle-wide waypoint — one
-# more unit in and the second bay's screen is behind the first divider).
-MONITOR_GLASS_X = units(33.5)
+# Each bay's desk stands against its far divider with the screen facing the
+# camera; the glass sits far enough forward for the housing to clear the
+# divider and for a keyboard to sit in front of it.
+BAY_DESK_DEPTH = 0.85
+BAY_GLASS_FROM_BACK = 0.53
 # Ceiling grid: 16-unit (520 mm) tiles. The runtime paints the tile map with
 # grid lines at x = 8 + 16k and z = −4 + 16k (ceiling.js gridOrigin), and the
 # tees, troffers and grilles here sit on that same grid.
@@ -120,6 +128,10 @@ GRID_Y0 = units(4.0)
 # aisle's edges. Mirrored in OFFICE_LAYOUT.fixtures (Stages.jsx).
 FIXTURE_XS = (-units(16.0), units(16.0))
 FIXTURE_YS = [units(-12.0), units(36.0), units(84.0), units(132.0), units(180.0)]
+# Only the two rows backed by runtime area sources run at full output. The
+# remaining apertures stay visibly installed but idle, creating the dark gaps
+# between fluorescent pools that keep the aisle from reading as uniform fill.
+FIXTURE_DRIVES = [1.0, 0.12, 0.9, 0.1, 0.06]
 FIXTURE_SIZE = (TILE, TILE * 2)
 
 # Panel system dimensions.
@@ -128,9 +140,6 @@ PANEL_T = 0.065
 CAP_H = 0.042
 RACEWAY_H = 0.105
 WORKTOP_T = 0.028
-# 650 mm deep: the housing overhangs nothing, and the 0.82 m left behind the
-# top is exactly a parked task chair's footprint.
-BANK_TOP_X = (AISLE_HALF + 0.03, AISLE_HALF + 0.03 + 0.65)
 HERO_TOP_X = (-(AISLE_HALF - POST / 2 - 0.012), AISLE_HALF - POST / 2 - 0.012)
 HERO_TOP_Y = (-0.38, 0.52)
 
@@ -156,18 +165,18 @@ def build_materials() -> dict[str, bpy.types.Material]:
     materials = {
         # Runtime re-materials these by name (CubicleOffice.jsx) with the
         # talk's shared maps; the Blender look only has to predict the deck.
-        "fabric": mapped_surface_material("Cubicle fabric", "#777873", 0.86, linen, repeats=(1.0, 1.0, 1.0), normal_strength=0.5),
-        "fabric_lower": mapped_surface_material("Cubicle fabric lower", "#575b59", 0.88, linen, repeats=(1.0, 1.0, 1.0), normal_strength=0.5),
-        "frame": principled_material("Partition frame", "#5f6462", 0.55, metallic=0.25, coat=0.04),
-        "raceway": principled_material("Partition raceway", "#474c4a", 0.62, metallic=0.18),
-        "laminate": textured_material("Laminate worktop", "#a19d93", "#98948a", 0.61, scale=900.0, detail=1.0, bump_strength=0.0, bump_distance=0.0001),
-        "steel": principled_material("Desk steel", "#475052", 0.4, metallic=0.58, coat=0.025),
-        "tray": principled_material("Keyboard tray", "#2a2f2e", 0.62, metallic=0.1),
+        "fabric": mapped_surface_material("Cubicle fabric", "#687371", 0.86, linen, repeats=(1.0, 1.0, 1.0), normal_strength=0.5),
+        "fabric_lower": mapped_surface_material("Cubicle fabric lower", "#454d4c", 0.88, linen, repeats=(1.0, 1.0, 1.0), normal_strength=0.5),
+        "frame": principled_material("Partition frame", "#515b59", 0.55, metallic=0.25, coat=0.04),
+        "raceway": principled_material("Partition raceway", "#363f3d", 0.62, metallic=0.18),
+        "laminate": textured_material("Laminate worktop", "#989188", "#8e887f", 0.61, scale=900.0, detail=1.0, bump_strength=0.0, bump_distance=0.0001),
+        "steel": principled_material("Desk steel", "#394346", 0.4, metallic=0.58, coat=0.025),
         "carpet": mapped_surface_material("Carpet tile", "#3e4341", 0.98, carpet, repeats=(18.0, 24.0, 1.0), normal_strength=0.38, use_diffuse=True),
         "ceiling": principled_material("Ceiling tile", "#8d938f", 0.9),
-        "tee": principled_material("Ceiling tee", "#858c88", 0.46, metallic=0.34),
-        "troffer": principled_material("Troffer frame", "#aeb6b2", 0.5, metallic=0.2),
-        "lens": principled_material("Troffer lens", "#b8c2bd", 0.62, emission="#bac8c1", emission_strength=9.0),
+        "tee": principled_material("Ceiling tee", "#626966", 0.55, metallic=0.12),
+        "troffer": principled_material("Troffer frame", "#818a86", 0.5, metallic=0.2),
+        "lens": principled_material("Troffer lens active", "#b8c2bd", 0.62, emission="#bac8c1", emission_strength=9.0),
+        "lens_idle": principled_material("Troffer lens idle", "#626b67", 0.72, emission="#7a8782", emission_strength=1.0),
         "grille": principled_material("Return grille", "#4b5353", 0.5, metallic=0.38),
         "shell": mapped_surface_material("Office shell", "#4b534f", 0.93, plaster, repeats=(3.0, 2.0, 1.0), normal_strength=0.3),
         "base": principled_material("Vinyl base", "#2e3231", 0.7),
@@ -179,7 +188,7 @@ def build_materials() -> dict[str, bpy.types.Material]:
         "pedestal_front": principled_material("Pedestal drawer", "#697571", 0.49, metallic=0.08, coat=0.1),
         "pedestal_hardware": principled_material("Pedestal hardware", "#343b3c", 0.27, metallic=0.76),
         "pedestal_caster": principled_material("Pedestal caster", "#202629", 0.7, metallic=0.04),
-        "chair_fabric": textured_material("Chair wool", "#5a554e", "#4e4a45", 0.96, scale=115.0, detail=2.0, bump_strength=0.10, bump_distance=0.0013),
+        "chair_fabric": mapped_surface_material("Chair wool", "#62584d", 0.96, linen, repeats=(1.0, 1.0, 1.0), normal_strength=0.45, use_diffuse=True),
         "chair_frame": principled_material("Chair frame", "#151a1d", 0.5, metallic=0.025),
         "chrome": principled_material("Chair chrome", "#8b9491", 0.29, metallic=0.78),
         "crt": textured_material("Bay CRT", "#2b2d32", "#33363c", 0.62, scale=52.0, detail=3.0, bump_strength=0.035, bump_distance=0.0007, metallic=0.015),
@@ -338,8 +347,9 @@ def build_ceiling_system(target: bpy.types.Collection, mats: dict[str, bpy.types
     lens_w, lens_d = FIXTURE_SIZE[0] - 0.05, FIXTURE_SIZE[1] - 0.05
     frame_w, frame_d = FIXTURE_SIZE[0] - 0.012, FIXTURE_SIZE[1] - 0.012
     for x in FIXTURE_XS:
-        for y in FIXTURE_YS:
-            add_box(f"Troffer lens ({x:.2f}, {y:.2f})", (lens_w, lens_d, 0.008), (x, y, CEILING_Z - 0.006), mats["lens"], target)
+        for row, y in enumerate(FIXTURE_YS):
+            lens_material = mats["lens"] if FIXTURE_DRIVES[row] >= 0.5 else mats["lens_idle"]
+            add_box(f"Troffer lens ({x:.2f}, {y:.2f})", (lens_w, lens_d, 0.008), (x, y, CEILING_Z - 0.006), lens_material, target)
             for sx in (-1, 1):
                 add_box("Troffer door rail", (0.02, frame_d, 0.014), (x + sx * (frame_w / 2 - 0.01), y, CEILING_Z - 0.007), mats["troffer"], target, bevel=0.002, segments=2)
             for sy in (-1, 1):
@@ -462,7 +472,7 @@ def build_partitions(target: bpy.types.Collection, mats: dict[str, bpy.types.Mat
         inner = side * AISLE_HALF
         outer = side * BANK_OUTER
         for y in BAY_EDGES_Y:
-            system.panel(f"Transverse panel {side} {y:.2f}", (inner, y), (outer, y), BANK_PANEL_TOP)
+            system.panel(f"Transverse panel {side} {y:.2f}", (inner, y), (outer, y), DIVIDER_TOP)
         # The outer run, one segment per bay so the posts are shared.
         edges = [OUTER_PANEL_Y0, *BAY_EDGES_Y, FAR_PANEL_Y]
         for y0, y1 in zip(edges, edges[1:]):
@@ -607,92 +617,59 @@ def place_bay_monitor(
     mats: dict[str, bpy.types.Material],
     *,
     glass_centre: tuple[float, float, float],
-    side: int,
 ) -> None:
     """A housing whose glass lands where the deck will draw the screen, facing
-    across the aisle. The pocket floor sits 10 mm behind the glass and the
-    opening is centred 17 mm below the housing's origin (Monitor.jsx), so the
-    origin is 10 mm along the facing direction and 17 mm up from the glass.
-    The imported housing faces −Y; a bank on +X faces −X."""
-    facing = (-1.0, 0.0) if side > 0 else (1.0, 0.0)
-    yaw = math.radians(-90.0) if side > 0 else math.radians(90.0)
+    the camera down the aisle (−Y here, +Z in the deck: yaw 0 in both). The
+    pocket floor sits 10 mm behind the glass and the opening is centred 17 mm
+    below the housing's origin (Monitor.jsx), so the origin is 10 mm behind
+    and 17 mm up from the glass centre."""
     gx, gy, gz = glass_centre
-    duplicate_object(
-        source,
-        name,
-        target,
-        location=(gx + facing[0] * 0.010, gy + facing[1] * 0.010, gz + 0.017),
-        rotation=(0.0, 0.0, yaw),
-    )
+    duplicate_object(source, name, target, location=(gx, gy + 0.010, gz + 0.017))
     add_box(
         f"{name} lookdev glass",
         (0.520, 0.006, 0.2925),
-        (gx + facing[0] * 0.002, gy, gz),
+        (gx, gy - 0.002, gz),
         mats["screen_bay"],
         lookdev,
-        rotation=(0.0, 0.0, yaw),
         bevel=0.012,
         segments=4,
     )
     x, y, z = blender_to_three((gx, gy, gz))
-    # Facing −X in the deck is a yaw of −π/2 about +Y (it turns the +Z screen
-    # normal onto −X); facing +X is +π/2.
-    AGENT_SCREENS.append({"x": round(x, 4), "y": round(y, 4), "z": round(z, 4), "yaw": round(-math.pi / 2 if side > 0 else math.pi / 2, 6)})
+    AGENT_SCREENS.append({"x": round(x, 4), "y": round(y, 4), "z": round(z, 4), "yaw": 0.0})
 
 
 def build_bay_desk_props(
     bay: int,
     side: int,
-    y_centre: float,
+    x_centre: float,
+    glass_y: float,
     target: bpy.types.Collection,
     mats: dict[str, bpy.types.Material],
 ) -> None:
-    """What sits on a bank worktop besides its monitor: the keyboard on a
-    pull-out tray at the aisle edge, and a mouse, a mug or a paper stack,
-    varied per bay."""
-    x_edge = side * BANK_TOP_X[0]
-    tray_z = DESK_Z - 0.09
-    tray_x = x_edge - side * 0.11
-    add_box(
-        f"Bay {bay} {side} keyboard tray",
-        (0.32, 0.6, 0.014),
-        (tray_x, y_centre, tray_z - 0.007),
-        mats["tray"],
-        target,
-        bevel=0.004,
-        segments=2,
-    )
-    for sy in (-1, 1):
-        add_box(
-            f"Bay {bay} {side} tray slide",
-            (0.3, 0.02, 0.03),
-            (x_edge + side * 0.03, y_centre + sy * 0.29, tray_z + 0.015),
-            mats["steel"],
-            target,
-        )
-    # The board's rig sits at its front edge and its depth runs toward the
-    # bank; the mouse's nose points the same way.
+    """What sits on a bay desk besides its monitor: the keyboard in front of
+    the glass, a mouse beside it, and a mug or a paper stack, varied per bay.
+    The desk faces +Y (away from the camera), so the board's depth runs +Y."""
     build_bay_keyboard(
         target,
         mats,
-        location=(tray_x - side * 0.055, y_centre, tray_z),
-        rotation=(math.radians(4.0), 0.0, math.radians(-90.0 * side)),
+        location=(x_centre - 0.02, glass_y - 0.15 - KEYBOARD_DEPTH, DESK_Z),
+        rotation=(math.radians(4.0), 0.0, math.radians(random.uniform(-3, 3))),
         name=f"Bay {bay} {side} keyboard",
     )
+    # The mouse's nose points toward the glass (its nose is local −Y).
+    build_simple_mouse(
+        target,
+        mats,
+        (x_centre + 0.27, glass_y - 0.21, DESK_Z),
+        math.radians(180.0 + random.uniform(-14, 14)),
+        name=f"Bay {bay} {side} mouse",
+    )
     dress = random.random()
-    if dress < 0.45:
-        build_simple_mouse(
-            target,
-            mats,
-            (side * (BANK_TOP_X[0] + 0.22), y_centre + 0.46 * random.choice((-1, 1)), DESK_Z),
-            math.radians(90.0 * side) + math.radians(random.uniform(-12, 12)),
-            name=f"Bay {bay} {side} mouse",
-        )
-    elif dress < 0.8:
+    if dress < 0.5:
         build_mug(
             target,
             mats,
-            (side * (BANK_TOP_X[0] + 0.30), y_centre + 0.44 * random.choice((-1, 1)), DESK_Z),
+            (x_centre + 0.46, glass_y - 0.10 + random.uniform(-0.05, 0.05), DESK_Z),
             math.radians(random.uniform(0, 360)),
             name=f"Bay {bay} {side} mug",
             steps=24,
@@ -700,8 +677,8 @@ def build_bay_desk_props(
     else:
         add_box(
             f"Bay {bay} {side} paper stack",
-            (0.297, 0.21, 0.018),
-            (side * (BANK_TOP_X[0] + 0.5), y_centre + 0.4 * random.choice((-1, 1)), DESK_Z + 0.009),
+            (0.21, 0.297, 0.018),
+            (x_centre - 0.50, glass_y - 0.20, DESK_Z + 0.009),
             mats["paper"],
             target,
             rotation=(0, 0, math.radians(random.uniform(-15, 15))),
@@ -748,65 +725,64 @@ def build_workstations(
     place_seated(chair_src, "Hero task chair", export, location=(units(-43.0), units(-18.0)), yaw=three_yaw_to_blender(0.18), surface_z=FLOOR_Z)
 
     # ── Bank bays ──
+    # Every bay is the hero workstation again: a desk against the far
+    # divider, the screen facing the camera down the aisle, the chair with
+    # its back to us. Over the low dividers the two rows read as rows.
     for bay, (y0, y1) in enumerate(BAYS_Y):
-        y_centre = (y0 + y1) / 2
         for side in (-1, 1):
-            x_inner, x_outer = BANK_TOP_X
-            build_worktop(
-                f"Bay {bay} {side}",
-                (min(side * x_inner, side * x_outer), max(side * x_inner, side * x_outer)),
-                (y0 + POST / 2 + 0.012, y1 - POST / 2 - 0.012),
-                export,
-                mats,
-                back="x1" if side > 0 else "x0",
-            )
+            x_inner = side * (AISLE_HALF + 0.05)
+            x_outer = side * (BANK_OUTER - PANEL_T / 2 - 0.03)
+            x_lo, x_hi = min(x_inner, x_outer), max(x_inner, x_outer)
+            x_centre = (x_lo + x_hi) / 2
+            y_back = y1 - POST / 2 - 0.02
+            y_front = y_back - BAY_DESK_DEPTH
+            glass_y = y_back - BAY_GLASS_FROM_BACK
+            build_worktop(f"Bay {bay} {side}", (x_lo, x_hi), (y_front, y_back), export, mats, back="y1")
             place_bay_monitor(
                 monitor_src,
                 f"Bay {bay} {side} CRT",
                 export,
                 lookdev,
                 mats,
-                glass_centre=(side * MONITOR_GLASS_X, y_centre, 0.0),
-                side=side,
+                glass_centre=(x_centre, glass_y, 0.0),
             )
-            # The chair rolled into the back of the bay, facing the aisle; it
-            # keeps the aisle clear and reads through the bay openings.
-            chair_yaw = math.radians(-90.0 if side > 0 else 90.0) + math.radians(random.uniform(-6, 6))
+            # The chair pushed up to the desk's front edge, facing it.
             place_seated(
                 bay_chair_src,
                 f"Bay {bay} {side} chair",
                 export,
-                location=(side * (x_outer + 0.40), y_centre + random.uniform(-0.08, 0.08)),
-                yaw=chair_yaw,
+                location=(x_centre + random.uniform(-0.12, 0.12), y_front - 0.36),
+                yaw=math.radians(random.uniform(-10, 10)),
                 surface_z=FLOOR_Z,
             )
-            # Pedestal under the top, drawers to the aisle, inboard of the
-            # frame's columns; the waste bin under the other end.
-            pedestal_end = random.choice((-1, 1))
+            # Pedestal under the outer end of the desk, drawers to the sitter,
+            # inboard of the frame's outer column; the waste bin under the
+            # inner end.
             place_seated(
                 bay_pedestal_src,
                 f"Bay {bay} {side} pedestal",
                 export,
-                location=(side * (x_inner + 0.34), y_centre + pedestal_end * 0.30),
-                yaw=math.radians(-90.0 if side > 0 else 90.0),
+                location=(x_centre + side * 0.42, y_back - 0.30),
+                yaw=0.0,
                 surface_z=FLOOR_Z,
             )
             add_cylinder(
                 f"Bay {bay} {side} waste bin",
                 0.13,
                 0.30,
-                (side * (x_inner + 0.30), y_centre - pedestal_end * 0.42, FLOOR_Z + 0.15),
+                (x_centre - side * 0.50, y_back - 0.45, FLOOR_Z + 0.15),
                 mats["waste"],
                 export,
                 vertices=32,
                 bevel=0.006,
             )
-            build_bay_desk_props(bay, side, y_centre, export, mats)
-            # Binder bin hung on the outer partition.
+            build_bay_desk_props(bay, side, x_centre, glass_y, export, mats)
+            # Binder bin hung on the outer partition over the desk's outer end.
             bin_x = side * (BANK_OUTER - PANEL_T / 2 - 0.16)
             bin_top = BANK_PANEL_TOP - CAP_H - 0.02
-            add_box(f"Bay {bay} {side} binder bin", (0.30, (y1 - y0) - 0.32, 0.36), (bin_x, y_centre, bin_top - 0.18), mats["bin"], export, bevel=0.006, segments=2)
-            add_box(f"Bay {bay} {side} bin door", (0.012, (y1 - y0) - 0.36, 0.30), (bin_x - side * 0.152, y_centre, bin_top - 0.16), mats["frame"], export, bevel=0.004, segments=2)
+            y_centre = (y0 + y1) / 2
+            add_box(f"Bay {bay} {side} binder bin", (0.30, 0.90, 0.36), (bin_x, y_centre, bin_top - 0.18), mats["bin"], export, bevel=0.006, segments=2)
+            add_box(f"Bay {bay} {side} bin door", (0.012, 0.86, 0.30), (bin_x - side * 0.152, y_centre, bin_top - 0.16), mats["frame"], export, bevel=0.004, segments=2)
 
 
 # ── Hero desk props ──────────────────────────────────────────────────────────
@@ -963,18 +939,24 @@ def build_lookdev_monitor(target: bpy.types.Collection, mats: dict[str, bpy.type
 def build_lighting(target: bpy.types.Collection) -> None:
     """The deck's office rig (Stages.jsx OfficeLighting + Scene.jsx), at the
     same places, sizes, colours and aims, so a render predicts the talk."""
-    # Two broad troffer sources over the aisle.
-    for z, energy in ((6.0, 30.0), (-78.0, 28.0)):
-        add_area_light(
-            f"Troffer bank {z:+.0f}",
-            three_to_blender(0.0, 31.3, z),
-            three_to_blender(0.0, -30.0, z),
-            energy,
-            "#e5efea",
-            units(58.0),
-            units(8.0),
-            target,
-        )
+    # One source per lit troffer (the two driven rows), the size of its lens:
+    # pools under the fixtures with dark intervals between them, instead of
+    # one bar of light across the whole aisle.
+    for row, drive in enumerate(FIXTURE_DRIVES):
+        if drive < 0.5:
+            continue
+        for x in FIXTURE_XS:
+            y = FIXTURE_YS[row]
+            add_area_light(
+                f"Troffer ({x:+.2f}, {y:+.2f})",
+                (x, y, CEILING_Z - 0.02),
+                (x, y, FLOOR_Z),
+                23.0 * drive,
+                "#e5efea",
+                FIXTURE_SIZE[0] - 0.05,
+                FIXTURE_SIZE[1] - 0.05,
+                target,
+            )
     # The shadow-casting spot over the hero bay.
     add_spot_light(
         "Office key spot",

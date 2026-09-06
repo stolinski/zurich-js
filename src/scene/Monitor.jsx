@@ -70,19 +70,20 @@ function segmentHousingGeometry(source) {
   const position = geometry.attributes.position
   if (!index || !position) return geometry
 
-  const buckets = [[], [], []]
+  const buckets = [[], [], [], []]
   for (let offset = 0; offset < index.count; offset += 3) {
     const a = index.getX(offset)
     const b = index.getX(offset + 1)
     const c = index.getX(offset + 2)
+    const x = (position.getX(a) + position.getX(b) + position.getX(c)) / 3
     const y = (position.getY(a) + position.getY(b) + position.getY(c)) / 3
     const z = (position.getZ(a) + position.getZ(b) + position.getZ(c)) / 3
-    // One mesh, but manufactured subassemblies need distinct broad
-    // reflection response. The stand/base occupies the lower band; the
-    // stepped face and bezel live at the front of the tube; the rest is
-    // shell. (The CAD part's vent cuts had a fourth, near-black bucket; the
-    // Blender housing has clean sides.)
-    const materialIndex = y < -180 ? 2 : z > -36 ? 1 : 0
+    // The 523 × 295 opening has a light-absorbing inner return. Treating it
+    // like satin face plastic lets the screen key reflect as a white neon
+    // outline. This is a material boundary on the existing pocket, not a
+    // second bezel or an overlay hiding the glass.
+    const innerReturn = z >= -13 && z <= 11 && Math.abs(x) < 265 && Math.abs(y + 17) < 151
+    const materialIndex = y < -180 ? 2 : innerReturn ? 3 : z > -36 ? 1 : 0
     buckets[materialIndex].push(a, b, c)
   }
 
@@ -119,14 +120,22 @@ export function Monitor() {
       // gradient — the thing that reads as light rather than a border — has
       // nothing to land on.
       new THREE.MeshStandardMaterial({
-        color: '#1e2025',
-        roughness: 0.52,
+        color: '#25272b',
+        roughness: 0.64,
         metalness: 0.01,
+        envMapIntensity: 1.15,
       }),
       new THREE.MeshStandardMaterial({
         color: '#33363c',
         roughness: 0.46,
         metalness: 0.025,
+      }),
+      new THREE.MeshPhysicalMaterial({
+        color: '#020303',
+        roughness: 0.96,
+        metalness: 0,
+        specularIntensity: 0.01,
+        envMapIntensity: 0.35,
       }),
     ]
       .map(varyRoughnessByWear)

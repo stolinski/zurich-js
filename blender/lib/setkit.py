@@ -12,6 +12,7 @@ the wall build on the same ones so a fix in a primitive reaches every set.
 
 from __future__ import annotations
 
+import json
 import math
 from pathlib import Path
 
@@ -24,6 +25,8 @@ METRES_PER_SCENE_UNIT = 1.0 / SCENE_UNITS_PER_METRE
 GLASS_WIDTH_M = 0.520
 GLASS_HEIGHT_M = 0.2925
 COORDINATE_CONTRACT = "Blender X -> Three X; Blender Z -> Three Y; Blender -Y -> Three Z"
+ROOT = Path(__file__).resolve().parents[2]
+SURFACE_CONTRACT = json.loads((ROOT / 'src/scene/surfaceProfiles.json').read_text())
 
 
 def units(value: float) -> float:
@@ -213,11 +216,31 @@ def mapped_surface_material(
     metallic: float = 0.0,
     coat: float = 0.0,
 ) -> bpy.types.Material:
-    """Add UV-mapped relief to a tinted, glTF-compatible surface."""
+    """Mapped material with the same tint × map semantics as three.js.
+
+    Migrated surfaces read the shared physical contract instead of maintaining
+    a second set of look-development guesses. Display transforms are NOT baked.
+    """
+    profile = SURFACE_CONTRACT['surfaces'].get(name)
+    files = {key: texture_dir / filename for key, filename in (
+        ('map', 'diffuse.jpg'), ('normalMap', 'normal.jpg'), ('roughnessMap', 'roughness.jpg'))}
+    if profile:
+        color, roughness = profile['color'], profile['roughness']
+        repeats = (*profile['repeat'], 1.0)
+        normal_strength, use_diffuse = profile['normalScale'], profile['diffuse']
+        metallic, coat = profile.get('metalness', 0.0), profile.get('clearcoat', 0.0)
+        files = {key: ROOT / 'public' / value.lstrip('/')
+                 for key, value in SURFACE_CONTRACT['textureSets'][profile['maps']].items()}
     material = principled_material(name, color, roughness, metallic, coat=coat)
     nodes = material.node_tree.nodes
     links = material.node_tree.links
     bsdf = nodes.get("Principled BSDF")
+    if profile:
+        material['talk_surface_profile'] = name
+        set_input(bsdf, 'Coat Roughness', profile.get('clearcoatRoughness', 0.65))
+        set_input(bsdf, 'Sheen Weight', profile.get('sheen', 0.0))
+        set_input(bsdf, 'Sheen Roughness', profile.get('sheenRoughness', 0.9))
+        set_input(bsdf, 'Sheen Tint', rgba(profile.get('sheenColor', '#ffffff')))
 
     texcoord = nodes.new("ShaderNodeTexCoord")
     mapping = nodes.new("ShaderNodeMapping")
@@ -226,20 +249,29 @@ def mapped_surface_material(
 
     if use_diffuse:
         diffuse = nodes.new("ShaderNodeTexImage")
-        diffuse.image = bpy.data.images.load(str(texture_dir / "diffuse.jpg"), check_existing=True)
+        diffuse.image = bpy.data.images.load(str(files['map']), check_existing=True)
         diffuse.extension = "REPEAT"
+        tint = nodes.new('ShaderNodeMixRGB')
+        tint.blend_type = 'MULTIPLY'
+        tint.inputs[0].default_value = 1.0
+        tint.inputs[2].default_value = rgba(color)
         links.new(mapping.outputs["Vector"], diffuse.inputs["Vector"])
-        links.new(diffuse.outputs["Color"], bsdf.inputs["Base Color"])
+        links.new(diffuse.outputs['Color'], tint.inputs[1])
+        links.new(tint.outputs['Color'], bsdf.inputs['Base Color'])
 
     roughness_map = nodes.new("ShaderNodeTexImage")
-    roughness_map.image = bpy.data.images.load(str(texture_dir / "roughness.jpg"), check_existing=True)
+    roughness_map.image = bpy.data.images.load(str(files['roughnessMap']), check_existing=True)
     roughness_map.image.colorspace_settings.name = "Non-Color"
     roughness_map.extension = "REPEAT"
+    roughness_gain = nodes.new('ShaderNodeMath')
+    roughness_gain.operation = 'MULTIPLY'
+    roughness_gain.inputs[1].default_value = roughness
     links.new(mapping.outputs["Vector"], roughness_map.inputs["Vector"])
-    links.new(roughness_map.outputs["Color"], bsdf.inputs["Roughness"])
+    links.new(roughness_map.outputs['Color'], roughness_gain.inputs[0])
+    links.new(roughness_gain.outputs[0], bsdf.inputs['Roughness'])
 
     normal = nodes.new("ShaderNodeTexImage")
-    normal.image = bpy.data.images.load(str(texture_dir / "normal.jpg"), check_existing=True)
+    normal.image = bpy.data.images.load(str(files['normalMap']), check_existing=True)
     normal.image.colorspace_settings.name = "Non-Color"
     normal.extension = "REPEAT"
     normal_map = nodes.new("ShaderNodeNormalMap")
@@ -248,6 +280,19 @@ def mapped_surface_material(
     links.new(normal.outputs["Color"], normal_map.inputs["Color"])
     links.new(normal_map.outputs["Normal"], bsdf.inputs["Normal"])
     return material
+
+
+def apply_surface_profiles() -> None:
+    """Apply the shared mapped finishes to a loaded set, without saving it."""
+    for name, profile in SURFACE_CONTRACT['surfaces'].items():
+        old = bpy.data.materials.get(name)
+        if old is None:
+            continue
+        old.name = name + ' (source)'
+        material = mapped_surface_material(
+            name, profile['color'], profile['roughness'], ROOT / 'public/textures',
+            repeats=(*profile['repeat'], 1.0), normal_strength=profile['normalScale'])
+        old.user_remap(material)
 
 
 def pbr_image_material(

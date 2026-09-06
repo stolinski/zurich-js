@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import * as THREE from 'three'
+import { createContactMaskData } from '../lib/contactMask.js'
 
 const patchTextures = new Map()
 
@@ -19,37 +20,7 @@ const patchTextures = new Map()
  */
 function buildPatchTexture(shape) {
   const size = 128
-  const data = new Uint8Array(size * size * 4)
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const nx = ((x + 0.5) / size) * 2 - 1
-      const ny = ((y + 0.5) / size) * 2 - 1
-      let core
-      if (shape === 'rect') {
-        // Superellipse radius: (|x|^n + |y|^n)^(1/n). n=4 keeps the sides
-        // straight and the corners rounded at roughly the radius a real
-        // object's occlusion wraps.
-        const sr = Math.pow(
-          Math.pow(Math.abs(nx), 4) + Math.pow(Math.abs(ny), 4),
-          0.25
-        )
-        // MUST reach exactly 0 at sr = 1, or the plateau runs into the quad
-        // border and the patch prints its own rectangle on the desk. A wide
-        // shoulder (plateau only inside 0.42) keeps the boundary itself
-        // undetectable while the core still hugs the footprint's corners.
-        const t = THREE.MathUtils.clamp((1 - sr) / 0.58, 0, 1)
-        core = Math.pow(t * t * (3 - 2 * t), 1.15)
-      } else {
-        core = THREE.MathUtils.clamp(1 - Math.hypot(nx, ny), 0, 1)
-        core = Math.pow(core, 2.35)
-      }
-      const offset = (y * size + x) * 4
-      data[offset] = 255
-      data[offset + 1] = 255
-      data[offset + 2] = 255
-      data[offset + 3] = Math.round(core * 255)
-    }
-  }
+  const data = createContactMaskData(size, shape)
 
   const texture = new THREE.DataTexture(
     data,

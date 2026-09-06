@@ -38,14 +38,15 @@ function RoomEnvironment({ stage, controller }) {
   stageRef.current = stage
 
   useLayoutEffect(() => {
-    // Build both PMREMs before the first presented frame. Stage changes then
+    // Build every PMREM before the first presented frame. Stage changes then
     // switch one texture reference instead of generating an environment during
     // a camera move.
     const home = makeRoomEnvironment(gl, 'home')
     const office = makeRoomEnvironment(gl, 'office', OFFICE_ENVIRONMENT_SPEC)
-    resources.current = { home, office }
+    const wall = makeRoomEnvironment(gl, 'wall')
+    resources.current = { home, office, wall }
     const apply = (nextStage) => {
-      const next = nextStage === 'cubicle' ? office : home
+      const next = nextStage === 'cubicle' ? office : nextStage === 'wall' ? wall : home
       const look = STAGE_LOOK_PRESETS[nextStage] ?? STAGE_LOOK_PRESETS.home
       scene.environment = next.texture
       scene.environmentIntensity = look.environment.intensity
@@ -58,6 +59,7 @@ function RoomEnvironment({ stage, controller }) {
       scene.environment = null
       home.dispose()
       office.dispose()
+      wall.dispose()
       resources.current = null
       controller.current = null
     }
