@@ -26,6 +26,8 @@
  *                                      reels spin for the length of the step
  *   grill  { id, question }            the brain flips and lands, then asks
  *                                      question `question` (null: nothing left)
+ *   ask    { id, question }            one screen of a catalog prompt types
+ *                                      itself, large (null: the idle prompt)
  * ──────────────────────────────────────────────────────────────
  */
 
@@ -83,6 +85,15 @@ export function stepDuration(step) {
       return PULL_SECS
     case 'grill':
       return FLIP_SECS
+    case 'ask': {
+      // Typed at the same speed as Scott's own turns; the idle prompt is instant.
+      if (step.question === null) return 0.01
+      const chars = getTerminalVisual(step.id).screens[step.question].reduce(
+        (sum, text) => sum + text.length,
+        0
+      )
+      return Math.max(0.5, chars / CHARS_PER_SEC)
+    }
     default:
       return 0.25
   }
@@ -205,6 +216,16 @@ export function buildFrame(script, index, progress, time, answers = []) {
       },
     }
   }
+  if (activeStep?.kind === 'ask') {
+    // Which screen is being typed and how far through it; the painter reveals
+    // the text from those, so every rehearsal types the same characters at
+    // the same moments and a deep link lands on the settled line.
+    return {
+      lines: [],
+      caret: null,
+      visual: { ...getTerminalVisual(activeStep.id), question: activeStep.question, progress },
+    }
+  }
   if (activeStep?.kind === 'pull') {
     // The catalog entry plus which pull this is and how far through it: the
     // painter derives every reel position from those, so the spin is a pure
@@ -308,8 +329,18 @@ export const SYNTAX_SCREEN = screen('syntax')
 export const SENTRY_SCREEN = screen('sentry')
 export const QR_SCREEN = screen('qr')
 export const ROB = screen('rob')
-// The form itself, right after the code that leads to it.
-export const SURVEY_QUESTIONS = screen('survey-questions')
+/**
+ * The form itself, right after the code that leads to it, asked one screen per
+ * Enter. Arrival is the idle prompt (question null), so the presenter owns the
+ * timing of every question; the screens come from the catalog entry, so the
+ * script and the glass cannot disagree about how many there are.
+ */
+export const SURVEY_QUESTIONS = Object.freeze([
+  Object.freeze({ kind: 'ask', id: 'survey-questions', question: null }),
+  ...getTerminalVisual('survey-questions').screens.map((_, question) =>
+    Object.freeze({ kind: 'ask', id: 'survey-questions', question })
+  ),
+])
 
 // Act markers for the glass-filling threshold pushes: each context change is
 // preceded by the machine writing the next chapter, and the held-forward rule

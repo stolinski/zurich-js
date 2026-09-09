@@ -140,18 +140,25 @@ export const TERMINAL_VISUALS = Object.freeze({
     path: '/logos/qr.svg',
     detail: `${n(SURVEY.respondents)} DEVELOPERS SURVEYED · ${SURVEY.source.toUpperCase()}`,
   }),
-  // THE FORM. Every question, worded as respondents saw it — and nothing else:
-  // no scales, no anchors, no counts (Scott, 2026-09-09). The room has just
-  // been handed the code; this is what the code leads to, and every data beat
-  // after it picks one of these lines back up. The wording is FORM's, so the
-  // glass and the dataset cannot disagree about what was asked.
+  // THE FORM, asked the way a terminal asks: one question per Enter, typed
+  // large behind a prompt, and nothing else on the glass — no scales, no
+  // anchors, no counts (Scott, 2026-09-09). The room has just been handed the
+  // code; this is what the code leads to, and every data beat after it picks
+  // one of these lines back up. The wording is FORM's, so the glass and the
+  // dataset cannot disagree about what was asked. The agent count and the
+  // open field share the last screen, the way the form ended.
   'survey-questions': Object.freeze({
-    kind: 'questions',
-    title: 'WHAT WE ASKED',
-    items: Object.freeze([
-      ...FORM.questions.map((question) => question.prompt),
-      FORM.openEnded,
-    ]),
+    kind: 'prompt',
+    header: 'SURVEY',
+    screens: Object.freeze(
+      FORM.questions.map((question, index, questions) =>
+        Object.freeze(
+          index === questions.length - 1
+            ? [question.prompt, FORM.openEnded]
+            : [question.prompt]
+        )
+      )
+    ),
   }),
   // ── Act markers ──
   // Full-screen writing beats for the glass-filling threshold slides, so each

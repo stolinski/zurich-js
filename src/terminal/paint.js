@@ -1147,60 +1147,84 @@ function drawTweetVisual(ctx, visual, draw = 1) {
 }
 
 /**
- * The survey, as the form: every question worded as respondents saw it, and
- * nothing else — no scales, no anchors, no counts. The room has just been
- * handed the code, so this is the instrument read before the readings.
+ * The survey, asked the way a terminal asks: one question per Enter, typed at
+ * the harness's own speed behind a prompt marker, large enough to be read
+ * from the back of the room, and nothing else on the glass — no scales, no
+ * anchors, no counts. Arrival is an idle prompt, so the presenter owns the
+ * timing of every question; the last press types two prompts (the agent
+ * count and the open field, which the form asked together at the end).
  *
- * A hanging number gutter so seven items read as a list from the back of the
- * room rather than a paragraph; the numbers sit one rung down so the words
- * are what glows. Types on over the draw sweep like a statement, and the
- * settled frame is identical to a deep link.
+ * `visual.question` is the screen being typed (null: the idle prompt) and
+ * `visual.progress` is 0→1 through it, so the frame is a pure function of the
+ * step and a deep link lands on the settled text. The caret is recorded as a
+ * byproduct of drawing — only the painter knows where the typed text ends —
+ * and handed back for the renderer to blink, exactly like the transcript's.
  */
-const QUESTIONS_TYPE = Object.freeze({ size: 48, lineHeight: 1.32, gap: 0.6, gutter: 92, top: 300 })
+const PROMPT_TYPE = Object.freeze({ size: 64, lineHeight: 1.4, gap: 0.7, top: 540, marker: '❯' })
 
-function drawQuestionsVisual(ctx, visual, draw = 1) {
-  chromeText(ctx, visual.title, TERMINAL.padX, 150, {
-    size: 62,
-    weight: 700,
-    color: PHOSPHOR.hot,
-  })
+function drawPromptVisual(ctx, visual) {
+  const { size } = PROMPT_TYPE
+  const screens = visual.screens
+  // `?visual` review hands the catalog entry over bare: the last screen, settled.
+  const asked = visual.question === undefined ? screens.length - 1 : visual.question
+  const progress = visual.progress ?? 1
+  chromeText(
+    ctx,
+    asked === null
+      ? `${visual.header} · ${screens.length} QUESTIONS`
+      : `${visual.header} · QUESTION ${asked + 1} OF ${screens.length}`,
+    TERMINAL.padX,
+    150,
+    { size: 40, weight: 700, color: PHOSPHOR.dim }
+  )
 
-  const { size } = QUESTIONS_TYPE
-  const lineHeight = size * QUESTIONS_TYPE.lineHeight
-  const gap = size * QUESTIONS_TYPE.gap
-  const left = TERMINAL.padX + QUESTIONS_TYPE.gutter
+  const lineHeight = size * PROMPT_TYPE.lineHeight
+  const left = TERMINAL.padX + Math.round(size * 1.25)
   ctx.font = screenFont(size, 500)
-  const blocks = visual.items.map((text) =>
+  const blocks = (asked === null ? [] : screens[asked]).map((text) =>
     wrapToWidth(ctx, text, TERMINAL.width - TERMINAL.padX - left)
   )
-  const total = blocks.flat().reduce((sum, line) => sum + line.length, 0)
-  let budget = Math.ceil(total * (draw >= 1 ? 1 : easeInOut((draw - 0.1) / 0.8)))
+  const chars = blocks.flat().reduce((sum, line) => sum + line.length, 0)
+  let budget = Math.ceil(chars * Math.min(1, progress))
+
+  const marker = (y) => {
+    ctx.font = screenFont(size, 700)
+    ctx.fillStyle = PHOSPHOR.phosphor
+    ctx.shadowColor = PHOSPHOR.phosphor
+    ctx.shadowBlur = GLOW_RADIUS * 0.8
+    ctx.fillText(PROMPT_TYPE.marker, TERMINAL.padX, y)
+  }
 
   ctx.textBaseline = 'top'
   ctx.textAlign = 'left'
-  let y = QUESTIONS_TYPE.top
-  blocks.forEach((block, index) => {
-    if (budget > 0) {
-      chromeText(ctx, String(index + 1), TERMINAL.padX, y, {
-        size,
-        weight: 700,
-        color: PHOSPHOR.dim,
-      })
-    }
-    for (const line of block) {
-      if (budget > 0) {
-        ctx.font = screenFont(size, 500)
-        ctx.fillStyle = PHOSPHOR.phosphor
+  let y = PROMPT_TYPE.top
+  let caret = { x: left, y }
+  if (asked === null) marker(y)
+  for (let index = 0; index < blocks.length; index++) {
+    // The second prompt appears only once the first has been fully typed.
+    if (index > 0 && budget <= 0) break
+    marker(y)
+    const block = blocks[index]
+    for (let row = 0; row < block.length; row++) {
+      const line = block[row]
+      const shown = line.slice(0, Math.max(0, Math.min(line.length, budget)))
+      ctx.font = screenFont(size, 500)
+      if (shown) {
+        ctx.fillStyle = PHOSPHOR.hot
         ctx.shadowColor = PHOSPHOR.phosphor
         ctx.shadowBlur = GLOW_RADIUS * 0.8
-        ctx.fillText(line.slice(0, budget), left, y)
-        budget -= line.length
+        ctx.fillText(shown, left, y)
       }
-      y += lineHeight
+      caret = { x: left + ctx.measureText(shown).width, y }
+      budget -= line.length
+      if (budget <= 0) break
+      if (row < block.length - 1) y += lineHeight
     }
-    y += gap
-  })
+    y += lineHeight + size * PROMPT_TYPE.gap
+  }
   ctx.shadowBlur = 0
+
+  return { caret: { rect: { x: caret.x, y: caret.y, width: size * 0.6, height: size } } }
 }
 
 /**
@@ -1258,7 +1282,7 @@ function drawVisual(ctx, visual, draw = 1, time = 0) {
   else if (visual.kind === 'grill') drawGrillVisual(ctx, visual, draw, time)
   else if (visual.kind === 'walk') drawWalkVisual(ctx, visual, draw, time)
   else if (visual.kind === 'diagram') drawDiagramVisual(ctx, visual, draw)
-  else if (visual.kind === 'questions') drawQuestionsVisual(ctx, visual, draw)
+  else if (visual.kind === 'prompt') return drawPromptVisual(ctx, visual)
   else throw new Error(`Unknown terminal visual kind: ${visual.kind}`)
   return []
 }
@@ -1367,49 +1391,69 @@ export function paintTerminal(ctx, frame, time, { drawCaret = true, reveal = nul
   const draw = reveal?.mode === 'in' ? reveal.progress : 1
 
   if (frame.visual) {
-    // Recorded even mid-sweep: the rows are already in their final places, so
-    // the pointer keeps working while the beam draws them in.
-    recordChartRegions(drawVisual(ctx, frame.visual, draw, time))
-    if (reveal) applyRasterWipe(ctx, reveal)
-    return
+    const drawn = drawVisual(ctx, frame.visual, draw, time)
+    // Chart rows are recorded even mid-sweep: they are already in their final
+    // places, so the pointer keeps working while the beam draws them in.
+    recordChartRegions(Array.isArray(drawn) ? drawn : [])
+    // A visual that types (the survey prompt) is the only thing that knows
+    // where its text ends; the caret it hands back blinks like the transcript's.
+    if (drawn?.caret) frame.caret = drawn.caret
+  } else {
+    // A transcript has no chart on it, so nothing is hoverable — clear the
+    // regions rather than leaving the last chart's rows live under the pointer.
+    recordChartRegions([])
+    drawHarnessChrome(ctx)
+    // Chrome ends on a right-aligned status label. Transcript coordinates are
+    // left-edge anchors, so restore their text state explicitly.
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'top'
+
+    for (let row = 0; row < frame.lines.length; row++) {
+      const line = frame.lines[row]
+      if (!line.text) continue
+      const color = ROLE[line.role] ?? PHOSPHOR.phosphor
+      const y = TERMINAL.padY + row * LINE_H + BASELINE
+
+      ctx.font = font(line.weight ?? 400)
+      ctx.fillStyle = color
+      ctx.shadowColor = color
+      ctx.shadowBlur = GLOW_RADIUS * (GLOW[line.role] ?? 0.5)
+      ctx.fillText(line.text, TERMINAL.padX, y)
+    }
+
+    ctx.shadowBlur = 0
   }
-
-  // A transcript has no chart on it, so nothing is hoverable — clear the
-  // regions rather than leaving the last chart's rows live under the pointer.
-  recordChartRegions([])
-  drawHarnessChrome(ctx)
-  // Chrome ends on a right-aligned status label. Transcript coordinates are
-  // left-edge anchors, so restore their text state explicitly.
-  ctx.textAlign = 'left'
-  ctx.textBaseline = 'top'
-
-  for (let row = 0; row < frame.lines.length; row++) {
-    const line = frame.lines[row]
-    if (!line.text) continue
-    const color = ROLE[line.role] ?? PHOSPHOR.phosphor
-    const y = TERMINAL.padY + row * LINE_H + BASELINE
-
-    ctx.font = font(line.weight ?? 400)
-    ctx.fillStyle = color
-    ctx.shadowColor = color
-    ctx.shadowBlur = GLOW_RADIUS * (GLOW[line.role] ?? 0.5)
-    ctx.fillText(line.text, TERMINAL.padX, y)
-  }
-
-  ctx.shadowBlur = 0
 
   if (reveal) applyRasterWipe(ctx, reveal)
 
   // Hard on/off block cursor—the phosphor is either being driven or it is not.
   // Suppressed during a sweep: the machine is repainting, nothing owns input.
   if (drawCaret && !reveal && frame.caret && Math.floor(time * 1.9) % 2 === 0) {
-    ctx.font = font(500)
-    const x = TERMINAL.padX + ctx.measureText(frame.caret.prefix).width
-    const y = TERMINAL.padY + frame.caret.row * LINE_H + BASELINE
+    const rect = caretRect(ctx, frame.caret)
     ctx.fillStyle = PHOSPHOR.hot
     ctx.shadowColor = PHOSPHOR.hot
     ctx.shadowBlur = GLOW_RADIUS
-    ctx.fillRect(x, y, CHAR_W, FONT_SIZE)
+    ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
     ctx.shadowBlur = 0
+  }
+}
+
+/**
+ * Where the block cursor sits, in canvas pixels.
+ *
+ * A transcript caret is `{ row, prefix }` — the TEXT the cursor follows,
+ * measured in the grid's own face so the block lands against the last glyph
+ * whatever the advance width turns out to be. A typing visual hands over a
+ * `rect` directly, because only its painter knows where its text ends. The
+ * tube composites the same rect in the shader, so both renderers read it here.
+ */
+export function caretRect(ctx, caret) {
+  if (caret.rect) return caret.rect
+  ctx.font = font(500)
+  return {
+    x: TERMINAL.padX + ctx.measureText(caret.prefix).width,
+    y: TERMINAL.padY + caret.row * LINE_H + BASELINE,
+    width: CHAR_W,
+    height: FONT_SIZE,
   }
 }

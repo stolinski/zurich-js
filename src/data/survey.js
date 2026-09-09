@@ -111,8 +111,10 @@ export const QUESTIONS = Object.freeze({
 
 /**
  * The form as respondents saw it: the six scaled questions in the order they
- * were asked, then the open field. `survey-questions` puts exactly this on the
+ * were asked, then the open field. `survey-questions` asks exactly this on the
  * glass right after the QR — the room reads the instrument before the readings.
+ * The form labelled the open field "(optional)"; the glass drops the word
+ * (Scott, 2026-09-09).
  */
 export const FORM = Object.freeze({
   questions: Object.freeze([
@@ -123,7 +125,7 @@ export const FORM = Object.freeze({
     QUESTIONS.sleep,
     QUESTIONS.agents,
   ]),
-  openEnded: 'Other thoughts (optional)',
+  openEnded: 'Other thoughts',
 })
 
 /** Response counts by scale point 1→5. Every array sums to SURVEY.respondents. */

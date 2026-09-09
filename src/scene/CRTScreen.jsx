@@ -2,15 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { crtVert, crtFrag, CRT_DEFAULTS } from '../shaders/crt.js'
-import {
-  CHAR_W,
-  FONT_SIZE,
-  LINE_H,
-  PHOSPHOR,
-  TERMINAL,
-  ensureFonts,
-  font,
-} from '../terminal/theme.js'
+import { PHOSPHOR, TERMINAL, ensureFonts } from '../terminal/theme.js'
+import { caretRect } from '../terminal/paint.js'
 import { clearWrapCache } from '../terminal/session.js'
 import { ensureTerminalAssets } from '../terminal/assets.js'
 import { getTerminalVisual } from '../terminal/visuals.js'
@@ -565,7 +558,7 @@ export function CRTScreen({ onTexture, deskY }) {
       const liveVisual =
         (staticVisual && Boolean(getTerminalVisual(step.id).animated)) ||
         step?.kind === 'grill'
-      const animatedStep = ['user', 'say', 'think', 'tool', 'pull', 'grill'].includes(
+      const animatedStep = ['user', 'say', 'think', 'tool', 'pull', 'grill', 'ask'].includes(
         step?.kind
       )
       const staticFrame = staticVisual || !animatedStep
@@ -607,18 +600,13 @@ export function CRTScreen({ onTexture, deskY }) {
         if (staticFrame || progress >= 1) ctx.getImageData(0, 0, 1, 1)
         caret.current = frame?.caret ?? null
         if (caret.current) {
-          ctx.font = font(500)
-          const x = TERMINAL.padX + ctx.measureText(caret.current.prefix).width
-          const y =
-            TERMINAL.padY +
-            caret.current.row * LINE_H +
-            (LINE_H - FONT_SIZE) * 0.5
+          const rect = caretRect(ctx, caret.current)
           // Canvas rows start at the top; plane UVs start at the bottom.
           uniforms.uCaretRect.value.set(
-            x / TERMINAL.width,
-            1 - (y + FONT_SIZE) / TERMINAL.height,
-            (x + CHAR_W) / TERMINAL.width,
-            1 - y / TERMINAL.height
+            rect.x / TERMINAL.width,
+            1 - (rect.y + rect.height) / TERMINAL.height,
+            (rect.x + rect.width) / TERMINAL.width,
+            1 - rect.y / TERMINAL.height
           )
         }
         const activeUsesMips = !slide?.camera?.fillScreen

@@ -88,7 +88,7 @@ an earlier cut made 28 and visibly yo-yoed.
 | 3 | `agent-session` | The harness runs a real exchange | Scott asks his own agent what his week looked like. |
 | 4 | `rob` | **the post itself, with profanity censored** | **Rob Hallam (@robj3d3), 12 July 2026 — 798 replies.** "I'm done with them f***ing with us. / Ended up in hospital today from stress. / Stayed up all night pushing my limits too hard, thinking it would be removed. / Health comes first. / Do better @AnthropicAI" The source record remains verbatim; only the projected profanity is softened. An earlier cut paraphrased this into authored lines; a room has no reason to believe a paraphrase of a thing that exists. The REPLY count is the argument — eight hundred people turned up to say this was normal, and that is the moment an anecdote became a question worth surveying. Text/date/counts from x.com's public syndication endpoint, retrieved 2026-08-31. |
 | 5 | `intro-qr` | the code, and **3,593** | **Moved out of the identity run.** Third from the top it asked a room that had been told nothing to scan a survey about a problem it had not met; here they have just read the post and the reply count and the code answers the question that leaves them with. It also carries the base count now — that number is the reason to scan, and it was being spent as an act marker four acts later. Resolves to **ai-health.syntax.fm**: charts first, form second. |
-| 6 | `survey-questions` | the six questions, and the open field | **The instrument, before the readings.** Every question worded exactly as respondents saw it — no scales, no anchors, no counts (Scott, 2026-09-09). The room has just been handed the code; this is what the code leads to, and every data beat after it picks one of these lines back up. |
+| 6 | `survey-questions` | an idle prompt; Enter types one question, large | **The instrument, before the readings.** Six presses, one question each, typed behind a prompt at the harness's own speed — worded exactly as respondents saw it, no scales, no anchors, no counts (Scott, 2026-09-09). The last press types the agent count and "Other thoughts" together, the way the form ended. The room has just been handed the code; this is what the code leads to, and every data beat after it picks one of these lines back up. |
 
 > ⚠ **`src/data/agentUsage.js` is still rehearsal copy.** The open trades on
 > "this is my week." Scott supplies the real numbers and the personal stories.
@@ -228,8 +228,9 @@ quadrants · 3R diagram.
 **Statement on bare glass:** "it is not just you." · "losing our skills." · 3,593 ·
 what-gets-pruned · **the three zeros**.
 
-**The form itself:** `survey-questions` — the six questions and the open field
-as a numbered list, worded as respondents saw them and nothing else.
+**The form itself:** `survey-questions` — the six questions typed one per
+Enter behind a prompt, large, worded as respondents saw them and nothing else;
+the agent count and the open field share the last press.
 
 **Performed, after the data:** the slot machine. `slot-machine` follows
 `stopping-sleep`, so the room watches the thing that produced the numbers it
