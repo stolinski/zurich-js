@@ -168,8 +168,10 @@ Everything drawn onto the glass.
   enormous odometer number + label), `slot` (three authored reels; a session's
   `pull` steps spin them, one Enter per pull), `grill` (a brain on a grill; a
   session's `grill` steps flip it and ask its questions, answered with Y or
-  N), and `walk` (a line, over a perspective walk through line trees that
-  moves on the free-running clock). The three glass-filling threshold slides
+  N), `walk` (a line, over a perspective walk through line trees that moves
+  on the free-running clock), and `questions` (the survey form as a numbered
+  list — every question worded as respondents saw it, from `FORM` in
+  `data/survey.js`, and nothing else). The three glass-filling threshold slides
   carry `statement`/`stat` **act markers** that the held-forward rule keeps on
   the glass through the beats they introduce. Numbers come only from
   `data/survey.js` (single source of truth, n = 3,593 from the Aug 28 export;

@@ -308,6 +308,8 @@ export const SYNTAX_SCREEN = screen('syntax')
 export const SENTRY_SCREEN = screen('sentry')
 export const QR_SCREEN = screen('qr')
 export const ROB = screen('rob')
+// The form itself, right after the code that leads to it.
+export const SURVEY_QUESTIONS = screen('survey-questions')
 
 // Act markers for the glass-filling threshold pushes: each context change is
 // preceded by the machine writing the next chapter, and the held-forward rule
@@ -332,12 +334,13 @@ export const GRILL_ME = Object.freeze([
 ])
 
 // ── The survey on the glass (NARRATIVE.md §3) ──
-export const MOST_PROMPTS = screen('most-prompts')
 
 /**
  * The slot machine, as a session: the idle machine on arrival, then one pull
  * per Enter. `pull` indexes the visual's authored outcomes, so the script and
- * the catalog cannot disagree about how many pulls there are.
+ * the catalog cannot disagree about how many pulls there are. It plays after
+ * the sleep data now; `most-prompts`, the line that used to name it first, has
+ * no session (cut 2026-09-09).
  */
 export const SLOT_MACHINE = Object.freeze([
   Object.freeze({ kind: 'visual', id: 'slot-machine' }),

@@ -109,6 +109,23 @@ export const QUESTIONS = Object.freeze({
   }),
 })
 
+/**
+ * The form as respondents saw it: the six scaled questions in the order they
+ * were asked, then the open field. `survey-questions` puts exactly this on the
+ * glass right after the QR — the room reads the instrument before the readings.
+ */
+export const FORM = Object.freeze({
+  questions: Object.freeze([
+    QUESTIONS.stopping,
+    QUESTIONS.enjoyment,
+    QUESTIONS.pressure,
+    QUESTIONS.skills,
+    QUESTIONS.sleep,
+    QUESTIONS.agents,
+  ]),
+  openEnded: 'Other thoughts (optional)',
+})
+
 /** Response counts by scale point 1→5. Every array sums to SURVEY.respondents. */
 export const DISTRIBUTIONS = Object.freeze({
   stopping: Object.freeze([408, 626, 692, 940, 927]),

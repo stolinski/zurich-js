@@ -5,6 +5,7 @@ import {
   DISTRIBUTIONS,
   DRIVE_QUADRANTS,
   EXTERNAL,
+  FORM,
   QUESTIONS,
   SURVEY,
   countOf,
@@ -139,6 +140,19 @@ export const TERMINAL_VISUALS = Object.freeze({
     path: '/logos/qr.svg',
     detail: `${n(SURVEY.respondents)} DEVELOPERS SURVEYED · ${SURVEY.source.toUpperCase()}`,
   }),
+  // THE FORM. Every question, worded as respondents saw it — and nothing else:
+  // no scales, no anchors, no counts (Scott, 2026-09-09). The room has just
+  // been handed the code; this is what the code leads to, and every data beat
+  // after it picks one of these lines back up. The wording is FORM's, so the
+  // glass and the dataset cannot disagree about what was asked.
+  'survey-questions': Object.freeze({
+    kind: 'questions',
+    title: 'WHAT WE ASKED',
+    items: Object.freeze([
+      ...FORM.questions.map((question) => question.prompt),
+      FORM.openEnded,
+    ]),
+  }),
   // ── Act markers ──
   // Full-screen writing beats for the glass-filling threshold slides, so each
   // context change is preceded by the machine writing the next chapter.
@@ -191,6 +205,10 @@ export const TERMINAL_VISUALS = Object.freeze({
    * ────────────────────────────────────────────────────────────────── */
 
   // ── ② Home · the machine you can't put down ──
+  // No longer on a slide: `variable-reward` named the mechanism as one line of
+  // glass before the machine showed it, and was cut (Scott, 2026-09-09) — the
+  // slot machine, now after the sleep data, names itself. Kept in the catalog
+  // for `?visual` review, like the other cut beats below.
   'most-prompts': Object.freeze({
     kind: 'statement',
     lines: Object.freeze([

@@ -8,7 +8,6 @@ import {
   CONTROL_ACT_SCREEN,
   CUBICLE_ACT_SCREEN,
   GRILL_ME,
-  MOST_PROMPTS,
   PHOSPHOR_ACT_SCREEN,
   PRODUCTIVITY_PARADOX,
   QR_SCREEN,
@@ -23,6 +22,7 @@ import {
   SLOT_MACHINE,
   STOPPING_BEATS_COUNT,
   STOPPING_SLEEP,
+  SURVEY_QUESTIONS,
   SYNTAX_SCREEN,
   TITLE_SCREEN,
 } from '../terminal/session.js'
@@ -208,33 +208,30 @@ export const slides = defineSlides([
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 0.45 },
   },
+  {
+    // THE FORM, before any answer to it. The room has just been handed the
+    // code; this is what the code leads to — the questions, worded as
+    // respondents saw them, and nothing else (no scales, no anchors, no
+    // counts). Every data beat after this picks one of these lines back up.
+    id: 'survey-questions',
+    stage: 'home',
+    session: SURVEY_QUESTIONS,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 0.45 },
+  },
 
   /* ═══════════════ ② HOME — THE MACHINE YOU CAN'T PUT DOWN ═══════════════
    * PILLAR 1. Why prompting is hard to stop, and what it does to sleep.
    *
-   * Still the glass, still head-on: the pull-back sits after the caveat, so
+   * Still the glass, still head-on: the pull-back sits after the machine, so
    * the whole of Pillar 1 plays on the same covering tube the chat window
-   * woke, and the room learns where that tube sits only once the sleep data
-   * has landed. */
-  {
-    // The mechanism, named, before it is shown.
-    id: 'variable-reward',
-    stage: 'home',
-    session: MOST_PROMPTS,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 1.2 },
-  },
-  {
-    // THE MACHINE, performed. Each Enter is one pull — one more prompt — and
-    // the reels land three near-misses before the one that pays. The
-    // calm-motion rule yields for the length of a pull because the churn IS
-    // the mechanism being shown; between pulls the machine is still.
-    id: 'slot-machine',
-    stage: 'home',
-    session: SLOT_MACHINE,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 1.2 },
-  },
+   * woke, and the room learns where that tube sits only once the data has
+   * landed and the mechanism has been shown.
+   *
+   * Data first, machine second (Scott, 2026-09-09): the room reads the overrun
+   * and what it does to sleep, and THEN watches the thing that does it.
+   * `variable-reward`, which named the mechanism as one line of glass before
+   * the machine showed it, was cut the same day — the machine names itself. */
   {
     id: 'q-stopping',
     stage: 'home',
@@ -244,6 +241,13 @@ export const slides = defineSlides([
   },
   {
     // The strongest relationship in the survey, ρ = 0.41.
+    //
+    // The counterweight (a third report no sleep change at all) and the
+    // association disclaimer are spoken over THIS chart, once, and meant.
+    // `stopping-caveat` used to hold the same chart as a press of its own so
+    // the qualification could not be skipped; from the presenter's side two
+    // identical glasses in a row read as a slide that did not advance (Scott,
+    // 2026-09-09), so the press is gone and the caveat rides in the notes.
     id: 'stopping-sleep',
     stage: 'home',
     session: STOPPING_SLEEP,
@@ -251,13 +255,14 @@ export const slides = defineSlides([
     camera: { ...GLASS, smoothTime: 1.2 },
   },
   {
-    // A HOLD: same camera, same glass, no flight. The counterweight (a third
-    // report no sleep change at all) and the association disclaimer are the
-    // same thought as the chart above them, so the frame must not move — this
-    // exists as a press so the qualification cannot be skipped on stage.
-    // Spoken here, once, and meant — not re-hedged on every later chart.
-    id: 'stopping-caveat',
+    // THE MACHINE, performed — after the data it explains. Each Enter is one
+    // pull — one more prompt — and the reels land three near-misses before
+    // the one that pays. The calm-motion rule yields for the length of a pull
+    // because the churn IS the mechanism being shown; between pulls the
+    // machine is still.
+    id: 'slot-machine',
     stage: 'home',
+    session: SLOT_MACHINE,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 1.2 },
   },
@@ -271,9 +276,9 @@ export const slides = defineSlides([
     // then move; the wake and the move were then fused; now the wake happens
     // at the harness and this beat is purely spatial.
     //
-    // After the caveat, not after the QR: the glass carries the held sleep
-    // split into the room, and the room learns where the tube sits only once
-    // the data has landed.
+    // After the machine, not after the QR: the glass carries the paid line
+    // into the room, and the room learns where the tube sits only once the
+    // data has landed and the machine has been seen for what it is.
     //
     // Square-on, and nothing after it. The three-quarter and profile waypoints
     // that followed re-explained the same fact from two more angles; the

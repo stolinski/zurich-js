@@ -1147,6 +1147,63 @@ function drawTweetVisual(ctx, visual, draw = 1) {
 }
 
 /**
+ * The survey, as the form: every question worded as respondents saw it, and
+ * nothing else — no scales, no anchors, no counts. The room has just been
+ * handed the code, so this is the instrument read before the readings.
+ *
+ * A hanging number gutter so seven items read as a list from the back of the
+ * room rather than a paragraph; the numbers sit one rung down so the words
+ * are what glows. Types on over the draw sweep like a statement, and the
+ * settled frame is identical to a deep link.
+ */
+const QUESTIONS_TYPE = Object.freeze({ size: 48, lineHeight: 1.32, gap: 0.6, gutter: 92, top: 300 })
+
+function drawQuestionsVisual(ctx, visual, draw = 1) {
+  chromeText(ctx, visual.title, TERMINAL.padX, 150, {
+    size: 62,
+    weight: 700,
+    color: PHOSPHOR.hot,
+  })
+
+  const { size } = QUESTIONS_TYPE
+  const lineHeight = size * QUESTIONS_TYPE.lineHeight
+  const gap = size * QUESTIONS_TYPE.gap
+  const left = TERMINAL.padX + QUESTIONS_TYPE.gutter
+  ctx.font = screenFont(size, 500)
+  const blocks = visual.items.map((text) =>
+    wrapToWidth(ctx, text, TERMINAL.width - TERMINAL.padX - left)
+  )
+  const total = blocks.flat().reduce((sum, line) => sum + line.length, 0)
+  let budget = Math.ceil(total * (draw >= 1 ? 1 : easeInOut((draw - 0.1) / 0.8)))
+
+  ctx.textBaseline = 'top'
+  ctx.textAlign = 'left'
+  let y = QUESTIONS_TYPE.top
+  blocks.forEach((block, index) => {
+    if (budget > 0) {
+      chromeText(ctx, String(index + 1), TERMINAL.padX, y, {
+        size,
+        weight: 700,
+        color: PHOSPHOR.dim,
+      })
+    }
+    for (const line of block) {
+      if (budget > 0) {
+        ctx.font = screenFont(size, 500)
+        ctx.fillStyle = PHOSPHOR.phosphor
+        ctx.shadowColor = PHOSPHOR.phosphor
+        ctx.shadowBlur = GLOW_RADIUS * 0.8
+        ctx.fillText(line.slice(0, budget), left, y)
+        budget -= line.length
+      }
+      y += lineHeight
+    }
+    y += gap
+  })
+  ctx.shadowBlur = 0
+}
+
+/**
  * A chart, sized for the back of a room rather than for a screenshot.
  *
  * The harness chrome is GONE from this visual — no frame, no "AGENT HARNESS /
@@ -1201,6 +1258,7 @@ function drawVisual(ctx, visual, draw = 1, time = 0) {
   else if (visual.kind === 'grill') drawGrillVisual(ctx, visual, draw, time)
   else if (visual.kind === 'walk') drawWalkVisual(ctx, visual, draw, time)
   else if (visual.kind === 'diagram') drawDiagramVisual(ctx, visual, draw)
+  else if (visual.kind === 'questions') drawQuestionsVisual(ctx, visual, draw)
   else throw new Error(`Unknown terminal visual kind: ${visual.kind}`)
   return []
 }

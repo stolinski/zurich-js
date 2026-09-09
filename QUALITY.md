@@ -143,7 +143,7 @@ A pass requires all of the following:
   vignette, tone mapping, or exposed background.
 
 **Required evidence:** settled captures for every slide plus 60fps recordings of
-`stopping-caveat → reveal`, `productivity-paradox → cubicle-wide`, and the
+`slot-machine → reveal`, `productivity-paradox → cubicle-wide`, and the
 entire phosphor handoff. Compare current FXAA, 2× composer MSAA at DPR 1.25, 4×
 composer MSAA at DPR 1, and 2× MSAA+FXAA on identical frames; do not accept an AA
 method based on reputation alone. A settled edge-region capture must reach
@@ -301,7 +301,7 @@ The following evidence is mandatory before calling a visual pass complete:
 | `cold-open` | Fresh-load and warm title capture at all three reference sizes |
 | `intro-syntax`, `intro-sentry`, `intro-qr` | Local asset decode, monochrome treatment, and title-safe clearance |
 | `agent-session` | Harness legibility, vector stability, and the AUTOPLAY schedule: the exchange drives itself now, so the evidence is a recording of the whole ~12s run, not a settled still. One press of Enter or Backspace must still take it back. |
-| `reveal` | Settled still plus one continuous `stopping-caveat → reveal` recording: the tube ramp and the pull-back are ONE move now, so early/mid/late frames of the flight are what prove no doubled glyphs and no late shader compile |
+| `reveal` | Settled still plus one continuous `slot-machine → reveal` recording: the tube ramp and the pull-back are ONE move now, so early/mid/late frames of the flight are what prove no doubled glyphs and no late shader compile |
 | `cubicle-wide` | Settled stills, clearance overlay, clay render, light-only render |
 | `agent-wall` | Settled still and moving shimmer/LOD check |
 | `inside-glass` | Frame sequence through the complete handoff, which is now ONE flight — the two held threshold waypoints in front of it were cut |
