@@ -398,10 +398,9 @@ export const EXTERNAL = Object.freeze({
    * else in the talk he is named (NARRATIVE.md §8). The beat used to be four
    * lines of authored poetry ABOUT this post; it is now the post.
    *
-   * VERBATIM, including the profanity and including the company he names. It is
-   * a public post, it is the actual artifact the survey came from, and a talk
-   * that tidies up the thing it is quoting has not quoted it. Scott's call if he
-   * wants it softened on stage — but then it stops being a quotation.
+   * This source record stays verbatim, including the profanity and the company
+   * he names. The terminal renderer softens the profanity only in the projected
+   * copy, without altering the preserved source text.
    *
    * Text, author, date and counts retrieved from X's public syndication
    * endpoint (cdn.syndication.twimg.com) on 2026-08-31. The REPLY count is the

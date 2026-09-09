@@ -157,11 +157,12 @@ export const TERMINAL_VISUALS = Object.freeze({
   }),
   // ROB — the post itself, drawn as a post.
   //
-  // Nothing here is authored: words, author, handle, date and counts all come
-  // from EXTERNAL.robPost, which holds what was actually published. Earlier
-  // passes paraphrased it into authored lines and then quoted it as plain type,
-  // and neither is the artifact — the beat works because the room recognises
-  // that a real person posted this and eight hundred people replied.
+  // Words, author, handle, date and counts all come from EXTERNAL.robPost,
+  // which holds what was actually published. The projected copy censors the
+  // profanity without changing the source record. Earlier passes paraphrased
+  // the post into authored lines and then quoted it as plain type, and neither
+  // is the artifact — the beat works because the room recognises that a real
+  // person posted this and eight hundred people replied.
   //
   // The SECOND attached image — his hospital admission form, carrying his full
   // name and clinical findings — is deliberately not shipped. He published it;
@@ -173,7 +174,11 @@ export const TERMINAL_VISUALS = Object.freeze({
     author: EXTERNAL.robPost.author,
     handle: EXTERNAL.robPost.handle,
     verified: true,
-    paragraphs: EXTERNAL.robPost.paragraphs,
+    paragraphs: Object.freeze(
+      EXTERNAL.robPost.paragraphs.map((paragraph) =>
+        paragraph.replace('fucking', 'f***ing')
+      )
+    ),
     meta: `${EXTERNAL.robPost.date} · ${n(EXTERNAL.robPost.replies)} REPLIES · ${n(
       EXTERNAL.robPost.likes
     )} LIKES`,
