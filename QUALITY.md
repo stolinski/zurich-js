@@ -143,7 +143,7 @@ A pass requires all of the following:
   vignette, tone mapping, or exposed background.
 
 **Required evidence:** settled captures for every slide plus 60fps recordings of
-`slot-machine → reveal`, `productivity-paradox → cubicle-wide`, and the
+`slot-machine → reveal`, `q-pressure → cubicle-wide`, and the
 entire phosphor handoff. Compare current FXAA, 2× composer MSAA at DPR 1.25, 4×
 composer MSAA at DPR 1, and 2× MSAA+FXAA on identical frames; do not accept an AA
 method based on reputation alone. A settled edge-region capture must reach

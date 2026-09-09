@@ -34,9 +34,15 @@ function scaleVisual(question, distribution) {
       values: Object.freeze(
         distribution.map((count, index) =>
           Object.freeze({
-            label: question.anchors[index]
-              ? `${index + 1} ${question.anchors[index]}`
-              : String(index + 1),
+            // A scale point is its number plus the anchor word at that end, if
+            // any. A question whose points ARE the answers (agents: 1…5+)
+            // carries `options` instead, and the option is the whole label —
+            // "1 1, 2 2, 3 3" was the number being printed twice.
+            label:
+              question.options?.[index] ??
+              (question.anchors?.[index]
+                ? `${index + 1} ${question.anchors[index]}`
+                : String(index + 1)),
             value: count,
           })
         )
@@ -164,6 +170,8 @@ export const TERMINAL_VISUALS = Object.freeze({
   // Full-screen writing beats for the glass-filling threshold slides, so each
   // context change is preceded by the machine writing the next chapter.
   // COPY IS PLACEHOLDER — the form is the deliverable, the words are Scott's.
+  // No longer on a slide (Scott, 2026-09-09): the cubicle act opens straight on
+  // its data. Kept for `?visual` review like the other cut beats.
   'act-cubicle': Object.freeze({
     kind: 'statement',
     lines: Object.freeze([
@@ -247,6 +255,8 @@ export const TERMINAL_VISUALS = Object.freeze({
 
   // ── ③ Cubicle · the pressure ──
   'q-pressure': scaleVisual(QUESTIONS.pressure, DISTRIBUTIONS.pressure),
+  // Cut from the deck 2026-09-09 (Scott); the studies stay in EXTERNAL for the
+  // talk to quote, and the chart stays here for `?visual` review.
   'productivity-paradox': Object.freeze({
     kind: 'chart',
     title: 'WHAT THE STUDIES FOUND',

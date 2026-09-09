@@ -121,20 +121,18 @@ in this act asks him to drive a keyboard on stage.
 
 | # | Slide | Glass | The argument |
 |---|---|---|---|
-| 11 | `cubicle-threshold` | "it is not just you." | — |
-| 12 | `q-pressure` | q3, **71%** · 37% daily | Seven in ten. The office arrives behind this glass; the room does not see it yet. |
-| 13 | `productivity-paradox` | **+26%** PRs · **−19%** speed | The tools work. And experienced devs were slower while *believing* they were faster. Both get used to ask for more. |
-| 14 | `cubicle-wide` | (holds the paradox chart) | Neighbouring pools of agent activity over the partitions. If it's possible to go faster we must go faster — and nobody asks why. Saved effort returns as decisions, supervision and a higher baseline, never as rest. After the data, not before it (2026-09-02): the office is the pull-back that closes the act, the way the desk closes Pillar 1. |
+| 11 | `q-pressure` | q3, **71%** · 37% daily | Seven in ten. Straight from the desk to the data: the camera pushes back into the glass and the office arrives behind it; the room does not see it yet. `cubicle-threshold` ("it is not just you.") and `productivity-paradox` (+26% PRs / −19% speed) were cut 2026-09-09 — the studies stay in `src/data/survey.js` for the talk to quote. |
+| 12 | `cubicle-wide` | (holds the pressure chart) | Neighbouring pools of agent activity over the partitions. If it's possible to go faster we must go faster — and nobody asks why. Saved effort returns as decisions, supervision and a higher baseline, never as rest. After the data, not before it (2026-09-02): the office is the pull-back that closes the act, the way the desk closes Pillar 1. |
 
 ### ④ Wall — the throttle
 
 | # | Slide | Glass | The argument |
 |---|---|---|---|
-| 15 | `q-agents` | median **2**, 63% run 1–2 | Most people are not running ten agents. |
-| 16 | `agents-stopping` | **80%** (n=569) vs **40%** (n=2,253) | Double the overrun rate. More levers, more pulls. Exact: 453/569 = 79.6% of people running four or more agents (the scale tops out at "5+"), 890/2,253 = 39.5% of those running one or two — verified against the export's agents × q1 cross-tab 2026-09-02. |
-| 17 | `stopping-beats-count` | **57%** (n=890) vs **21%** (n=866) | **The tell.** Hold agent count constant and the sleep gap barely shrinks. It isn't how many agents — it's whether you can stop. Pillar 1 from a second direction, and the finding the video never reaches. |
-| 18 | `agent-wall-near` | — | **After the data, not before it.** Neighbours enter peripheral vision. |
-| 19 | `agent-wall` | — | The pull-back used to OPEN this act, so the room saw fifty-four screens and only then learned the median developer runs two — the reveal explaining itself away. Now the data lands first and the camera pulls back onto a wall they have every reason not to expect. The escalation is trivially logical and that is the problem: one, two, four — there is no number at which the reasoning stops. **Nothing may be scheduled between these two.** |
+| 13 | `q-agents` | median **2**, 63% run 1–2 | Most people are not running ten agents. |
+| 14 | `agents-stopping` | **80%** (n=569) vs **40%** (n=2,253) | Double the overrun rate. More levers, more pulls. Exact: 453/569 = 79.6% of people running four or more agents (the scale tops out at "5+"), 890/2,253 = 39.5% of those running one or two — verified against the export's agents × q1 cross-tab 2026-09-02. |
+| 15 | `stopping-beats-count` | **57%** (n=890) vs **21%** (n=866) | **The tell.** Hold agent count constant and the sleep gap barely shrinks. It isn't how many agents — it's whether you can stop. Pillar 1 from a second direction, and the finding the video never reaches. |
+| 16 | `agent-wall-near` | — | **After the data, not before it.** Neighbours enter peripheral vision. |
+| 17 | `agent-wall` | — | The pull-back used to OPEN this act, so the room saw fifty-four screens and only then learned the median developer runs two — the reveal explaining itself away. Now the data lands first and the camera pulls back onto a wall they have every reason not to expect. The escalation is trivially logical and that is the problem: one, two, four — there is no number at which the reasoning stops. **Nothing may be scheduled between these two.** |
 
 ### ⑤ The skill you can't feel going · **PILLAR 2**
 
@@ -146,15 +144,15 @@ watched something disappear in silence.
 
 | # | Slide | Glass | The argument |
 |---|---|---|---|
-| 20 | `phosphor-return` | "losing our skills." | — |
-| 21 | `q-skills` | q4, **63%** diminishing | Only **12%** say sharpening (n=445). |
-| 22 | `q-enjoyment` | q2, **57%** less | 18% the same. 24% enjoy it *more*. |
-| 23 | `skills-enjoyment` | **68%** (n=2,279) vs **30%** (n=445) | **The finding.** ρ = **−0.37**, strongest negative in the survey. Not two findings — mostly the same people. Say plainly that the survey measured *belief* and never tested anyone; then say why belief is what matters, because it's what keeps you in the field. |
-| 24 | `agents-outcomes` | sleep **32→66%**, enjoyment **18→37%**, skills **flat, dashed** | Benefit and cost climb *together*. No setting moves one without the other. Moved after the skill beats (2026-09-02): the flat line is the last thing on the glass before the descent. |
-| 25 | `inside-glass` | the dream — fireflies | The whole descent in ONE move: the glass opens and the camera keeps going through it into the cloud. The motes are fireflies now (2026-09-02): each wanders on its own slow seeded path and blinks on its own rhythm, so the cloud is a swarm of live things rather than a drifting texture. `phosphor-approach` and `phosphor-threshold` used to hold in front of this as two separate stops, when the one thing a descent must not do is stop. |
-| 26 | `synapse` | the fireflies settle into the network | **WHY 1 — NEUROPLASTICITY.** The brain is an efficient machine and prunes what it isn't using. The same motes that were wandering settle into their network positions and stay put — explained over it, which is not a metaphor for what's being described but a picture of it. The instrument you played in middle school. |
-| 27 | `synapse-decay` | connections die one by one | **WHY 2 — use it or lose it**, watched rather than asserted. Say nothing. The silence is the point. |
-| 28 | `what-gets-pruned` | "grill me." — a brain on a grill | **WHY 3, put to the room.** The glass reforms over the flight out of the cloud (`phosphor-exit` used to hold that as a beat of its own, with nothing to say on it; cut 2026-09-02) and lands on a brain on a grill. Each time it lands a question pops up — *could you have written this without the model? did you read the diff? do you know why it works? could you debug it by hand? would you notice if it was wrong?* — Scott answers with **Y** or **N** and the answer flips it. Five questions, then the tally. The questions are placeholder copy. |
+| 18 | `phosphor-return` | "losing our skills." | — |
+| 19 | `q-skills` | q4, **63%** diminishing | Only **12%** say sharpening (n=445). |
+| 20 | `q-enjoyment` | q2, **57%** less | 18% the same. 24% enjoy it *more*. |
+| 21 | `skills-enjoyment` | **68%** (n=2,279) vs **30%** (n=445) | **The finding.** ρ = **−0.37**, strongest negative in the survey. Not two findings — mostly the same people. Say plainly that the survey measured *belief* and never tested anyone; then say why belief is what matters, because it's what keeps you in the field. |
+| 22 | `agents-outcomes` | sleep **32→66%**, enjoyment **18→37%**, skills **flat, dashed** | Benefit and cost climb *together*. No setting moves one without the other. Moved after the skill beats (2026-09-02): the flat line is the last thing on the glass before the descent. |
+| 23 | `inside-glass` | the dream — fireflies | The whole descent in ONE move: the glass opens and the camera keeps going through it into the cloud. The motes are fireflies now (2026-09-02): each wanders on its own slow seeded path and blinks on its own rhythm, so the cloud is a swarm of live things rather than a drifting texture. `phosphor-approach` and `phosphor-threshold` used to hold in front of this as two separate stops, when the one thing a descent must not do is stop. |
+| 24 | `synapse` | the fireflies settle into the network | **WHY 1 — NEUROPLASTICITY.** The brain is an efficient machine and prunes what it isn't using. The same motes that were wandering settle into their network positions and stay put — explained over it, which is not a metaphor for what's being described but a picture of it. The instrument you played in middle school. |
+| 25 | `synapse-decay` | connections die one by one | **WHY 2 — use it or lose it**, watched rather than asserted. Say nothing. The silence is the point. |
+| 26 | `what-gets-pruned` | "grill me." — a brain on a grill | **WHY 3, put to the room.** The glass reforms over the flight out of the cloud (`phosphor-exit` used to hold that as a beat of its own, with nothing to say on it; cut 2026-09-02) and lands on a brain on a grill. Each time it lands a question pops up — *could you have written this without the model? did you read the diff? do you know why it works? could you debug it by hand? would you notice if it was wrong?* — Scott answers with **Y** or **N** and the answer flips it. Five questions, then the tally. The questions are placeholder copy. |
 
 The correlation matrix and the drive quadrants are **not** drawn (cut
 2026-09-02, with `three-zeros` and `drive-quadrants`): the data stays in
@@ -165,10 +163,10 @@ n = 173 for own-pull — but the room gets the question, not another chart.
 
 | # | Slide | Stage | The argument |
 |---|---|---|---|
-| 29 | `return-cubicle` | `cubicle`, "you have to be allowed / to stop." on the monitor | **The ceiling.** Everything about to be said assumes you're allowed to stop. Against a quota, or a manager who treats the tool as a magic bullet, a 15-minute timer will not save you. Healthy prompting cannot be carried by personal discipline alone. The line stays on the monitor for the whole beat; `act-ceiling`, `early-career` and its caveat were cut 2026-09-02. |
-| 30 | `act-boundaries` | `cubicle`, glass | "go for a walk." over a perspective line drawing of a path through bare line trees, walked along at walking pace. |
-| 31 | `boundaries` | `home`, "you are in control." on the monitor | **How you'd know**, then **what works** — both at the desk where they apply. Sleep first, loss of interest, exhaustion that doesn't clear, anxiety, pulling away from people; then somatization. Then: box the loop (10–15 min, then stop whether or not it landed — a timer beats a variable-reward schedule, willpower doesn't); make stopping structural, not moral; stay the one deciding (that's Pillar 2's answer — put the reps back); narrow the ambition; talk to people, not just the model. The glass holds one line so the screen never lectures. |
-| 32 | `close` | `home`, lights off | The lights go off in the room over the flight and the title comes back on the glass — same words as slide 0, on a screen you now know is an object, alone in the dark the way it was at 3am. Then the idle cursor. Hold it blinking and stop talking. `three-r` was cut 2026-09-02. |
+| 27 | `return-cubicle` | `cubicle`, "you have to be allowed / to stop." on the monitor | **The ceiling.** Everything about to be said assumes you're allowed to stop. Against a quota, or a manager who treats the tool as a magic bullet, a 15-minute timer will not save you. Healthy prompting cannot be carried by personal discipline alone. The line stays on the monitor for the whole beat; `act-ceiling`, `early-career` and its caveat were cut 2026-09-02. |
+| 28 | `act-boundaries` | `cubicle`, glass | "go for a walk." over a perspective line drawing of a path through bare line trees, walked along at walking pace. |
+| 29 | `boundaries` | `home`, "you are in control." on the monitor | **How you'd know**, then **what works** — both at the desk where they apply. Sleep first, loss of interest, exhaustion that doesn't clear, anxiety, pulling away from people; then somatization. Then: box the loop (10–15 min, then stop whether or not it landed — a timer beats a variable-reward schedule, willpower doesn't); make stopping structural, not moral; stay the one deciding (that's Pillar 2's answer — put the reps back); narrow the ambition; talk to people, not just the model. The glass holds one line so the screen never lectures. |
+| 30 | `close` | `home`, lights off | The lights go off in the room over the flight and the title comes back on the glass — same words as slide 0, on a screen you now know is an object, alone in the dark the way it was at 3am. Then the idle cursor. Hold it blinking and stop talking. `three-r` was cut 2026-09-02. |
 
 The return visits **two** rooms, not three. An earlier cut stopped at the wall
 first to say "turn your agent count down" — a point `stopping-beats-count`
@@ -220,13 +218,14 @@ it. Rejected: **staying inside for the advice** — the advice needs a desk.
 
 ## 5. Chart, line, or silence
 
-**Chart:** usage/after-midnight · q1 · stopping→sleep · q3 · +26%/−19% ·
+**Chart:** usage/after-midnight · q1 · stopping→sleep · q3 ·
 early-career employment · agents distribution · agents→stopping ·
 agents→outcomes · stopping-beats-count · q4 · q2 · skills→enjoyment · drive
 quadrants · 3R diagram.
 
-**Statement on bare glass:** "it is not just you." · "losing our skills." · 3,593 ·
-what-gets-pruned · **the three zeros**.
+**Statement on bare glass:** "losing our skills." · 3,593 · what-gets-pruned ·
+**the three zeros**. ("it is not just you." was cut with `cubicle-threshold`,
+2026-09-09.)
 
 **The form itself:** `survey-questions` — the six questions typed one per
 Enter behind a prompt, large, worded as respondents saw them and nothing else;

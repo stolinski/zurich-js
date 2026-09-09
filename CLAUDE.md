@@ -173,9 +173,11 @@ Everything drawn onto the glass.
   terminal asks: a session's `ask` steps type one screen per Enter, large,
   behind a prompt marker — every question worded as respondents saw it, from
   `FORM` in `data/survey.js`, and nothing else; the painter hands back the
-  caret's rect, and both renderers blink it). The three glass-filling threshold slides
-  carry `statement`/`stat` **act markers** that the held-forward rule keeps on
-  the glass through the beats they introduce. Numbers come only from
+  caret's rect, and both renderers blink it). The glass-filling threshold into
+  the phosphor (`phosphor-return`) carries a `statement` **act marker** that
+  the held-forward rule keeps on the glass through the beats it introduces;
+  the cubicle act opens straight on its data since 2026-09-09, with CameraRig
+  hiding that stage swap behind the covering glass itself. Numbers come only from
   `data/survey.js` (single source of truth, n = 3,593 from the Aug 28 export;
   the video's older ~1,300-response figures must never be quoted on stage).
 - `hover.js` — which chart row the pointer is over, shared by both renderers so

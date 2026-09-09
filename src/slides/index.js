@@ -6,10 +6,8 @@ import {
   CEILING_ACT_SCREEN,
   COLD_OPEN,
   CONTROL_ACT_SCREEN,
-  CUBICLE_ACT_SCREEN,
   GRILL_ME,
   PHOSPHOR_ACT_SCREEN,
-  PRODUCTIVITY_PARADOX,
   QR_SCREEN,
   ROB,
   Q_AGENTS,
@@ -81,9 +79,14 @@ import {
  *             timing of the room is taken away from the person in it. Enter and
  *             Backspace still hand control back on the first press.
  *    stage    'home' | 'cubicle' | 'wall' | 'phosphor'. Context swaps are held
- *             until the hero glass covers frame, so EVERY stage change here is
- *             immediately preceded by a glass-filling slide — forwards and
- *             backwards. Breaking that pairing pops the scenery on stage.
+ *             until the hero glass covers frame: CameraRig routes every
+ *             adjacent stage change through the strict cover point (a short
+ *             push into the glass if the camera is not already there), the
+ *             StageDirector commits the swap behind it, and only then does the
+ *             destination flight begin. A glass-filling slide on at least ONE
+ *             side of the change keeps that push short and invisible; a
+ *             room-to-room stage change would spend its whole flight hiding
+ *             behind a glass the room never asked to look at.
  *    crt      tube params. `tube: 0` is a flat passthrough — a screen
  *             recording. `tube: 1` is a CRT. Anything between is the reveal.
  *
@@ -293,18 +296,13 @@ export const slides = defineSlides([
 
   /* ═══════════════ ③ CUBICLE — THE PRESSURE ═══════════════ */
   {
-    // The glass writes the act marker during the push, and the held-forward
-    // rule keeps it up through the cubicle beats it introduces.
-    id: 'cubicle-threshold',
-    stage: 'home',
-    session: CUBICLE_ACT_SCREEN,
-    crt: { tube: 1, maskMode: 2, maskStrength: 0.68 },
-    camera: { ...GLASS, smoothTime: 2.0 },
-    focus: [0, 0, 0],
-  },
-  {
-    // The stage swap to the cubicle happens behind this covering glass; the
-    // room is not seen until the data has landed.
+    // Straight from the desk to the data (Scott, 2026-09-09). The camera pushes
+    // back into the glass from the reveal, the stage swaps to the cubicle
+    // behind it once it covers the frame, and the pressure chart draws in on
+    // the way; the room is not seen until the data has landed.
+    // `cubicle-threshold` ("it is not just you.", which used to write the act
+    // marker over that push) and `productivity-paradox` (+26% PRs / −19%
+    // speed) were cut the same day — the act is one chart and the office.
     id: 'q-pressure',
     stage: 'cubicle',
     session: Q_PRESSURE,
@@ -312,21 +310,12 @@ export const slides = defineSlides([
     camera: { ...GLASS, smoothTime: 2.0 },
   },
   {
-    // The tools work AND experienced developers were slower while believing
-    // they were faster. Both findings get used to ask for more.
-    id: 'productivity-paradox',
-    stage: 'cubicle',
-    session: PRODUCTIVITY_PARADOX,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 1.2 },
-  },
-  {
     // Enough width to reveal neighboring pools of agent activity over the
     // partitions, while the original monitor remains the anchor. Spoken: saved
     // effort returns as decisions and supervision, never as rest. After the
     // data, not before it (Scott, 2026-09-02): the office is the pull-back
     // that closes the act, the way the desk closes Pillar 1. No session, so
-    // the paradox chart stays on the monitor through the move.
+    // the pressure chart stays on the monitor through the move.
     id: 'cubicle-wide',
     stage: 'cubicle',
     crt: TUBE,

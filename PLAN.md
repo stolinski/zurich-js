@@ -321,11 +321,14 @@ The hero monitor never changes; the surrounding context reclassifies it:
 3. **Agent wall** — 54 procedural agents surround the full-resolution hero,
    turning individual productivity pressure into infrastructure.
 
-Each context change is preceded by a glass-filling threshold slide. The stage
-director keeps the old set mounted until the projected hero glass covers the
-viewport, then swaps while occluded. This works forward and backward; nonlocal
-0–9/dev jumps resolve immediately. It preserves one-press/one-slide navigation
-and avoids a visible scenery cross-fade.
+Each context change happens behind the covering glass: a glass-filling slide
+sits on at least one side of it, and when the camera is not already at the
+cover point CameraRig pushes into the glass first (the home → cubicle change,
+since `cubicle-threshold` was cut on 2026-09-09). The stage director keeps the
+old set mounted until the projected hero glass covers the viewport, then swaps
+while occluded. This works forward and backward; nonlocal 0–9/dev jumps resolve
+immediately. It preserves one-press/one-slide navigation and avoids a visible
+scenery cross-fade.
 
 **The architecture that makes this affordable:** distant sessions are rendered
 for **silhouette and rhythm**, not legibility. The wall's racks and housings

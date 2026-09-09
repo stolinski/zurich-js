@@ -100,11 +100,14 @@ export const QUESTIONS = Object.freeze({
     anchors: Object.freeze(['no change', '', '', '', 'major change']),
     highlight: Object.freeze([3, 4, 5]),
   }),
+  // Not a 1–5 scale with words at the ends: every point is its own answer, so
+  // the points carry `options` rather than `anchors` and the glass labels a
+  // column with the option alone.
   agents: Object.freeze({
     key: 'agents',
     title: 'Coding agents typically run at once',
     prompt: 'How many coding agents are you typically running at once?',
-    anchors: Object.freeze(['1', '2', '3', '4', '5+']),
+    options: Object.freeze(['1', '2', '3', '4', '5+']),
     highlight: Object.freeze([1, 2]),
   }),
 })

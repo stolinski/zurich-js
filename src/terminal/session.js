@@ -346,7 +346,8 @@ export const SURVEY_QUESTIONS = Object.freeze([
 // preceded by the machine writing the next chapter, and the held-forward rule
 // keeps that writing on the glass through the beats it introduces.
 // PLACEHOLDER COPY — see terminal/visuals.js.
-export const CUBICLE_ACT_SCREEN = screen('act-cubicle')
+// `act-cubicle` ("it is not just you.") has no session since 2026-09-09: the
+// cubicle act opens on its data, and CameraRig hides the stage swap itself.
 export const PHOSPHOR_ACT_SCREEN = screen('act-phosphor')
 export const CEILING_ACT_SCREEN = screen('act-ceiling')
 export const BOUNDARIES_ACT_SCREEN = screen('act-boundaries')
@@ -382,7 +383,6 @@ export const SLOT_MACHINE = Object.freeze([
 export const Q_STOPPING = screen('q-stopping')
 export const STOPPING_SLEEP = screen('stopping-sleep')
 export const Q_PRESSURE = screen('q-pressure')
-export const PRODUCTIVITY_PARADOX = screen('productivity-paradox')
 export const Q_AGENTS = screen('q-agents')
 export const AGENTS_STOPPING = screen('agents-stopping')
 export const AGENTS_OUTCOMES = screen('agents-outcomes')
