@@ -473,13 +473,24 @@ counting. `src/index.css` is small for the same reason.
   Y up, screen facing +Z) that `Monitor.jsx` consumes unchanged. The contract
   it keeps is in that script's docstring: the 523 × 295 opening at Y −17, the
   −12 pocket floor, the −288 stand underside, the chin control positions, and
-  the coordinate buckets `Monitor.jsx` assigns materials by. The sides are
-  clean — no vents: boolean cuts read as torn rims and conformed strips read
-  as stickers, so the vent bucket and its louver baffles are gone from
-  `Monitor.jsx`. Corners are tight (14 mm on the face, 6 mm at the opening);
-  the first pass at 38 / 12 read as a rounded 2000s appliance. The same GLB
-  is the source for every distant housing: the office and wall builds import
-  it, crease it, and decimate it to a third for the bays and the cells.
+  four MATERIAL SLOTS — `CRT shell`, `CRT face` (the bezel moulding: front,
+  fascia, chin and the sides forward of the mould split), `CRT stand`,
+  `CRT inner return` — exported as glTF primitives that `Monitor.jsx` merges
+  back into one geometry with groups and finishes BY NAME, like every set.
+  It used to bucket triangles by centroid ("stand below Y −180"), and the
+  chin, which runs to −242 and was filled with housing-wide sliver
+  triangles, came out half stand material: hard-edged lighter wedges on the
+  front panel of every room slide (Scott, 2026-09-09). The front annulus is
+  now a constrained Delaunay fill over a 32 mm grid and every rounded loop
+  subdivides its straight runs, so per-vertex shading has vertices to land
+  on and the decimated copies collapse cleanly. The sides are clean — no
+  vents: boolean cuts read as torn rims and conformed strips read as
+  stickers. Corners are tight (14 mm on the face, 6 mm at the opening); the
+  first pass at 38 / 12 read as a rounded 2000s appliance. The same GLB is
+  the source for every distant housing: the office and wall builds import
+  it (all slots collapsed to one material), crease it, and decimate it to a
+  third for the bays and the cells — rebuild and re-export both sets after
+  changing the housing.
 - **Quality per frame beats brute-force resolution.** DPR caps at 1.25, FXAA
   resolves edges after one shaded scene sample, variance shadow maps update only
   when a stage swaps, and repeated office/monitor assets stay instanced. Preserve

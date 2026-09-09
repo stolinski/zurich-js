@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import { useGLTF } from '@react-three/drei'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { SCREEN_SIZE } from './CRTScreen.jsx'
 import { DESK_Y } from './Room.jsx'
 import {
@@ -25,11 +26,20 @@ import {
  * The model is at true scale in mm with the same axis convention the scene
  * uses (X width, Y up, screen facing +Z), so the only transform needed here is
  * a uniform scale and a shift to put the glass on the origin. The opening,
- * pocket depth, stand underside, control positions and the material buckets
- * below are the contract the Blender script keeps.
+ * pocket depth, stand underside, control positions and the four named
+ * surfaces below are the contract the Blender script keeps.
+ *
+ * The surfaces arrive as glTF primitives, one per Blender material slot, and
+ * are finished here BY NAME — the same rule every set follows. Until
+ * 2026-09-09 this file bucketed triangles by centroid instead ("stand below
+ * Y = −180"), and the chin, which runs from −170 to −242 and was filled with
+ * sliver triangles the width of the housing, came out half stand material:
+ * lighter, shinier wedges with hard diagonal edges on every room slide.
  */
 
 const MODEL = '/models/crt-monitor.glb'
+/** Blender's material slots, in the order the material array below is built. */
+const SURFACES = ['CRT shell', 'CRT face', 'CRT stand', 'CRT inner return']
 
 // Must match build_monitor.py. The screen's width sets the scale; its
 // centre sits `SCREEN_CENTRE_MM` below the housing's midline because the chin
@@ -64,48 +74,33 @@ export const MONITOR_BASE_Y = (CAD.plateBottomMm - CAD.screenCentreMm) * SCALE
 const SHELL = { color: '#2b2d32', roughness: 0.62, metalness: 0.015 }
 const CABLE_R = 0.17
 
-function segmentHousingGeometry(source) {
-  const geometry = source.clone()
-  const index = geometry.index
-  const position = geometry.attributes.position
-  if (!index || !position) return geometry
-
-  const buckets = [[], [], [], []]
-  for (let offset = 0; offset < index.count; offset += 3) {
-    const a = index.getX(offset)
-    const b = index.getX(offset + 1)
-    const c = index.getX(offset + 2)
-    const x = (position.getX(a) + position.getX(b) + position.getX(c)) / 3
-    const y = (position.getY(a) + position.getY(b) + position.getY(c)) / 3
-    const z = (position.getZ(a) + position.getZ(b) + position.getZ(c)) / 3
-    // The 523 × 295 opening has a light-absorbing inner return. Treating it
-    // like satin face plastic lets the screen key reflect as a white neon
-    // outline. This is a material boundary on the existing pocket, not a
-    // second bezel or an overlay hiding the glass.
-    const innerReturn = z >= -13 && z <= 11 && Math.abs(x) < 265 && Math.abs(y + 17) < 151
-    const materialIndex = y < -180 ? 2 : innerReturn ? 3 : z > -36 ? 1 : 0
-    buckets[materialIndex].push(a, b, c)
-  }
-
-  const ordered = buckets.flat()
-  const IndexArray = position.count > 65535 ? Uint32Array : Uint16Array
-  geometry.setIndex(new THREE.BufferAttribute(new IndexArray(ordered), 1))
-  geometry.clearGroups()
-  let start = 0
-  buckets.forEach((bucket, materialIndex) => {
-    geometry.addGroup(start, bucket.length, materialIndex)
-    start += bucket.length
+/**
+ * The four surfaces as one geometry with one group per surface, in SURFACES
+ * order. Merged rather than kept as four meshes so the normal crease and the
+ * weathering see the whole housing: a creased normal at the bezel's rim needs
+ * the side it meets, and that side is another primitive.
+ */
+function mergeHousingSurfaces(gltfScene) {
+  const parts = new Map()
+  gltfScene.traverse((object) => {
+    if (object.isMesh) parts.set(object.material.name, object.geometry)
   })
-  return geometry
+  const missing = SURFACES.filter((name) => !parts.has(name))
+  if (missing.length) {
+    throw new Error(`crt-monitor.glb is missing surfaces: ${missing.join(', ')}`)
+  }
+  return mergeGeometries(
+    SURFACES.map((name) => parts.get(name)),
+    true
+  )
 }
 
 export function Monitor() {
   const { scene } = useGLTF(MODEL)
 
-  // One solid out of the kernel means one mesh and one material. Clone so a
-  // hot reload can't accumulate material swaps on the cached GLTF.
+  // Built once from the cached GLTF, never mutating it, so a hot reload can't
+  // accumulate material swaps or re-finish an already finished geometry.
   const housing = useMemo(() => {
-    const root = scene.clone(true)
     // Broad material partitions correspond to moulded subassemblies. Still not
     // a tiled micro-normal — a box-projected photograph over a compound housing
     // buys seams and a readable grain direction. The tooth comes from
@@ -114,8 +109,10 @@ export function Monitor() {
     // bevel flow and room-sized highlights carry the form; this carries the
     // material.
     const materials = [
+      // CRT shell — the rear cabinet behind the mould split.
       new THREE.MeshStandardMaterial(SHELL),
-      // The stepped face and bezel stay the darkest lit surface so the glass
+      // CRT face — the bezel moulding: front, fascia, chin and the sides
+      // forward of the split. It stays the darkest lit surface so the glass
       // still wins the frame, but not so dark that the inner chamfer's amber
       // gradient — the thing that reads as light rather than a border — has
       // nothing to land on.
@@ -125,11 +122,15 @@ export function Monitor() {
         metalness: 0.01,
         envMapIntensity: 1.15,
       }),
+      // CRT stand — base, turntable, pedestal and tilt barrel.
       new THREE.MeshStandardMaterial({
         color: '#33363c',
         roughness: 0.46,
         metalness: 0.025,
       }),
+      // CRT inner return — the pocket's light-absorbing walls and floor.
+      // Treating it like satin face plastic lets the screen key reflect as a
+      // white neon outline; this is the authored pocket, not an overlay.
       new THREE.MeshPhysicalMaterial({
         color: '#020303',
         roughness: 0.96,
@@ -140,19 +141,14 @@ export function Monitor() {
     ]
       .map(varyRoughnessByWear)
       .map(addMouldedGrain)
-    root.traverse((o) => {
-      if (o.isMesh) {
-        // Segment while indexed, then crease the normals (the CAD's per-face
-        // normals shaded the housing's gentle side curvature as vertical
-        // bands and the vent-slot rims as torn speckle) and bake the
-        // weathering pass shared with every desk prop.
-        o.geometry = finishPropGeometry(segmentHousingGeometry(o.geometry), 3)
-        o.material = materials
-        o.castShadow = true
-        o.receiveShadow = true
-      }
-    })
-    return root
+    // Crease the normals (the CAD's per-face normals shaded the housing's
+    // gentle side curvature as vertical bands) and bake the weathering pass
+    // shared with every desk prop.
+    const mesh = new THREE.Mesh(finishPropGeometry(mergeHousingSurfaces(scene), 3), materials)
+    mesh.name = 'crt_monitor'
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    return mesh
   }, [scene])
 
   // Cable. Sampled from a real CATENARY rather than eyeballed control points —
