@@ -2334,10 +2334,188 @@ function drawUsageLimit(ctx, panel, time) {
   ctx.restore()
 }
 
+/** A flame: two curves meeting at a tip that leans with the flicker. */
+function flamePath(ctx, x, baseY, height, width, lean) {
+  ctx.beginPath()
+  ctx.moveTo(x - width / 2, baseY)
+  ctx.bezierCurveTo(x - width * 0.6, baseY - height * 0.45, x + lean - width * 0.1, baseY - height * 0.7, x + lean, baseY - height)
+  ctx.bezierCurveTo(x + lean + width * 0.1, baseY - height * 0.7, x + width * 0.6, baseY - height * 0.45, x + width / 2, baseY)
+  ctx.closePath()
+}
+
+/**
+ * The spark, lost: a flame burns on a wick, flickering, and dwindles over the
+ * cycle to an ember and a wisp of smoke, while coins stack up beside it, one
+ * for every bit of flame that goes.
+ */
+function drawEmber(ctx, panel, time) {
+  const cycle = 11
+  const t = time % cycle
+  const cx = panel.x + panel.w / 2 - 110
+  const baseY = panel.y + panel.h / 2 + 120
+  const fade = 1 - smoothRamp(cycle - 0.7, cycle - 0.1, t)
+  const life = 1 - smoothRamp(1.5, 7.5, t)
+  const flicker = Math.sin(time * 9) * 0.5 + Math.sin(time * 23) * 0.3
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.globalAlpha = fade
+  // The wick, and its holder.
+  ctx.strokeStyle = PHOSPHOR.dim
+  ctx.lineWidth = 5
+  ctx.beginPath()
+  ctx.moveTo(cx - 70, baseY + 20)
+  ctx.lineTo(cx + 70, baseY + 20)
+  ctx.moveTo(cx, baseY + 20)
+  ctx.lineTo(cx, baseY - 10)
+  ctx.stroke()
+  if (life > 0.02) {
+    const height = 40 + 220 * life
+    const width = 30 + 90 * life
+    ctx.fillStyle = PHOSPHOR.phosphor
+    ctx.shadowColor = PHOSPHOR.phosphor
+    ctx.shadowBlur = GLOW_RADIUS * (0.6 + life)
+    flamePath(ctx, cx, baseY - 10, height * (1 + flicker * 0.08), width, flicker * 12 * life)
+    ctx.fill()
+    ctx.fillStyle = PHOSPHOR.hot
+    ctx.shadowBlur = 0
+    flamePath(ctx, cx, baseY - 10, height * 0.5, width * 0.45, flicker * 6 * life)
+    ctx.fill()
+  } else {
+    // The ember, and the smoke.
+    const ember = 0.5 + 0.5 * Math.sin(time * 3)
+    ctx.globalAlpha = fade * (0.4 + 0.5 * ember)
+    ctx.fillStyle = PHOSPHOR.dim
+    ctx.beginPath()
+    ctx.arc(cx, baseY - 14, 7, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.globalAlpha = fade * 0.6
+    ctx.strokeStyle = PHOSPHOR.ghost
+    ctx.lineWidth = 4
+    ctx.beginPath()
+    for (let step = 0; step <= 20; step++) {
+      const f = step / 20
+      const x = cx + Math.sin(time * 1.1 + f * 5) * 16 * (0.3 + f)
+      const y = baseY - 30 - f * 170
+      if (step === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.stroke()
+    ctx.globalAlpha = fade
+  }
+  // The coins, stacking as the flame goes.
+  const coins = Math.min(7, Math.floor((1 - life) * 7.99))
+  const coinX = panel.x + panel.w / 2 + 170
+  ctx.strokeStyle = PHOSPHOR.phosphor
+  ctx.lineWidth = 4
+  for (let coin = 0; coin < coins; coin++) {
+    const y = baseY + 6 - coin * 26
+    ctx.beginPath()
+    ctx.ellipse(coinX, y, 64, 14, 0, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(coinX - 64, y)
+    ctx.lineTo(coinX - 64, y + 14)
+    ctx.moveTo(coinX + 64, y)
+    ctx.lineTo(coinX + 64, y + 14)
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
+/**
+ * The spark, found: a strike, a burst of short hot rays, and a flame that
+ * catches and stays lit — and out of it, branches fan upward and outward,
+ * each forking as it goes, into things nobody would have started before.
+ */
+function drawIgnition(ctx, panel, time) {
+  const cycle = 10
+  const t = time % cycle
+  const cx = panel.x + panel.w / 2
+  const baseY = panel.y + panel.h - 200
+  const fade = 1 - smoothRamp(cycle - 0.7, cycle - 0.1, t)
+  const strike = smoothRamp(0.2, 0.6, t)
+  const burst = t > 0.5 && t < 1.4 ? 1 - smoothRamp(0.7, 1.4, t) : 0
+  const flame = smoothRamp(0.9, 2.2, t)
+  const flicker = Math.sin(time * 9) * 0.5 + Math.sin(time * 23) * 0.3
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.globalAlpha = fade
+  // The strike: a short hot stroke coming down to the point.
+  if (strike > 0 && flame < 1) {
+    ctx.globalAlpha = fade * (1 - flame)
+    ctx.strokeStyle = PHOSPHOR.hot
+    ctx.lineWidth = 6
+    ctx.beginPath()
+    ctx.moveTo(cx - 120 + 120 * strike, baseY - 140 + 140 * strike)
+    ctx.lineTo(cx - 60 + 60 * strike, baseY - 70 + 70 * strike)
+    ctx.stroke()
+    ctx.globalAlpha = fade
+  }
+  if (burst > 0) {
+    ctx.strokeStyle = PHOSPHOR.hot
+    ctx.lineWidth = 4
+    ctx.shadowColor = PHOSPHOR.phosphor
+    ctx.shadowBlur = GLOW_RADIUS
+    for (let ray = 0; ray < 10; ray++) {
+      const angle = (ray / 10) * Math.PI * 2 + 0.3
+      const inner = 20 + 40 * (1 - burst)
+      const outer = inner + 30 + 50 * (1 - burst)
+      ctx.beginPath()
+      ctx.moveTo(cx + Math.cos(angle) * inner, baseY - 20 + Math.sin(angle) * inner)
+      ctx.lineTo(cx + Math.cos(angle) * outer, baseY - 20 + Math.sin(angle) * outer)
+      ctx.stroke()
+    }
+    ctx.shadowBlur = 0
+  }
+  if (flame > 0) {
+    const height = 200 * flame
+    const width = 100 * flame
+    ctx.fillStyle = PHOSPHOR.phosphor
+    ctx.shadowColor = PHOSPHOR.phosphor
+    ctx.shadowBlur = GLOW_RADIUS * 1.2
+    flamePath(ctx, cx, baseY, height * (1 + flicker * 0.08), width, flicker * 12)
+    ctx.fill()
+    ctx.fillStyle = PHOSPHOR.hot
+    ctx.shadowBlur = 0
+    flamePath(ctx, cx, baseY, height * 0.5, width * 0.45, flicker * 6)
+    ctx.fill()
+  }
+  // The branches: from the flame's tip, forking upward, drawn on in turn.
+  const grow = smoothRamp(2.4, 7.4, t)
+  if (grow > 0) {
+    ctx.strokeStyle = PHOSPHOR.phosphor
+    ctx.lineWidth = 4
+    const tip = { x: cx, y: baseY - 210 }
+    const branch = (x, y, angle, length, depth, start) => {
+      const local = Math.min(1, Math.max(0, (grow - start) / 0.28))
+      if (local <= 0) return
+      const ex = x + Math.cos(angle) * length * local
+      const ey = y + Math.sin(angle) * length * local
+      ctx.globalAlpha = fade * (0.45 + 0.55 * (1 - depth / 4))
+      ctx.beginPath()
+      ctx.moveTo(x, y)
+      ctx.lineTo(ex, ey)
+      ctx.stroke()
+      if (local >= 1 && depth < 3) {
+        const spread = 0.42 + seeded(depth * 7 + Math.round(x), 3) * 0.2
+        branch(ex, ey, angle - spread, length * 0.72, depth + 1, start + 0.24)
+        branch(ex, ey, angle + spread, length * 0.72, depth + 1, start + 0.24)
+      }
+    }
+    branch(tip.x, tip.y, -Math.PI / 2 - 0.5, 150, 0, 0)
+    branch(tip.x, tip.y, -Math.PI / 2 + 0.5, 150, 0, 0.1)
+  }
+  ctx.restore()
+}
+
 const QUOTE_ILLUSTRATIONS = Object.freeze({
   doomscroll: drawDoomscroll,
   puzzle: drawPuzzle,
   battery: drawBattery,
+  ember: drawEmber,
+  ignition: drawIgnition,
   popups: drawPopups,
   break: drawForbiddenBreak,
   starts: drawStarts,

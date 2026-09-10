@@ -22,6 +22,8 @@ import {
   QUOTE_PHONE,
   QUOTE_PUZZLE,
   QUOTE_SHIP,
+  QUOTE_SPARK,
+  QUOTE_SPARK_LOST,
   QUOTE_STARTS,
   QUOTE_TIRED,
   ROB,
@@ -530,6 +532,23 @@ export const slides = defineSlides([
     id: 'skills-enjoyment',
     stage: 'wall',
     session: SKILLS_ENJOYMENT,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // TWO QUOTES on the spark (Scott, 2026-09-10), back to back. Lost: a
+    // flame dwindling to an ember while coins stack beside it.
+    id: 'quote-spark-lost',
+    stage: 'wall',
+    session: QUOTE_SPARK_LOST,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // Found: a strike, a burst, a flame that catches and branches upward.
+    id: 'quote-spark',
+    stage: 'wall',
+    session: QUOTE_SPARK,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 1.2 },
   },

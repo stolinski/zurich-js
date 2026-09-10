@@ -414,6 +414,21 @@ export const TERMINAL_VISUALS = Object.freeze({
     illustration: 'battery',
     animated: true,
   }),
+  // After the skill-and-enjoyment chart (Scott, 2026-09-10): the spark, lost
+  // and found — a flame dwindling to an ember while coins stack, and a strike
+  // that catches and branches.
+  'quote-spark-lost': Object.freeze({
+    kind: 'quote',
+    text: "I lost my spark, my passion, now it's just money, for however long I'll be able to do it.",
+    illustration: 'ember',
+    animated: true,
+  }),
+  'quote-spark': Object.freeze({
+    kind: 'quote',
+    text: "For me, AI has not been an accelerant, it is the spark. I'm not just 'coding fast', I'm doing things now that a few years ago I would never even have considered doing",
+    illustration: 'ignition',
+    animated: true,
+  }),
   'quote-puzzle': Object.freeze({
     kind: 'quote',
     text: "It's like solving a puzzle. You don't get any reward when another person solves the puzzle because you know that it was actually not you who solved it.",
