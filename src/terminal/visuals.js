@@ -427,7 +427,28 @@ export const TERMINAL_VISUALS = Object.freeze({
     illustration: 'popups',
     animated: true,
   }),
-  // After the pressure question: a break, forbidden.
+  // After the pressure question, three respondents on the pressure itself
+  // (Scott, 2026-09-10): a ship every day, a system nobody knows any more,
+  // and the usage limit against the other side of the planet.
+  'quote-ship': Object.freeze({
+    kind: 'quote',
+    text: "There's an immense pressure to ship at my company. Previously it was OK. You could go an entire week with one or two major tasks completed. Now they expect a major ship EVERY DAY. And are actively punishing people whose productivity didn't rise.",
+    illustration: 'ship',
+    animated: true,
+  }),
+  'quote-architecture': Object.freeze({
+    kind: 'quote',
+    text: 'I feel a significant amount of pressure to produce more, knowing less about the overall architecture of our system, and it genuinely feels like we will create a problem somewhere in the system at some point that none of us will be able to solve because of it.',
+    illustration: 'architecture',
+    animated: true,
+  }),
+  'quote-fomo': Object.freeze({
+    kind: 'quote',
+    text: "Sometimes I have strong FOMO that I don't do enough. Sometimes I am blaming myself that I did not have energy and went to sleep instead of burning the tokens to hit the usage limit before the next reset... knowing that some smart kids on the other side of the planet don't sleep while you do - this hyper competition - makes me sick.",
+    illustration: 'usage-limit',
+    animated: true,
+  }),
+  // Then a break, forbidden.
   'quote-breaks': Object.freeze({
     kind: 'quote',
     text: 'Writing code by hand feels like taking a break, as in stealing company time, and actual breaks feel borderline illegal.',

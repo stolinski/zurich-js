@@ -1052,7 +1052,7 @@ function drawWarningVisual(ctx, visual, draw = 1) {
  * step down rather than scale continuously so every quote lands on one of a
  * few authored sizes.
  */
-const QUOTE_SIZES = Object.freeze([96, 88, 80, 72, 64, 56])
+const QUOTE_SIZES = Object.freeze([96, 88, 80, 72, 64, 56, 48, 44])
 /** Where a quote's line illustration lives: the right third of the glass. */
 const QUOTE_PANEL = Object.freeze({ x: 1660, y: 220, w: 724, h: 1000 })
 
@@ -1070,18 +1070,21 @@ function drawQuoteVisual(ctx, visual, draw = 1, time = 0) {
   const text = `“${visual.text}”`
   const illustrated = Boolean(visual.illustration)
   // With a drawing beside it the quote takes the left two thirds and may run
-  // to five lines; alone it takes the width and stops at four.
+  // to five lines; alone it takes the width and stops at four. A long quote
+  // steps down to the small sizes, where seven lines (six alone) still sit
+  // inside the glass with room around them.
   const left = TERMINAL.padX
   const right = illustrated ? QUOTE_PANEL.x - 100 : TERMINAL.width - TERMINAL.padX - 60
   const maxWidth = right - left - (illustrated ? 0 : 60)
-  const maxLines = illustrated ? 5 : 4
+  const linesAllowed = (candidate) =>
+    candidate >= 64 ? (illustrated ? 5 : 4) : illustrated ? 7 : 6
   let size = QUOTE_SIZES[QUOTE_SIZES.length - 1]
   let lines = []
   for (const candidate of QUOTE_SIZES) {
     ctx.font = screenFont(candidate, 700)
     size = candidate
     lines = wrapToWidth(ctx, text, maxWidth)
-    if (lines.length <= maxLines) break
+    if (lines.length <= linesAllowed(candidate)) break
   }
   const lineHeight = size * 1.42
   const startY = TERMINAL.height / 2 - ((lines.length - 1) * lineHeight) / 2
@@ -2095,6 +2098,242 @@ function drawNineToFive(ctx, panel, time) {
   ctx.restore()
 }
 
+/**
+ * A ship every day: two weeks of seven day cells. In the top row one or two
+ * ships land, unhurried. In the bottom row a ship stamps hot into every cell
+ * in turn, one after another, and the row fills.
+ */
+function drawShipEveryDay(ctx, panel, time) {
+  const cycle = 10
+  const t = time % cycle
+  const cell = 84
+  const gap = 12
+  const width = 7 * cell + 6 * gap
+  const x0 = panel.x + (panel.w - width) / 2
+  const fade = 1 - smoothRamp(cycle - 0.8, cycle - 0.1, t)
+  ctx.save()
+  ctx.lineJoin = 'round'
+  ctx.globalAlpha = fade
+  const rows = [
+    { y: panel.y + 300, label: 'BEFORE', ships: [[1, 0.8], [4, 2.4]], hot: false },
+    {
+      y: panel.y + 620,
+      label: 'NOW',
+      ships: [0, 1, 2, 3, 4, 5, 6].map((day) => [day, 3.4 + day * 0.5]),
+      hot: true,
+    },
+  ]
+  for (const row of rows) {
+    chromeText(ctx, row.label, x0, row.y - 64, { size: 24, weight: 700, color: PHOSPHOR.dim })
+    ctx.strokeStyle = row.hot ? PHOSPHOR.dim : PHOSPHOR.ghost
+    ctx.lineWidth = 3
+    for (let day = 0; day < 7; day++) {
+      ctx.beginPath()
+      ctx.roundRect(x0 + day * (cell + gap), row.y, cell, cell, 10)
+      ctx.stroke()
+    }
+    for (const [day, at] of row.ships) {
+      const life = t - at
+      if (life < 0) continue
+      const land = smoothRamp(0, 0.3, life)
+      const scale = 1.5 - 0.5 * land
+      const cx = x0 + day * (cell + gap) + cell / 2
+      const cy = row.y + cell / 2
+      const side = 40 * scale
+      ctx.globalAlpha = fade * land
+      ctx.fillStyle = row.hot ? PHOSPHOR.hot : PHOSPHOR.phosphor
+      if (row.hot) {
+        ctx.shadowColor = PHOSPHOR.phosphor
+        ctx.shadowBlur = GLOW_RADIUS * (1.6 - land)
+      }
+      ctx.beginPath()
+      ctx.roundRect(cx - side / 2, cy - side / 2, side, side, 6)
+      ctx.fill()
+      ctx.shadowBlur = 0
+      ctx.globalAlpha = fade
+    }
+  }
+  ctx.restore()
+}
+
+/**
+ * The system nobody knows any more: a grid of boxes wired together, built
+ * fast, one box after another. As it grows its inside fades to ghost —
+ * connected, but unknown — and then somewhere in the middle a fault pulses
+ * hot, with a crack through it, and nothing around it is lit to reach it by.
+ */
+function drawArchitecture(ctx, panel, time) {
+  const cycle = 12
+  const t = time % cycle
+  const cols = 4
+  const rowsN = 4
+  const pitchX = 160
+  const pitchY = 190
+  const box = { w: 64, h: 46 }
+  const x0 = panel.x + (panel.w - (cols - 1) * pitchX) / 2
+  const y0 = panel.y + (panel.h - (rowsN - 1) * pitchY) / 2
+  const fade = 1 - smoothRamp(cycle - 0.8, cycle - 0.1, t)
+  const unknown = smoothRamp(4.5, 7.5, t)
+  const fault = t > 7.8 ? 0.5 + 0.5 * Math.sin((t - 7.8) * 7) : 0
+  ctx.save()
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+  const at = (i) => ({ col: i % cols, row: Math.floor(i / cols) })
+  const centre = (i) => {
+    const { col, row } = at(i)
+    return { x: x0 + col * pitchX, y: y0 + row * pitchY }
+  }
+  const interior = (i) => {
+    const { col, row } = at(i)
+    return col > 0 && col < cols - 1 && row > 0 && row < rowsN - 1
+  }
+  for (let i = 0; i < cols * rowsN; i++) {
+    const on = smoothRamp(0.3 + i * 0.32, 0.6 + i * 0.32, t)
+    if (on <= 0) continue
+    const c = centre(i)
+    const dimmed = interior(i) ? unknown : 0
+    ctx.globalAlpha = fade * on * (1 - dimmed * 0.75)
+    // Wires back to the box on the left and the one above.
+    ctx.strokeStyle = PHOSPHOR.dim
+    ctx.lineWidth = 3
+    const { col, row } = at(i)
+    if (col > 0) {
+      const l = centre(i - 1)
+      ctx.beginPath()
+      ctx.moveTo(l.x + box.w / 2, l.y)
+      ctx.lineTo(c.x - box.w / 2, c.y)
+      ctx.stroke()
+    }
+    if (row > 0) {
+      const u = centre(i - cols)
+      ctx.beginPath()
+      ctx.moveTo(u.x, u.y + box.h / 2)
+      ctx.lineTo(c.x, c.y - box.h / 2)
+      ctx.stroke()
+    }
+    ctx.strokeStyle = PHOSPHOR.phosphor
+    ctx.lineWidth = 4
+    ctx.beginPath()
+    ctx.roundRect(c.x - box.w / 2, c.y - box.h / 2, box.w, box.h, 8)
+    ctx.stroke()
+  }
+  // The fault, deep inside.
+  if (fault > 0) {
+    const c = centre(9)
+    ctx.globalAlpha = fade * fault
+    ctx.strokeStyle = PHOSPHOR.hot
+    ctx.lineWidth = 5
+    ctx.shadowColor = PHOSPHOR.phosphor
+    ctx.shadowBlur = GLOW_RADIUS
+    ctx.beginPath()
+    ctx.roundRect(c.x - box.w / 2, c.y - box.h / 2, box.w, box.h, 8)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(c.x - 26, c.y - 30)
+    ctx.lineTo(c.x - 6, c.y - 4)
+    ctx.lineTo(c.x + 8, c.y - 10)
+    ctx.lineTo(c.x + 4, c.y + 12)
+    ctx.lineTo(c.x + 24, c.y + 30)
+    ctx.stroke()
+    ctx.shadowBlur = 0
+  }
+  ctx.restore()
+}
+
+/**
+ * The usage limit: two gauges under one limit line. Yours fills in steps and
+ * stops when you sleep — a moon comes up over it and the room left under the
+ * limit hatches hot. Theirs, under a sun, keeps filling to the line. Then the
+ * reset drops both to nothing and it starts again.
+ */
+function drawUsageLimit(ctx, panel, time) {
+  const cycle = 11
+  const t = time % cycle
+  const gauge = { w: 120, h: 600 }
+  const top = panel.y + 240
+  const bottom = top + gauge.h
+  const yours = panel.x + panel.w / 2 - 150
+  const theirs = panel.x + panel.w / 2 + 150
+  const fade = 1 - smoothRamp(cycle - 0.7, cycle - 0.1, t)
+  const asleep = t > 4.6
+  const reset = smoothRamp(7.8, 8.3, t)
+  const yourFill = (asleep ? 0.62 : Math.min(0.62, Math.floor(t / 0.45) * 0.062)) * (1 - reset)
+  const theirFill = Math.min(1, Math.floor(t / 0.45) * 0.062) * (1 - reset)
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.globalAlpha = fade
+  // The limit.
+  ctx.strokeStyle = PHOSPHOR.phosphor
+  ctx.lineWidth = 4
+  ctx.setLineDash([14, 12])
+  ctx.beginPath()
+  ctx.moveTo(panel.x + 40, top)
+  ctx.lineTo(panel.x + panel.w - 40, top)
+  ctx.stroke()
+  ctx.setLineDash([])
+  chromeText(ctx, 'LIMIT', panel.x + 40, top - 40, { size: 24, weight: 700, color: PHOSPHOR.dim })
+  for (const [x, fill, hot] of [
+    [yours, yourFill, false],
+    [theirs, theirFill, true],
+  ]) {
+    ctx.strokeStyle = PHOSPHOR.dim
+    ctx.lineWidth = 4
+    ctx.beginPath()
+    ctx.roundRect(x - gauge.w / 2, top, gauge.w, gauge.h, 16)
+    ctx.stroke()
+    if (fill > 0) {
+      ctx.fillStyle = hot && fill >= 1 ? PHOSPHOR.hot : PHOSPHOR.phosphor
+      const h = (gauge.h - 16) * fill
+      ctx.beginPath()
+      ctx.roundRect(x - gauge.w / 2 + 8, bottom - 8 - h, gauge.w - 16, h, 10)
+      ctx.fill()
+    }
+  }
+  // Asleep: the moon over your gauge, and the room you left hatched hot.
+  if (asleep && reset < 1) {
+    const wake = smoothRamp(4.6, 5.4, t) * (1 - reset)
+    ctx.globalAlpha = fade * wake
+    ctx.strokeStyle = PHOSPHOR.phosphor
+    ctx.lineWidth = 5
+    ctx.beginPath()
+    ctx.arc(yours, top - 120, 36, Math.PI * 0.15, Math.PI * 1.55)
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(yours + 18, top - 128, 30, Math.PI * 0.35, Math.PI * 1.45, true)
+    ctx.stroke()
+    const pulse = 0.5 + 0.5 * Math.sin(t * 5)
+    ctx.globalAlpha = fade * wake * (0.35 + 0.5 * pulse)
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(yours - gauge.w / 2 + 8, top + 8, gauge.w - 16, (gauge.h - 16) * (1 - 0.62))
+    ctx.clip()
+    ctx.strokeStyle = PHOSPHOR.hot
+    ctx.lineWidth = 3
+    for (let y = top - gauge.w; y < top + gauge.h; y += 18) {
+      ctx.beginPath()
+      ctx.moveTo(yours - gauge.w / 2, y + gauge.w)
+      ctx.lineTo(yours + gauge.w / 2, y)
+      ctx.stroke()
+    }
+    ctx.restore()
+  }
+  // The sun over theirs, always up.
+  ctx.globalAlpha = fade
+  ctx.strokeStyle = PHOSPHOR.dim
+  ctx.lineWidth = 4
+  ctx.beginPath()
+  ctx.arc(theirs, top - 120, 30, 0, Math.PI * 2)
+  ctx.stroke()
+  for (let ray = 0; ray < 8; ray++) {
+    const angle = (ray / 8) * Math.PI * 2
+    ctx.beginPath()
+    ctx.moveTo(theirs + Math.cos(angle) * 42, top - 120 + Math.sin(angle) * 42)
+    ctx.lineTo(theirs + Math.cos(angle) * 56, top - 120 + Math.sin(angle) * 56)
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
 const QUOTE_ILLUSTRATIONS = Object.freeze({
   doomscroll: drawDoomscroll,
   puzzle: drawPuzzle,
@@ -2104,6 +2343,9 @@ const QUOTE_ILLUSTRATIONS = Object.freeze({
   starts: drawStarts,
   ninety: drawNinety,
   apart: drawApart,
+  ship: drawShipEveryDay,
+  architecture: drawArchitecture,
+  'usage-limit': drawUsageLimit,
   calmer: drawCalmer,
   'one-project': drawOneProject,
   outside: drawOutside,

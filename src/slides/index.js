@@ -9,9 +9,11 @@ import {
   QR_CODE_SCREEN,
   QR_SCREEN,
   QUOTE_APART,
+  QUOTE_ARCHITECTURE,
   QUOTE_BREAKS,
   QUOTE_CALMER,
   QUOTE_DOOMSCROLL,
+  QUOTE_FOMO,
   QUOTE_LUNCH,
   QUOTE_NINE_TO_FIVE,
   QUOTE_NINETY,
@@ -19,6 +21,7 @@ import {
   QUOTE_OUTSIDE,
   QUOTE_PHONE,
   QUOTE_PUZZLE,
+  QUOTE_SHIP,
   QUOTE_STARTS,
   QUOTE_TIRED,
   ROB,
@@ -368,6 +371,34 @@ export const slides = defineSlides([
     session: Q_PRESSURE,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 2.0 },
+  },
+  {
+    // THREE QUOTES on the pressure itself (Scott, 2026-09-10), before the
+    // break that feels like theft. First: a ship every day — a week where one
+    // or two land, then a week where one stamps hot into every cell.
+    id: 'quote-ship',
+    stage: 'cubicle',
+    session: QUOTE_SHIP,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // A system nobody knows any more: a grid of boxes wired together fast,
+    // its inside fading to ghost, a fault pulsing hot in the middle.
+    id: 'quote-architecture',
+    stage: 'cubicle',
+    session: QUOTE_ARCHITECTURE,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // The usage limit: your gauge stops when you sleep, theirs fills to the
+    // line under a sun, and the reset drops both.
+    id: 'quote-fomo',
+    stage: 'cubicle',
+    session: QUOTE_FOMO,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
   },
   {
     // A QUOTE (Scott, 2026-09-10): the pressure in one respondent's words —
