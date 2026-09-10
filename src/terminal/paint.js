@@ -1033,17 +1033,35 @@ function drawWarningVisual(ctx, visual, draw = 1) {
  * few authored sizes.
  */
 const QUOTE_SIZES = Object.freeze([96, 88, 80, 72, 64, 56])
+/** Where a quote's line illustration lives: the right third of the glass. */
+const QUOTE_PANEL = Object.freeze({ x: 1660, y: 220, w: 724, h: 1000 })
 
-function drawQuoteVisual(ctx, visual, draw = 1) {
+const smoothRamp = (edge0, edge1, x) => {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
+}
+/** Seeded 0–1 value for an integer, so a feed or a grid varies without ever changing. */
+const seeded = (k, salt = 0) => {
+  const value = Math.sin(k * 12.9898 + salt * 78.233) * 43758.5453
+  return value - Math.floor(value)
+}
+
+function drawQuoteVisual(ctx, visual, draw = 1, time = 0) {
   const text = `“${visual.text}”`
-  const maxWidth = TERMINAL.width - TERMINAL.padX * 2 - 120
+  const illustrated = Boolean(visual.illustration)
+  // With a drawing beside it the quote takes the left two thirds and may run
+  // to five lines; alone it takes the width and stops at four.
+  const left = TERMINAL.padX
+  const right = illustrated ? QUOTE_PANEL.x - 100 : TERMINAL.width - TERMINAL.padX - 60
+  const maxWidth = right - left - (illustrated ? 0 : 60)
+  const maxLines = illustrated ? 5 : 4
   let size = QUOTE_SIZES[QUOTE_SIZES.length - 1]
   let lines = []
   for (const candidate of QUOTE_SIZES) {
     ctx.font = screenFont(candidate, 700)
     size = candidate
     lines = wrapToWidth(ctx, text, maxWidth)
-    if (lines.length <= 4) break
+    if (lines.length <= maxLines) break
   }
   const lineHeight = size * 1.42
   const startY = TERMINAL.height / 2 - ((lines.length - 1) * lineHeight) / 2
@@ -1057,16 +1075,289 @@ function drawQuoteVisual(ctx, visual, draw = 1) {
   ctx.fillStyle = PHOSPHOR.hot
   ctx.shadowColor = PHOSPHOR.phosphor
   ctx.shadowBlur = GLOW_RADIUS * 0.8
+  const centreX = (left + right) / 2
   for (let index = 0; index < lines.length && budget > 0; index++) {
     const line = lines[index]
     const shown = line.slice(0, budget)
     budget -= line.length
     // Anchored to the full line's centred box so the type-on grows in place.
     const fullWidth = ctx.measureText(line).width
-    ctx.fillText(shown, (TERMINAL.width - fullWidth) / 2, startY + index * lineHeight)
+    ctx.fillText(shown, centreX - fullWidth / 2, startY + index * lineHeight)
   }
   ctx.shadowBlur = 0
+
+  if (illustrated) QUOTE_ILLUSTRATIONS[visual.illustration](ctx, QUOTE_PANEL, time)
 }
+
+/*
+ * ── Quote illustrations ──
+ * Line drawings in the walk's idiom — phosphor strokes on bare glass, hot
+ * only where something happens — that move on the free-running clock beside
+ * a respondent's words (Scott, 2026-09-10: "some kind of visual for each of
+ * these quotes, like doomscrolling, a puzzle"). Every cycle is authored and
+ * seeded, so a loop looks the same at every rehearsal; nothing in them is
+ * random at run time.
+ */
+
+/** A phone whose feed never ends: cards rise past the screen at one every ~1.4 s. */
+function drawDoomscroll(ctx, panel, time) {
+  const phone = { w: 430, h: 880 }
+  const x = panel.x + (panel.w - phone.w) / 2
+  const y = panel.y + (panel.h - phone.h) / 2
+  ctx.save()
+  ctx.lineWidth = 5
+  ctx.strokeStyle = PHOSPHOR.dim
+  ctx.beginPath()
+  ctx.roundRect(x, y, phone.w, phone.h, 64)
+  ctx.stroke()
+  ctx.fillStyle = PHOSPHOR.dim
+  ctx.beginPath()
+  ctx.roundRect(x + phone.w / 2 - 60, y + 28, 120, 12, 6)
+  ctx.fill()
+
+  const screen = { x: x + 26, y: y + 64, w: phone.w - 52, h: phone.h - 104 }
+  ctx.beginPath()
+  ctx.rect(screen.x, screen.y, screen.w, screen.h)
+  ctx.clip()
+  const pitch = 218
+  const offset = time * 150
+  const first = Math.floor((offset - screen.h) / pitch) - 1
+  for (let k = first; k < first + 7; k++) {
+    const top = screen.y + screen.h + k * pitch - offset
+    if (top > screen.y + screen.h || top + pitch < screen.y) continue
+    const card = { x: screen.x + 14, y: top, w: screen.w - 28, h: pitch - 28 }
+    ctx.lineWidth = 3
+    ctx.strokeStyle = PHOSPHOR.ghost
+    ctx.beginPath()
+    ctx.roundRect(card.x, card.y, card.w, card.h, 22)
+    ctx.stroke()
+    // Avatar, a name, a handle.
+    ctx.fillStyle = PHOSPHOR.dim
+    ctx.beginPath()
+    ctx.arc(card.x + 44, card.y + 44, 22, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillRect(card.x + 82, card.y + 30, 90 + seeded(k, 1) * 70, 10)
+    ctx.fillStyle = PHOSPHOR.ghost
+    ctx.fillRect(card.x + 82, card.y + 50, 60 + seeded(k, 2) * 40, 8)
+    // Three lines of something, then an image every third card or so.
+    const hasImage = seeded(k, 3) > 0.55
+    const bodyTop = card.y + 84
+    for (let row = 0; row < (hasImage ? 2 : 3); row++) {
+      const width = (card.w - 44) * (0.55 + 0.45 * seeded(k, 10 + row))
+      ctx.fillRect(card.x + 22, bodyTop + row * 22, width, 9)
+    }
+    if (hasImage) {
+      ctx.strokeStyle = PHOSPHOR.ghost
+      ctx.beginPath()
+      ctx.roundRect(card.x + 22, bodyTop + 52, card.w - 44, card.h - 84 - 52 - 16, 12)
+      ctx.stroke()
+    }
+    // Now and then something hot in the feed — the thing the thumb was after.
+    if (seeded(k, 4) > 0.86) {
+      ctx.fillStyle = PHOSPHOR.hot
+      ctx.beginPath()
+      ctx.arc(card.x + card.w - 30, card.y + 30, 7, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+  ctx.restore()
+}
+
+/** One edge of a jigsaw piece: flat, a tab out, or a blank in. */
+function jigsawEdge(ctx, ax, ay, bx, by, type, knob) {
+  if (type === 0) {
+    ctx.lineTo(bx, by)
+    return
+  }
+  const dx = bx - ax
+  const dy = by - ay
+  const length = Math.hypot(dx, dy)
+  const ux = dx / length
+  const uy = dy / length
+  // Outward normal for a clockwise path in canvas coordinates.
+  const ox = uy * type
+  const oy = -ux * type
+  const mx = ax + dx / 2
+  const my = ay + dy / 2
+  const neck = knob * 0.55
+  const p0x = mx - ux * neck
+  const p0y = my - uy * neck
+  const p1x = mx + ux * neck
+  const p1y = my + uy * neck
+  const tipX = mx + ox * knob * 1.7
+  const tipY = my + oy * knob * 1.7
+  ctx.lineTo(p0x, p0y)
+  ctx.bezierCurveTo(
+    p0x + ox * knob * 0.9 - ux * knob * 0.55,
+    p0y + oy * knob * 0.9 - uy * knob * 0.55,
+    tipX - ux * knob * 0.95,
+    tipY - uy * knob * 0.95,
+    tipX,
+    tipY
+  )
+  ctx.bezierCurveTo(
+    tipX + ux * knob * 0.95,
+    tipY + uy * knob * 0.95,
+    p1x + ox * knob * 0.9 + ux * knob * 0.55,
+    p1y + oy * knob * 0.9 + uy * knob * 0.55,
+    p1x,
+    p1y
+  )
+  ctx.lineTo(bx, by)
+}
+
+function jigsawPiecePath(ctx, x, y, s, edges, knob) {
+  ctx.beginPath()
+  ctx.moveTo(x, y)
+  jigsawEdge(ctx, x, y, x + s, y, edges.top, knob)
+  jigsawEdge(ctx, x + s, y, x + s, y + s, edges.right, knob)
+  jigsawEdge(ctx, x + s, y + s, x, y + s, edges.bottom, knob)
+  jigsawEdge(ctx, x, y + s, x, y, edges.left, knob)
+  ctx.closePath()
+}
+
+// The order the pieces arrive in: corners, then edges, then the middle last.
+const PUZZLE_ORDER = Object.freeze([0, 8, 2, 6, 1, 7, 3, 5, 4])
+
+/**
+ * A three-by-three jigsaw assembling itself: pieces slide in one by one from
+ * off the panel and lock, the whole thing flares hot for a beat when the last
+ * one lands, then it clears and starts again. Somebody else is solving it.
+ */
+function drawPuzzle(ctx, panel, time) {
+  const n = 3
+  const s = 176
+  const knob = 24
+  const gx = panel.x + (panel.w - n * s) / 2
+  const gy = panel.y + (panel.h - n * s) / 2
+  const cycle = 10.5
+  const t = time % cycle
+  const gap = 0.72
+  const arrive = 0.55
+  const solvedAt = 0.6 + (n * n - 1) * gap + arrive
+  const fadeOut = 1 - smoothRamp(cycle - 1.4, cycle - 0.3, t)
+  const flare = t > solvedAt ? Math.exp(-(t - solvedAt) * 2.2) : 0
+
+  // Tabs alternate by parity so every interior edge has one tab and one blank.
+  const belowTab = (r, c) => ((r + c) % 2 === 0 ? 1 : -1)
+  const rightTab = (r, c) => ((r * 3 + c) % 2 === 0 ? 1 : -1)
+  const edgesOf = (r, c) => ({
+    top: r === 0 ? 0 : -belowTab(r - 1, c),
+    bottom: r === n - 1 ? 0 : belowTab(r, c),
+    left: c === 0 ? 0 : -rightTab(r, c - 1),
+    right: c === n - 1 ? 0 : rightTab(r, c),
+  })
+
+  ctx.save()
+  ctx.globalAlpha = fadeOut
+  ctx.lineJoin = 'round'
+  // The outline of where the puzzle will be, faint, so the empty board reads.
+  ctx.lineWidth = 3
+  ctx.strokeStyle = PHOSPHOR.ghost
+  ctx.setLineDash([14, 14])
+  ctx.strokeRect(gx, gy, n * s, n * s)
+  ctx.setLineDash([])
+
+  PUZZLE_ORDER.forEach((cell, order) => {
+    const startAt = 0.6 + order * gap
+    if (t < startAt) return
+    const r = Math.floor(cell / n)
+    const c = cell % n
+    const p = Math.min(1, (t - startAt) / arrive)
+    const eased = p * p * (3 - 2 * p)
+    // From off the panel — alternately from the right and from below — to home.
+    const fromX = gx + c * s + (order % 2 === 0 ? panel.w * 0.7 : 0)
+    const fromY = gy + r * s + (order % 2 === 0 ? 0 : panel.h * 0.6)
+    const x = fromX + (gx + c * s - fromX) * eased
+    const y = fromY + (gy + r * s - fromY) * eased
+    const locked = p >= 1
+    jigsawPiecePath(ctx, x, y, s, edgesOf(r, c), knob)
+    ctx.lineWidth = locked ? 5 : 4
+    ctx.strokeStyle = locked ? PHOSPHOR.phosphor : PHOSPHOR.dim
+    if (flare > 0) {
+      ctx.strokeStyle = PHOSPHOR.hot
+      ctx.shadowColor = PHOSPHOR.phosphor
+      ctx.shadowBlur = GLOW_RADIUS * 1.5 * flare
+    }
+    ctx.stroke()
+    ctx.shadowBlur = 0
+  })
+  ctx.restore()
+}
+
+/**
+ * Output up, energy down: the pile of things done grows a bar at a time while
+ * the battery beside it drains, flickering at the bottom; then both clear and
+ * it starts again.
+ */
+function drawBattery(ctx, panel, time) {
+  const cycle = 11.5
+  const t = time % cycle
+  const fadeOut = 1 - smoothRamp(cycle - 1.3, cycle - 0.3, t)
+  ctx.save()
+  ctx.globalAlpha = fadeOut
+  ctx.lineJoin = 'round'
+
+  // The battery.
+  const battery = { w: 220, h: 560 }
+  const bx = panel.x + panel.w * 0.66 - battery.w / 2
+  const by = panel.y + (panel.h - battery.h) / 2 + 20
+  ctx.lineWidth = 5
+  ctx.strokeStyle = PHOSPHOR.dim
+  ctx.beginPath()
+  ctx.roundRect(bx, by, battery.w, battery.h, 26)
+  ctx.stroke()
+  ctx.fillStyle = PHOSPHOR.dim
+  ctx.beginPath()
+  ctx.roundRect(bx + battery.w / 2 - 44, by - 34, 88, 30, 8)
+  ctx.fill()
+  const level = 1 - 0.95 * smoothRamp(0.4, 9.2, t)
+  const inner = { x: bx + 18, y: by + 18, w: battery.w - 36, h: battery.h - 36 }
+  const fillHeight = inner.h * level
+  // Nearly empty, it flickers.
+  const flicker = level < 0.18 ? 0.55 + 0.45 * (Math.sin(time * 21) > 0.2 ? 1 : 0.3) : 1
+  ctx.fillStyle = PHOSPHOR.phosphor
+  ctx.globalAlpha = fadeOut * (0.55 + 0.45 * level) * flicker
+  ctx.beginPath()
+  ctx.roundRect(inner.x, inner.y + inner.h - fillHeight, inner.w, fillHeight, 12)
+  ctx.fill()
+  ctx.globalAlpha = fadeOut
+
+  // The pile of things done.
+  const bar = { w: 250, h: 34, gap: 14 }
+  const px = panel.x + panel.w * 0.24 - bar.w / 2
+  const baseline = by + battery.h
+  const count = Math.min(11, Math.floor((t - 0.2) / 0.8) + 1)
+  for (let i = 0; i < count; i++) {
+    const appearedAt = 0.2 + i * 0.8
+    const pop = Math.min(1, (t - appearedAt) / 0.3)
+    const scale = 0.6 + 0.4 * (pop * pop * (3 - 2 * pop))
+    const y = baseline - (i + 1) * (bar.h + bar.gap)
+    const w = bar.w * scale
+    ctx.lineWidth = 4
+    ctx.strokeStyle = PHOSPHOR.phosphor
+    ctx.beginPath()
+    ctx.roundRect(px + (bar.w - w) / 2, y, w, bar.h, 8)
+    ctx.stroke()
+    if (pop >= 1) {
+      // A tick: done.
+      ctx.strokeStyle = PHOSPHOR.hot
+      ctx.lineWidth = 4
+      ctx.beginPath()
+      ctx.moveTo(px + 24, y + bar.h / 2)
+      ctx.lineTo(px + 36, y + bar.h / 2 + 9)
+      ctx.lineTo(px + 56, y + bar.h / 2 - 10)
+      ctx.stroke()
+    }
+  }
+  ctx.restore()
+}
+
+const QUOTE_ILLUSTRATIONS = Object.freeze({
+  doomscroll: drawDoomscroll,
+  puzzle: drawPuzzle,
+  battery: drawBattery,
+})
 
 /**
  * A CRT shutting off around whatever it was showing: the picture collapses
@@ -1480,7 +1771,7 @@ function drawVisual(ctx, visual, draw = 1, time = 0) {
   else if (visual.kind === 'prompt') return drawPromptVisual(ctx, visual)
   else if (visual.kind === 'warning') drawWarningVisual(ctx, visual, draw)
   else if (visual.kind === 'off') drawPowerOff(ctx, visual, time)
-  else if (visual.kind === 'quote') drawQuoteVisual(ctx, visual, draw)
+  else if (visual.kind === 'quote') drawQuoteVisual(ctx, visual, draw, time)
   else throw new Error(`Unknown terminal visual kind: ${visual.kind}`)
   return []
 }

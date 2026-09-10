@@ -398,17 +398,27 @@ export const TERMINAL_VISUALS = Object.freeze({
   // on the glass, after the beat they speak to. The words are verbatim.
   // After the grill, before the agent data: what running the machine feels
   // like from the inside.
+  // Each carries a line illustration on the right third of the glass, moving
+  // on the free-running clock (Scott, 2026-09-10: "a visual for each of these
+  // quotes, like doomscrolling, a puzzle"): an endless feed, a battery
+  // draining while the pile of things done grows, a jigsaw assembling itself.
   'quote-doomscroll': Object.freeze({
     kind: 'quote',
     text: 'it feels like having doomscrolled for hours.',
+    illustration: 'doomscroll',
+    animated: true,
   }),
   'quote-tired': Object.freeze({
     kind: 'quote',
     text: "I feel(!) like I'm more productive but have never felt so tired.",
+    illustration: 'battery',
+    animated: true,
   }),
   'quote-puzzle': Object.freeze({
     kind: 'quote',
     text: "It's like solving a puzzle. You don't get any reward when another person solves the puzzle because you know that it was actually not you who solved it.",
+    illustration: 'puzzle',
+    animated: true,
   }),
   'skills-enjoyment': cohortVisual(
     'Perceived skill and enjoyment',

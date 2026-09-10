@@ -186,7 +186,11 @@ Everything drawn onto the glass.
   caret's rect, and both renderers blink it), `warning` (a drawn warning
   triangle over one word — the disclaimer), and `quote` (one respondent's
   words, verbatim, wrapped and centred at the largest of a few authored
-  sizes that keeps them to four lines). The `qr` asset is drawn a
+  sizes that keeps them to four lines — five when an `illustration` sits
+  on the right third: a line drawing in the walk's idiom that moves on the
+  free-running clock; `doomscroll` is a phone whose feed never ends,
+  `puzzle` a jigsaw assembling itself, `battery` a battery draining while
+  the pile of things done grows; every cycle is seeded and authored). The `qr` asset is drawn a
   thousand pixels wide with smoothing off and no glow, from a 1640 px raster,
   on FLAT slides only: it has to scan from the back of the room. No act marker sits on a
   threshold any more (`act-cubicle` cut 2026-09-09, `phosphor-return`'s
