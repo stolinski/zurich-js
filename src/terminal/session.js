@@ -396,18 +396,10 @@ export const CLOSE = Object.freeze([
   Object.freeze({ kind: 'off', id: 'talk-title', dwell: 1.8 }),
   Object.freeze({ kind: 'draw', id: 'thank-you' }),
 ])
-/**
- * The form itself, right after the code that leads to it, asked one screen per
- * Enter. Arrival is the idle prompt (question null), so the presenter owns the
- * timing of every question; the screens come from the catalog entry, so the
- * script and the glass cannot disagree about how many there are.
- */
-export const SURVEY_QUESTIONS = Object.freeze([
-  Object.freeze({ kind: 'ask', id: 'survey-questions', question: null }),
-  ...getTerminalVisual('survey-questions').screens.map((_, question) =>
-    Object.freeze({ kind: 'ask', id: 'survey-questions', question })
-  ),
-])
+// `survey-questions` — the form typed one question per Enter behind a prompt,
+// between the code and the first chart — has no session since 2026-09-10
+// (Scott: "kill survey-questions"). The catalog entry and the `ask` step kind
+// stay for `?visual` review; the deck goes from the code straight to the data.
 
 // Act markers for the glass-filling threshold pushes: each context change is
 // preceded by the machine writing the next chapter, and the held-forward rule

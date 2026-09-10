@@ -36,7 +36,6 @@ import {
   SKILLS_ENJOYMENT,
   SLOT_MACHINE,
   STOPPING_SLEEP,
-  SURVEY_QUESTIONS,
   SYNTAX_SCREEN,
   TITLE_SCREEN,
 } from '../terminal/session.js'
@@ -199,8 +198,9 @@ export const slides = defineSlides([
     //
     // Still FLAT. The tube used to wake here (Scott, 2026-09-02); since
     // 2026-09-10 the whole open — the disclaimer, chat window, Rob and the QR
-    // — stays a screen recording and the tube wakes at `survey-questions`,
-    // because the curve, mask and beam were what made the code hard to scan.
+    // — stays a screen recording and the tube wakes at `q-stopping`, the first
+    // question, because the curve, mask and beam were what made the code hard
+    // to scan.
     id: 'agent-session',
     stage: 'home',
     session: COLD_OPEN,
@@ -239,31 +239,22 @@ export const slides = defineSlides([
     crt: FLAT,
     camera: { ...FLAT_GLASS, smoothTime: 0.45 },
   },
-  {
-    // THE FORM, before any answer to it. The room has just been handed the
-    // code; this is what the code leads to — the questions, worded as
-    // respondents saw them, and nothing else (no scales, no anchors, no
-    // counts). Every data beat after this picks one of these lines back up.
-    //
-    // THE TUBE WAKES HERE. The title, the identity assets, the chat window,
-    // Rob, the disclaimer and the code are the flat frames; from the first
-    // survey prompt on, every glass-filling beat is the same TUBE_FULL preset
-    // as the data runs, through the same post. (Flat slides used to read
-    // visibly darker than tube ones — the flat path was presenting linear
-    // light, fixed in shaders/crt.js on 2026-09-10 — and a curved screen
-    // recording still gives away nothing about the room.)
-    id: 'survey-questions',
-    stage: 'home',
-    session: SURVEY_QUESTIONS,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 0.6 },
-  },
 
   /* ═══════════════ ② HOME — THE MACHINE YOU CAN'T PUT DOWN ═══════════════
    * PILLAR 1. Why prompting is hard to stop, and what it does to sleep.
    *
+   * THE TUBE WAKES HERE, on the first question. The title, the identity
+   * assets, the disclaimer, the chat window, Rob and the code are the flat
+   * frames; from `q-stopping` on, every glass-filling beat is the same
+   * TUBE_FULL preset as the data runs, through the same post. (Flat slides
+   * used to read visibly darker than tube ones — the flat path was presenting
+   * linear light, fixed in shaders/crt.js on 2026-09-10 — and a curved screen
+   * recording still gives away nothing about the room.) `survey-questions`,
+   * which typed the form one question per Enter between the code and this,
+   * was cut 2026-09-10 (Scott); the wording stays in the catalog.
+   *
    * Still the glass, still head-on: the pull-back sits after the machine, so
-   * the whole of Pillar 1 plays on the same covering tube the survey prompt
+   * the whole of Pillar 1 plays on the same covering tube the first question
    * woke, and the room learns where that tube sits only once the data has
    * landed and the mechanism has been shown.
    *
@@ -337,7 +328,7 @@ export const slides = defineSlides([
   {
     // THE REVEAL, and it is ONE beat: the dolly back into the room.
     //
-    // The tube has been awake since the survey prompt, so the pull-back no
+    // The tube has been awake since the first question, so the pull-back no
     // longer carries the wake — only the housing, the desk and the room
     // arriving around an image the room has already accepted. `tube-wake`
     // used to hold at the covering distance while curvature came up and only

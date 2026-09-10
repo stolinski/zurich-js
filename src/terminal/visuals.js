@@ -170,11 +170,10 @@ export const TERMINAL_VISUALS = Object.freeze({
   }),
   // THE FORM, asked the way a terminal asks: one question per Enter, typed
   // large behind a prompt, and nothing else on the glass — no scales, no
-  // anchors, no counts (Scott, 2026-09-09). The room has just been handed the
-  // code; this is what the code leads to, and every data beat after it picks
-  // one of these lines back up. The wording is FORM's, so the glass and the
-  // dataset cannot disagree about what was asked. The agent count and the
-  // open field share the last screen, the way the form ended.
+  // anchors, no counts (Scott, 2026-09-09). The wording is FORM's, so the
+  // glass and the dataset cannot disagree about what was asked. No longer on
+  // a slide (Scott, 2026-09-10: "kill survey-questions"); kept for `?visual`
+  // review like the other cut beats.
   'survey-questions': Object.freeze({
     kind: 'prompt',
     header: 'SURVEY',

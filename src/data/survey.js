@@ -114,7 +114,7 @@ export const QUESTIONS = Object.freeze({
 
 /**
  * The form as respondents saw it: the six scaled questions in the order they
- * were asked, then the open field. `survey-questions` asks exactly this on the
+ * were asked, then the open field. The `survey-questions` catalog entry types exactly this on the
  * glass right after the QR — the room reads the instrument before the readings.
  * The form labelled the open field "(optional)"; the glass drops the word
  * (Scott, 2026-09-09).

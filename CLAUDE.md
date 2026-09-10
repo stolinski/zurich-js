@@ -64,7 +64,7 @@ everything after is built from. (The tube waking on the glass rather than at
 the pull-back is Scott's call of 2026-09-02: flat data slides read darker than
 tube ones — which turned out to be the flat path presenting linear light,
 fixed 2026-09-10 — and the curve gives away nothing about the room. It moved
-from the chat window to the survey prompt on 2026-09-10 so the QR code stays
+from the chat window to the first question on 2026-09-10 so the QR code stays
 flat and scans; the code comes back flat once more before the close.)
 
 **Read `PLAN.md`, `NARRATIVE.md`, `ART-DIRECTION.md`, `PRESENTATION-SYSTEM.md`,
