@@ -434,6 +434,27 @@ export const TERMINAL_VISUALS = Object.freeze({
     illustration: 'break',
     animated: true,
   }),
+  // After the sleep chart: things started, none finished.
+  'quote-starts': Object.freeze({
+    kind: 'quote',
+    text: "at first it seems like AI had the potential to 'accomplish great things quickly', but the truth is more like Ai has the potential to 'start great things quickly'.",
+    illustration: 'starts',
+    animated: true,
+  }),
+  // And the last ten percent that never closes.
+  'quote-ninety': Object.freeze({
+    kind: 'quote',
+    text: 'Getting to 80 or 90% became super easy, but getting to 99% became almost impossible (for me, at least).',
+    illustration: 'ninety',
+    animated: true,
+  }),
+  // After the walk: two people, drifting.
+  'quote-apart': Object.freeze({
+    kind: 'quote',
+    text: 'We are moving apart from each other as humans.',
+    illustration: 'apart',
+    animated: true,
+  }),
   'skills-enjoyment': cohortVisual(
     'Perceived skill and enjoyment',
     COHORTS.skillsToEnjoyment
@@ -467,12 +488,11 @@ export const TERMINAL_VISUALS = Object.freeze({
   }),
 
   // ── ⑦ The return · the fix is a stack ──
+  // The question the return asks (Scott, 2026-09-10; it read "you have to be
+  // allowed / to stop." before that).
   'act-ceiling': Object.freeze({
     kind: 'statement',
-    lines: Object.freeze([
-      Object.freeze({ text: 'you have to be allowed', role: 'phosphor' }),
-      Object.freeze({ text: 'to stop.', role: 'hot' }),
-    ]),
+    lines: Object.freeze([Object.freeze({ text: 'what do we do', role: 'hot' })]),
   }),
   // GO FOR A WALK. One line, over a perspective line drawing of a path
   // through simple line trees that the room walks along — the only visual in

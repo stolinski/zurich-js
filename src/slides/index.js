@@ -9,10 +9,13 @@ import {
   GRILL_ME,
   QR_CODE_SCREEN,
   QR_SCREEN,
+  QUOTE_APART,
   QUOTE_BREAKS,
   QUOTE_DOOMSCROLL,
   QUOTE_LUNCH,
+  QUOTE_NINETY,
   QUOTE_PUZZLE,
+  QUOTE_STARTS,
   QUOTE_TIRED,
   ROB,
   Q_AGENTS,
@@ -291,6 +294,25 @@ export const slides = defineSlides([
     camera: { ...GLASS, smoothTime: 1.2 },
   },
   {
+    // TWO QUOTES (Scott, 2026-09-10) between the sleep data and the machine:
+    // what the machine is good at. First, started things — tracks that leap
+    // out of the gate and stall, none reaching the line.
+    id: 'quote-starts',
+    stage: 'home',
+    session: QUOTE_STARTS,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // Then the last ten percent — a bar that sprints to the high eighties and
+    // creeps, the readout ticking slower every time, never touching 100.
+    id: 'quote-ninety',
+    stage: 'home',
+    session: QUOTE_NINETY,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
     // THE MACHINE, performed — after the data it explains. Each Enter is one
     // pull — one more prompt — and the reels land three near-misses before
     // the one that pays. The calm-motion rule yields for the length of a pull
@@ -539,11 +561,12 @@ export const slides = defineSlides([
    * form has to invert or it has no resolution, and the autonomy caveat needs
    * the cubicle physically back in frame. */
   {
-    // THE CEILING. Everything about to be said assumes you are allowed to stop.
-    // Against a quota, or a manager who treats the tool as a magic bullet, a
-    // 15-minute timer will not save you. Healthy prompting cannot be carried
-    // by personal discipline alone. The line stays on the monitor for the
-    // whole beat — it used to be written on a glass slide of its own.
+    // THE QUESTION. Back at the desk with the whole argument behind us, the
+    // monitor asks "what do we do" (Scott, 2026-09-10; it read "you have to
+    // be allowed to stop." before that), and the answer is spoken over the
+    // pull-back and the walk: against a quota, or a manager who treats the
+    // tool as a magic bullet, a 15-minute timer will not save you. The line
+    // stays on the monitor for the whole beat.
     //
     // ONE PULL-BACK from inside the decayed synapse to this desk (Scott,
     // 2026-09-10: "all the way, not stopping in between"). CameraRig flies
@@ -567,6 +590,16 @@ export const slides = defineSlides([
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 2.4 },
     focus: [0, 0, 0],
+  },
+  {
+    // A QUOTE after the walk (Scott, 2026-09-10): two line figures start
+    // shoulder to shoulder and walk away from each other, the thread between
+    // them thinning and going out.
+    id: 'quote-apart',
+    stage: 'cubicle',
+    session: QUOTE_APART,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
   },
   {
     // THE CODE AGAIN, alone and at scanning size, as the door out (Scott,

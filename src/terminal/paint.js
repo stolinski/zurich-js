@@ -152,12 +152,32 @@ function drawTitle(ctx, visual, draw = 1) {
  * identical to a deep link. Bare glass on purpose: the strongest beats in
  * this deck are one line of driven phosphor and nothing else.
  */
+// A line alone on the glass grows to fill it: the return's question is read
+// off a monitor in a room shot, not off a full frame, so it takes the largest
+// of these that still leaves a margin.
+const STATEMENT_SOLO_SIZES = Object.freeze([170, 150, 130, 115, 100])
+
+function soloStatementSize(ctx, text) {
+  for (const size of STATEMENT_SOLO_SIZES) {
+    ctx.font = screenFont(size, 700)
+    if (ctx.measureText(text).width <= TERMINAL.width * 0.8) return size
+  }
+  return STATEMENT_SOLO_SIZES[STATEMENT_SOLO_SIZES.length - 1]
+}
+
 function drawStatementVisual(ctx, visual, draw = 1) {
   const lines = visual.lines
   // These are the beats with nothing else on the glass. If a line cannot be
   // read from the back of the room there is no second thing for the room to
   // look at instead.
-  const size = lines.length > 3 ? 74 : lines.length > 2 ? 86 : 100
+  const size =
+    lines.length > 3
+      ? 74
+      : lines.length > 2
+        ? 86
+        : lines.length > 1
+          ? 100
+          : soloStatementSize(ctx, lines[0].text)
   const lineHeight = size * 1.7
   const startY = TERMINAL.height / 2 - ((lines.length - 1) * lineHeight) / 2
 
@@ -1530,12 +1550,226 @@ function drawForbiddenBreak(ctx, panel, time) {
   ctx.restore()
 }
 
+/**
+ * Great things, started: a column of tracks, each with a finish line. One
+ * after another a bar leaps out of the gate — hot while it runs — and stalls
+ * a fraction of the way along, and the next one starts underneath it. None
+ * of them reaches the line.
+ */
+function drawStarts(ctx, panel, time) {
+  const rows = 7
+  const stagger = 1.4
+  const cycle = rows * stagger + 2.6
+  const t = time % cycle
+  const x0 = panel.x + 40
+  const x1 = panel.x + panel.w - 40
+  const top = panel.y + 140
+  const pitch = 118
+  const fade = 1 - smoothRamp(cycle - 0.9, cycle - 0.1, t)
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.globalAlpha = fade
+  for (let row = 0; row < rows; row++) {
+    const y = top + row * pitch
+    // The track and its finish line.
+    ctx.strokeStyle = PHOSPHOR.ghost
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.moveTo(x0, y)
+    ctx.lineTo(x1, y)
+    ctx.stroke()
+    ctx.strokeStyle = PHOSPHOR.dim
+    ctx.lineWidth = 4
+    ctx.beginPath()
+    ctx.moveTo(x1, y - 22)
+    ctx.lineTo(x1, y + 22)
+    ctx.stroke()
+    // The run: out of the gate fast, then nothing.
+    const life = t - row * stagger
+    if (life <= 0) continue
+    const stall = 0.16 + seeded(row, 1) * 0.28
+    const fill = stall * (1 - Math.exp(-life * 4.5))
+    const running = smoothRamp(0.9, 0.3, life)
+    const end = x0 + (x1 - x0) * fill
+    ctx.strokeStyle = PHOSPHOR.phosphor
+    ctx.lineWidth = 14
+    ctx.beginPath()
+    ctx.moveTo(x0, y)
+    ctx.lineTo(end, y)
+    ctx.stroke()
+    if (running > 0) {
+      ctx.globalAlpha = fade * running
+      ctx.fillStyle = PHOSPHOR.hot
+      ctx.shadowColor = PHOSPHOR.phosphor
+      ctx.shadowBlur = GLOW_RADIUS
+      ctx.beginPath()
+      ctx.arc(end, y, 12, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.shadowBlur = 0
+      ctx.globalAlpha = fade
+    }
+  }
+  ctx.restore()
+}
+
+/**
+ * The last ten percent: one big bar with a readout. It races to the high
+ * eighties in a second and a half, then creeps — the number ticks up one at a
+ * time and slower every time — and never touches the hundred mark.
+ */
+function drawNinety(ctx, panel, time) {
+  const cycle = 12
+  const t = time % cycle
+  const x0 = panel.x + 40
+  const x1 = panel.x + panel.w - 40
+  const y = panel.y + panel.h / 2 + 40
+  const h = 84
+  const fade = 1 - smoothRamp(cycle - 1.0, cycle - 0.2, t)
+  const sprint = 0.88 * smoothRamp(0.2, 1.6, t)
+  const creep = t > 1.6 ? 0.11 * (1 - Math.exp(-(t - 1.6) / 3.2)) : 0
+  const fill = sprint + creep
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.globalAlpha = fade
+  // The bar's outline and its marks.
+  ctx.strokeStyle = PHOSPHOR.dim
+  ctx.lineWidth = 4
+  ctx.beginPath()
+  ctx.roundRect(x0, y - h / 2, x1 - x0, h, 16)
+  ctx.stroke()
+  for (const [mark, label, align, nudge] of [
+    [0, '0', 'left', -2],
+    [0.5, '50', 'center', 0],
+    [0.9, '90', 'center', 0],
+    [1, '100', 'right', 10],
+  ]) {
+    const x = x0 + (x1 - x0) * mark
+    ctx.strokeStyle = mark === 1 ? PHOSPHOR.phosphor : PHOSPHOR.dim
+    ctx.lineWidth = mark === 1 ? 5 : 3
+    ctx.beginPath()
+    ctx.moveTo(x, y + h / 2 + 10)
+    ctx.lineTo(x, y + h / 2 + 34)
+    ctx.stroke()
+    chromeText(ctx, label, x + nudge, y + h / 2 + 76, {
+      size: 24,
+      weight: 700,
+      align,
+      color: mark === 1 ? PHOSPHOR.phosphor : PHOSPHOR.dim,
+    })
+  }
+  // The fill, and the stretch it cannot close, hatched.
+  if (fill > 0) {
+    ctx.fillStyle = PHOSPHOR.phosphor
+    ctx.beginPath()
+    ctx.roundRect(x0 + 8, y - h / 2 + 8, (x1 - x0 - 16) * fill, h - 16, 10)
+    ctx.fill()
+  }
+  const gapStart = x0 + 8 + (x1 - x0 - 16) * Math.max(fill, 0.9)
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(gapStart, y - h / 2 + 8, x1 - 8 - gapStart, h - 16)
+  ctx.clip()
+  ctx.strokeStyle = PHOSPHOR.ghost
+  ctx.lineWidth = 3
+  for (let x = gapStart - h; x < x1; x += 18) {
+    ctx.beginPath()
+    ctx.moveTo(x, y + h / 2)
+    ctx.lineTo(x + h, y - h / 2)
+    ctx.stroke()
+  }
+  ctx.restore()
+  // The readout.
+  chromeText(ctx, `${Math.floor(fill * 100)}%`, (x0 + x1) / 2, y - h / 2 - 70, {
+    size: 150,
+    weight: 800,
+    align: 'center',
+    baseline: 'bottom',
+    color: fill > 0.9 ? PHOSPHOR.hot : PHOSPHOR.phosphor,
+  })
+  ctx.restore()
+}
+
+/**
+ * Two people, drifting: a pair of line figures start shoulder to shoulder
+ * and walk away from each other across a bare floor, the line between them
+ * stretching thin and going out, until they stand alone at the edges.
+ */
+function drawApart(ctx, panel, time) {
+  const cycle = 11
+  const t = time % cycle
+  const cx = panel.x + panel.w / 2
+  const floorY = panel.y + panel.h / 2 + 200
+  const drift = smoothRamp(0.6, 8.2, t)
+  const gap = 42 + 262 * drift
+  const moving = drift > 0.002 && drift < 0.998
+  const fade = 1 - smoothRamp(cycle - 1.1, cycle - 0.2, t)
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.globalAlpha = fade
+  // The floor.
+  ctx.strokeStyle = PHOSPHOR.ghost
+  ctx.lineWidth = 3
+  ctx.beginPath()
+  ctx.moveTo(panel.x + 20, floorY)
+  ctx.lineTo(panel.x + panel.w - 20, floorY)
+  ctx.stroke()
+  // The thread between them, thinning as it stretches.
+  const bond = 1 - smoothRamp(0.25, 0.8, drift)
+  if (bond > 0) {
+    ctx.globalAlpha = fade * bond
+    ctx.strokeStyle = PHOSPHOR.dim
+    ctx.lineWidth = 3 + 3 * bond
+    ctx.setLineDash([10, 14])
+    ctx.beginPath()
+    ctx.moveTo(cx - gap + 30, floorY - 160)
+    ctx.lineTo(cx + gap - 30, floorY - 160)
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.globalAlpha = fade
+  }
+  // The two figures, each facing away, legs swinging only while they walk.
+  for (const side of [-1, 1]) {
+    const x = cx + side * gap
+    const swing = moving ? Math.sin(time * 7 + (side + 1) * 1.3) * 22 : 0
+    ctx.strokeStyle = PHOSPHOR.phosphor
+    ctx.lineWidth = 6
+    // Head.
+    ctx.beginPath()
+    ctx.arc(x, floorY - 250, 26, 0, Math.PI * 2)
+    ctx.stroke()
+    // Body.
+    ctx.beginPath()
+    ctx.moveTo(x, floorY - 222)
+    ctx.lineTo(x, floorY - 110)
+    ctx.stroke()
+    // Arms, hanging slightly toward the way they are going.
+    ctx.beginPath()
+    ctx.moveTo(x, floorY - 200)
+    ctx.lineTo(x + side * 18 + swing * 0.4, floorY - 120)
+    ctx.moveTo(x, floorY - 200)
+    ctx.lineTo(x - side * 14 - swing * 0.4, floorY - 122)
+    ctx.stroke()
+    // Legs.
+    ctx.beginPath()
+    ctx.moveTo(x, floorY - 110)
+    ctx.lineTo(x + swing, floorY)
+    ctx.moveTo(x, floorY - 110)
+    ctx.lineTo(x - swing, floorY)
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
 const QUOTE_ILLUSTRATIONS = Object.freeze({
   doomscroll: drawDoomscroll,
   puzzle: drawPuzzle,
   battery: drawBattery,
   popups: drawPopups,
   break: drawForbiddenBreak,
+  starts: drawStarts,
+  ninety: drawNinety,
+  apart: drawApart,
 })
 
 /**
