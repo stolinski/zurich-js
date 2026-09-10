@@ -389,11 +389,12 @@ export const DISCLAIMER_SCREEN = screen('disclaimer')
  * there for a few seconds; then the tube shuts off — the picture collapses to
  * a line, the line to a dot — and after a moment of real dark two words type
  * themselves on the dead glass. `dwell` is the silence between; the slide is
- * `autoplay`, and one press of Enter or Backspace hands it back.
+ * `autoplay`, and one press of Enter or Backspace hands it back. Halved on
+ * 2026-09-10 (Scott: "about 2x as fast") from 6.5 and 1.8.
  */
 export const CLOSE = Object.freeze([
-  Object.freeze({ kind: 'visual', id: 'talk-title', dwell: 6.5 }),
-  Object.freeze({ kind: 'off', id: 'talk-title', dwell: 1.8 }),
+  Object.freeze({ kind: 'visual', id: 'talk-title', dwell: 3.2 }),
+  Object.freeze({ kind: 'off', id: 'talk-title', dwell: 0.9 }),
   Object.freeze({ kind: 'draw', id: 'thank-you' }),
 ])
 // `survey-questions` — the form typed one question per Enter behind a prompt,
