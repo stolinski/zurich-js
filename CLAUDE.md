@@ -180,11 +180,14 @@ Everything drawn onto the glass.
   caret's rect, and both renderers blink it), and `warning` (a drawn warning
   triangle over one word — the disclaimer). The `qr` asset is drawn a
   thousand pixels wide with smoothing off and no glow, from a 1640 px raster,
-  on FLAT slides only: it has to scan from the back of the room. The glass-filling threshold into
-  the phosphor (`phosphor-return`) carries a `statement` **act marker** that
-  the held-forward rule keeps on the glass through the beats it introduces;
-  the cubicle act opens straight on its data since 2026-09-09, with CameraRig
-  hiding that stage swap behind the covering glass itself. Numbers come only from
+  on FLAT slides only: it has to scan from the back of the room. No act marker sits on a
+  threshold any more (`act-cubicle` cut 2026-09-09, `phosphor-return`'s
+  "losing our skills." cut 2026-09-10): each act opens on its data, and
+  CameraRig hides an adjacent stage swap behind the covering glass. The one
+  glass-filling beat that exists purely for occlusion is `phosphor-exit`,
+  a session-less hold after `synapse-decay`: the phosphor cues ease over its
+  smoothTime, so without it the cubicle would show through a half-formed
+  glass. Numbers come only from
   `data/survey.js` (single source of truth, n = 3,593 from the Aug 28 export;
   the video's older ~1,300-response figures must never be quoted on stage).
 - `hover.js` — which chart row the pointer is over, shared by both renderers so

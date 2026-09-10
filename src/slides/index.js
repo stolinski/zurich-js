@@ -1,6 +1,5 @@
 import { defineSlides } from '../presentation/defineSlides.js'
 import {
-  AGENTS_OUTCOMES,
   AGENTS_STOPPING,
   BOUNDARIES_ACT_SCREEN,
   CEILING_ACT_SCREEN,
@@ -8,7 +7,6 @@ import {
   CONTROL_ACT_SCREEN,
   DISCLAIMER_SCREEN,
   GRILL_ME,
-  PHOSPHOR_ACT_SCREEN,
   QR_SCREEN,
   ROB,
   Q_AGENTS,
@@ -19,7 +17,6 @@ import {
   SENTRY_SCREEN,
   SKILLS_ENJOYMENT,
   SLOT_MACHINE,
-  STOPPING_BEATS_COUNT,
   STOPPING_SLEEP,
   SURVEY_QUESTIONS,
   SYNTAX_SCREEN,
@@ -352,19 +349,25 @@ export const slides = defineSlides([
     camera: { ...GLASS, smoothTime: 2.0 },
   },
   {
+    // GRILL ME, right after the agent count (Scott, 2026-09-10; it used to be
+    // the exit from the phosphor). Two agents is normal — and before the wall
+    // shows what the reasoning scales to, the question goes to the room:
+    // could you have written this without the model, did you read the diff,
+    // do you know why it works. Each landing asks one; Y or N answers it and
+    // flips the brain for the next.
+    id: 'what-gets-pruned',
+    stage: 'wall',
+    session: GRILL_ME,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // More levers, more pulls: double the overrun rate at four or more agents.
+    // `stopping-beats-count` (the same split inside the 1–2 agent band) was
+    // cut 2026-09-10.
     id: 'agents-stopping',
     stage: 'wall',
     session: AGENTS_STOPPING,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 2.6 },
-  },
-  {
-    // THE TELL. Hold agent count constant and the sleep gap barely shrinks: it
-    // isn't how many agents, it's whether you can stop. Pillar 1 confirmed from
-    // a second direction, and the finding the video never reaches.
-    id: 'stopping-beats-count',
-    stage: 'wall',
-    session: STOPPING_BEATS_COUNT,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 1.2 },
   },
@@ -377,9 +380,9 @@ export const slides = defineSlides([
     // AFTER the agent data, not before it. The pull-back used to open this act,
     // so the room saw fifty-four screens and only then learned that the median
     // developer runs two — which is the reveal explaining itself away. Now the
-    // data lands first (two is normal, more costs you sleep, and the count was
-    // never the mechanism anyway) and the camera pulls back onto a wall the
-    // room has just been given every reason not to expect.
+    // data lands first (two is normal, more means more overruns, and the grill
+    // has already asked what the output is worth) and the camera pulls back
+    // onto a wall the room has just been given every reason not to expect.
     //
     // Still ONE continuous escalation with the next beat, and nothing may be
     // scheduled between them.
@@ -401,20 +404,14 @@ export const slides = defineSlides([
     focus: [0, 0, -3],
   },
   {
-    id: 'phosphor-return',
-    stage: 'wall',
-    session: PHOSPHOR_ACT_SCREEN,
-    crt: { tube: 1, maskMode: 2, maskStrength: 0.72 },
-    camera: { ...GLASS, smoothTime: 3.0 },
-    focus: [0, 0, 0],
-  },
-  {
-    // Only 12% say sharpening.
+    // Only 12% say sharpening. Straight from the wall into the data: the
+    // `phosphor-return` act marker ("losing our skills.") that used to sit
+    // between them was cut 2026-09-10 (Scott).
     id: 'q-skills',
     stage: 'wall',
     session: Q_SKILLS,
     crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 1.2 },
+    camera: { ...GLASS, smoothTime: 3.0 },
   },
   {
     id: 'q-enjoyment',
@@ -428,22 +425,12 @@ export const slides = defineSlides([
     // mostly the same people. Say that the survey measured BELIEF about skill
     // and never tested anyone; then say why belief is the thing that matters.
     //
-    // The finding, stated. WHY it happens is the descent that follows.
+    // The finding, stated. WHY it happens is the descent that follows. The
+    // last glass-filling wall beat, so it occludes the phosphor swap
+    // (`agents-outcomes` used to; cut 2026-09-10).
     id: 'skills-enjoyment',
     stage: 'wall',
     session: SKILLS_ENJOYMENT,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 1.2 },
-  },
-  {
-    // Benefit and cost climb together; the dashed skills line refuses to
-    // follow. After the skill beats, not among the agent ones (Scott,
-    // 2026-09-02): the flat line is read once the room has the skill finding,
-    // as the last thing on the glass before the descent. This is now the last
-    // glass-filling wall beat, so it occludes the phosphor swap.
-    id: 'agents-outcomes',
-    stage: 'wall',
-    session: AGENTS_OUTCOMES,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 1.2 },
   },
@@ -497,16 +484,16 @@ export const slides = defineSlides([
 
   /* ═══════════════ ⑥ THE TURN ═══════════════ */
   {
-    // GRILL ME. Back out through the faceplate — the deposits fade and the
-    // glass reforms over this one flight, which is also the occlusion that
-    // carries the phosphor stage out — and the glass lands on a brain on a
-    // grill. Each landing asks a question; Y or N answers it and flips the
-    // brain for the next. `phosphor-exit` used to hold the reformed glass as
-    // its own beat with nothing to say on it; the exit is this slide's arrival
-    // now (Scott, 2026-09-02).
-    id: 'what-gets-pruned',
+    // OUT THROUGH THE FACEPLATE. The deposits fade and the glass reforms over
+    // this one flight, which is also the occlusion that carries the phosphor
+    // stage out: the next slide is a cubicle room shot, and a set swap needs
+    // the glass covering the frame with a picture on it — the phosphor cues
+    // ease over this slide's smoothTime, so without it the cubicle would show
+    // through a half-formed glass. No session, so the glass reforms around
+    // the last chart the room left on it. The grill used to be this beat's
+    // arrival; it moved after the agent count (Scott, 2026-09-10).
+    id: 'phosphor-exit',
     stage: 'phosphor',
-    session: GRILL_ME,
     crt: { tube: 1, maskMode: 2, maskStrength: 0.72 },
     phosphor: { opacity: 0, screenOpacity: 1, depth: 1, form: 1, decay: 1 },
     camera: { ...GLASS, smoothTime: 3.2 },

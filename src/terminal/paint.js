@@ -1338,13 +1338,23 @@ function drawChartVisual(ctx, visual, draw = 1) {
     weight: 700,
     color: PHOSPHOR.hot,
   })
+  // A question can be put to the room before it is answered: a `visual` step
+  // with `reveal: 'title'` stops here, and the `plot` step that follows grows
+  // the chart in over its own progress (Scott, 2026-09-10, for q-stopping).
+  if (visual.reveal === 'title') return []
+  const grow = Math.min(draw, visual.progress === undefined ? 1 : easeInOut(visual.progress))
+
   // The headline share, on its own line and at reading size. This is the
   // sentence Scott says out loud; it was 24px, right-aligned, above the plot.
-  chromeText(ctx, visual.detail, TERMINAL.padX, 236, {
-    size: 40,
-    weight: 500,
-    color: PHOSPHOR.phosphor,
-  })
+  // When the plot is growing on Enter it lands once the bars have — the number
+  // is the answer, and the bars are what earn it.
+  if (visual.progress === undefined || visual.progress >= 1) {
+    chromeText(ctx, visual.detail, TERMINAL.padX, 236, {
+      size: 40,
+      weight: 500,
+      color: PHOSPHOR.phosphor,
+    })
+  }
 
   const panel = { x: TERMINAL.padX, y: 320, w: TERMINAL.width - TERMINAL.padX * 2, h: 950 }
   drawCornerMarks(ctx, panel)
@@ -1355,7 +1365,7 @@ function drawChartVisual(ctx, visual, draw = 1) {
     ctx,
     { x: panel.x + 96, y: panel.y + 40, w: panel.w - 192, h: panel.h - 230 },
     visual.chart,
-    draw,
+    grow,
     hoveredChartRow()
   )
 }

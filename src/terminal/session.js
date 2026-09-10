@@ -21,7 +21,11 @@
  *   tool  { name, arg, out[] }         a tool call and its output
  *   note  { text }                     dim chrome (banners, token counts)
  *   gap   {}                           a blank line / breathing beat
- *   visual { id }                      a catalog visual replaces the transcript
+ *   visual { id, reveal? }             a catalog visual replaces the transcript;
+ *                                      `reveal: 'title'` draws a chart's headline
+ *                                      alone, the question before its answer
+ *   plot   { id }                      the chart named by `id` grows its plot in
+ *                                      over the step, under the title already up
  *   pull   { id, pull }                one pull of a catalog slot machine; the
  *                                      reels spin for the length of the step
  *   grill  { id, question }            the brain flips and lands, then asks
@@ -64,9 +68,13 @@ export function clearWrapCache() {
 /* ──────────────────────────── step timing ──────────────────────────── */
 
 const CHARS_PER_SEC = 34 // Scott typing — fast, but human
+// The survey asking: nobody is performing this typing, the room is reading
+// it, so it runs at a machine's pace (Scott, 2026-09-10: "faster").
+const ASK_CHARS_PER_SEC = 96
 const WORDS_PER_SEC = 9 // the agent streaming
 const PULL_SECS = 2.4 // one pull of the slot machine, lever to last reel
 const FLIP_SECS = 1.6 // the brain in the air, lift-off to the question
+const PLOT_SECS = 0.85 // a chart growing in on Enter, the same beat as the draw sweep
 
 /** How long a step takes to play out, in seconds. */
 export function stepDuration(step) {
@@ -86,14 +94,16 @@ export function stepDuration(step) {
     case 'grill':
       return FLIP_SECS
     case 'ask': {
-      // Typed at the same speed as Scott's own turns; the idle prompt is instant.
+      // The idle prompt is instant; a question types at the machine's pace.
       if (step.question === null) return 0.01
       const chars = getTerminalVisual(step.id).screens[step.question].reduce(
         (sum, text) => sum + text.length,
         0
       )
-      return Math.max(0.5, chars / CHARS_PER_SEC)
+      return Math.max(0.35, chars / ASK_CHARS_PER_SEC)
     }
+    case 'plot':
+      return PLOT_SECS
     default:
       return 0.25
   }
@@ -197,7 +207,19 @@ export function buildFrame(script, index, progress, time, answers = []) {
     return {
       lines: [],
       caret: null,
-      visual: getTerminalVisual(activeStep.id),
+      visual: activeStep.reveal
+        ? { ...getTerminalVisual(activeStep.id), reveal: activeStep.reveal }
+        : getTerminalVisual(activeStep.id),
+    }
+  }
+  if (activeStep?.kind === 'plot') {
+    // The chart grows in over the step; the painter derives every bar from
+    // this progress, so the reveal lands identically at every rehearsal and a
+    // deep link shows it grown.
+    return {
+      lines: [],
+      caret: null,
+      visual: { ...getTerminalVisual(activeStep.id), progress },
     }
   }
   if (activeStep?.kind === 'grill') {
@@ -347,9 +369,9 @@ export const SURVEY_QUESTIONS = Object.freeze([
 // preceded by the machine writing the next chapter, and the held-forward rule
 // keeps that writing on the glass through the beats it introduces.
 // PLACEHOLDER COPY — see terminal/visuals.js.
-// `act-cubicle` ("it is not just you.") has no session since 2026-09-09: the
-// cubicle act opens on its data, and CameraRig hides the stage swap itself.
-export const PHOSPHOR_ACT_SCREEN = screen('act-phosphor')
+// `act-cubicle` ("it is not just you.", 2026-09-09) and `act-phosphor`
+// ("losing our skills.", 2026-09-10) have no sessions: both acts open on their
+// data, and CameraRig hides the stage swaps itself.
 export const CEILING_ACT_SCREEN = screen('act-ceiling')
 export const BOUNDARIES_ACT_SCREEN = screen('act-boundaries')
 export const CONTROL_ACT_SCREEN = screen('act-control')
@@ -381,13 +403,21 @@ export const SLOT_MACHINE = Object.freeze([
     Object.freeze({ kind: 'pull', id: 'slot-machine', pull })
   ),
 ])
-export const Q_STOPPING = screen('q-stopping')
+/**
+ * The first question, asked before it is answered: the glass shows only the
+ * headline — the question the survey put to 3,593 people — and Enter grows
+ * the chart in under it (Scott, 2026-09-10).
+ */
+export const Q_STOPPING = Object.freeze([
+  Object.freeze({ kind: 'visual', id: 'q-stopping', reveal: 'title' }),
+  Object.freeze({ kind: 'plot', id: 'q-stopping' }),
+])
 export const STOPPING_SLEEP = screen('stopping-sleep')
 export const Q_PRESSURE = screen('q-pressure')
 export const Q_AGENTS = screen('q-agents')
 export const AGENTS_STOPPING = screen('agents-stopping')
-export const AGENTS_OUTCOMES = screen('agents-outcomes')
-export const STOPPING_BEATS_COUNT = screen('stopping-beats-count')
+// `agents-outcomes` and `stopping-beats-count` have no sessions since
+// 2026-09-10 (Scott); the visuals stay in the catalog for `?visual` review.
 export const Q_SKILLS = screen('q-skills')
 export const Q_ENJOYMENT = screen('q-enjoyment')
 export const SKILLS_ENJOYMENT = screen('skills-enjoyment')

@@ -558,7 +558,7 @@ export function CRTScreen({ onTexture, deskY }) {
       const liveVisual =
         (staticVisual && Boolean(getTerminalVisual(step.id).animated)) ||
         step?.kind === 'grill'
-      const animatedStep = ['user', 'say', 'think', 'tool', 'pull', 'grill', 'ask'].includes(
+      const animatedStep = ['user', 'say', 'think', 'tool', 'pull', 'grill', 'ask', 'plot'].includes(
         step?.kind
       )
       const staticFrame = staticVisual || !animatedStep
@@ -566,7 +566,7 @@ export function CRTScreen({ onTexture, deskY }) {
       const sourceSlide = slides.findIndex((candidate) => candidate.session === painted.script)
       // A spinning reel or a flipping brain moves every frame; typed text only
       // every few. Key those finely enough that the motion is not quantised.
-      const smooth = step?.kind === 'pull' || step?.kind === 'grill'
+      const smooth = ['pull', 'grill', 'plot'].includes(step?.kind)
       const phase = staticVisual
         ? 'static'
         : !animatedStep

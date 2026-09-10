@@ -308,6 +308,8 @@ export const TERMINAL_VISUALS = Object.freeze({
     'Agents run at once, and stopping',
     COHORTS.agentsToStopping
   ),
+  // Cut from the deck 2026-09-10 (Scott), with `stopping-beats-count` below;
+  // both stay for `?visual` review and the figures stay in survey.js to quote.
   'agents-outcomes': Object.freeze({
     kind: 'chart',
     title: 'OUTCOMES BY AGENTS RUN AT ONCE',
@@ -353,8 +355,9 @@ export const TERMINAL_VISUALS = Object.freeze({
   'q-skills': scaleVisual(QUESTIONS.skills, DISTRIBUTIONS.skills),
   // GRILL ME. A brain on a grill, drawn in the slot machine's idiom: each time
   // it lands a question pops up, Y or N answers it, and the answer flips it
-  // for the next. COPY IS PLACEHOLDER — the questions are Scott's; the form
-  // is the deliverable.
+  // for the next. Asked right after the agent count since 2026-09-10 (it used
+  // to be the exit from the phosphor). COPY IS PLACEHOLDER — the questions are
+  // Scott's; the form is the deliverable.
   'grill-me': Object.freeze({
     kind: 'grill',
     title: 'grill me.',
