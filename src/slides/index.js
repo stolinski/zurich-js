@@ -9,6 +9,7 @@ import {
   GRILL_ME,
   QR_CODE_SCREEN,
   QR_SCREEN,
+  QUOTE_PUZZLE,
   ROB,
   Q_AGENTS,
   Q_ENJOYMENT,
@@ -426,12 +427,21 @@ export const slides = defineSlides([
     // mostly the same people. Say that the survey measured BELIEF about skill
     // and never tested anyone; then say why belief is the thing that matters.
     //
-    // The finding, stated. WHY it happens is the descent that follows. The
-    // last glass-filling wall beat, so it occludes the phosphor swap
-    // (`agents-outcomes` used to; cut 2026-09-10).
+    // The finding, stated. WHY it happens is the descent that follows.
     id: 'skills-enjoyment',
     stage: 'wall',
     session: SKILLS_ENJOYMENT,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // A QUOTE (Scott, 2026-09-10): one respondent, in their own words, on
+    // why the enjoyment goes when the skill does — the reward was never the
+    // puzzle solved, it was solving it. The last glass-filling wall beat, so
+    // it occludes the phosphor swap.
+    id: 'quote-puzzle',
+    stage: 'wall',
+    session: QUOTE_PUZZLE,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 1.2 },
   },

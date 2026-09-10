@@ -1025,6 +1025,50 @@ function drawWarningVisual(ctx, visual, draw = 1) {
 }
 
 /**
+ * A QUOTE — one respondent's words, large and alone on the glass. Wrapped and
+ * centred at the largest size that keeps it to four lines, in hot, with
+ * typographic marks around it; it types on over the draw sweep the way a
+ * statement does, and the settled frame is identical to a deep link. Sizes
+ * step down rather than scale continuously so every quote lands on one of a
+ * few authored sizes.
+ */
+const QUOTE_SIZES = Object.freeze([96, 88, 80, 72, 64, 56])
+
+function drawQuoteVisual(ctx, visual, draw = 1) {
+  const text = `“${visual.text}”`
+  const maxWidth = TERMINAL.width - TERMINAL.padX * 2 - 120
+  let size = QUOTE_SIZES[QUOTE_SIZES.length - 1]
+  let lines = []
+  for (const candidate of QUOTE_SIZES) {
+    ctx.font = screenFont(candidate, 700)
+    size = candidate
+    lines = wrapToWidth(ctx, text, maxWidth)
+    if (lines.length <= 4) break
+  }
+  const lineHeight = size * 1.42
+  const startY = TERMINAL.height / 2 - ((lines.length - 1) * lineHeight) / 2
+  const totalChars = lines.reduce((sum, line) => sum + line.length, 0)
+  const typeProgress = draw >= 1 ? 1 : easeInOut((draw - 0.1) / 0.8)
+  let budget = Math.ceil(totalChars * typeProgress)
+
+  ctx.font = screenFont(size, 700)
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = 'left'
+  ctx.fillStyle = PHOSPHOR.hot
+  ctx.shadowColor = PHOSPHOR.phosphor
+  ctx.shadowBlur = GLOW_RADIUS * 0.8
+  for (let index = 0; index < lines.length && budget > 0; index++) {
+    const line = lines[index]
+    const shown = line.slice(0, budget)
+    budget -= line.length
+    // Anchored to the full line's centred box so the type-on grows in place.
+    const fullWidth = ctx.measureText(line).width
+    ctx.fillText(shown, (TERMINAL.width - fullWidth) / 2, startY + index * lineHeight)
+  }
+  ctx.shadowBlur = 0
+}
+
+/**
  * A CRT shutting off around whatever it was showing: the picture collapses
  * toward the centre line, brightening as it goes (the beam's energy squeezed
  * into fewer lines), holds as one hot line, then the line contracts to a dot
@@ -1436,6 +1480,7 @@ function drawVisual(ctx, visual, draw = 1, time = 0) {
   else if (visual.kind === 'prompt') return drawPromptVisual(ctx, visual)
   else if (visual.kind === 'warning') drawWarningVisual(ctx, visual, draw)
   else if (visual.kind === 'off') drawPowerOff(ctx, visual, time)
+  else if (visual.kind === 'quote') drawQuoteVisual(ctx, visual, draw)
   else throw new Error(`Unknown terminal visual kind: ${visual.kind}`)
   return []
 }

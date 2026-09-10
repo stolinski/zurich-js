@@ -183,8 +183,10 @@ Everything drawn onto the glass.
   terminal asks: a session's `ask` steps type one screen per Enter, large,
   behind a prompt marker — every question worded as respondents saw it, from
   `FORM` in `data/survey.js`, and nothing else; the painter hands back the
-  caret's rect, and both renderers blink it), and `warning` (a drawn warning
-  triangle over one word — the disclaimer). The `qr` asset is drawn a
+  caret's rect, and both renderers blink it), `warning` (a drawn warning
+  triangle over one word — the disclaimer), and `quote` (one respondent's
+  words, verbatim, wrapped and centred at the largest of a few authored
+  sizes that keeps them to four lines). The `qr` asset is drawn a
   thousand pixels wide with smoothing off and no glow, from a 1640 px raster,
   on FLAT slides only: it has to scan from the back of the room. No act marker sits on a
   threshold any more (`act-cubicle` cut 2026-09-09, `phosphor-return`'s

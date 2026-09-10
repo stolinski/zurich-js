@@ -394,6 +394,12 @@ export const TERMINAL_VISUALS = Object.freeze({
     ]),
   }),
   'q-enjoyment': scaleVisual(QUESTIONS.enjoyment, DISTRIBUTIONS.enjoyment),
+  // QUOTE SLIDES (Scott, 2026-09-10): one respondent's words, large and alone
+  // on the glass, after the finding they speak to. The words are verbatim.
+  'quote-puzzle': Object.freeze({
+    kind: 'quote',
+    text: "It's like solving a puzzle. You don't get any reward when another person solves the puzzle because you know that it was actually not you who solved it.",
+  }),
   'skills-enjoyment': cohortVisual(
     'Perceived skill and enjoyment',
     COHORTS.skillsToEnjoyment
