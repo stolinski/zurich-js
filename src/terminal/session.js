@@ -32,6 +32,12 @@
  *                                      question `question` (null: nothing left)
  *   ask    { id, question }            one screen of a catalog prompt types
  *                                      itself, large (null: the idle prompt)
+ *   draw   { id }                      a catalog visual draws itself in over the
+ *                                      step, the way the sweep would (a title
+ *                                      types, bars grow) — for Enter/autoplay
+ *   off    { id }                      the tube shuts off: the visual named by
+ *                                      `id` collapses to a line, then to dark
+ *   Any step may carry `dwell` seconds for autoplay (useSessionAutoplay).
  * ──────────────────────────────────────────────────────────────
  */
 
@@ -75,6 +81,8 @@ const WORDS_PER_SEC = 9 // the agent streaming
 const PULL_SECS = 2.4 // one pull of the slot machine, lever to last reel
 const FLIP_SECS = 1.6 // the brain in the air, lift-off to the question
 const PLOT_SECS = 0.85 // a chart growing in on Enter, the same beat as the draw sweep
+const DRAW_SECS = 1.2 // a visual drawing itself in on a step
+const OFF_SECS = 0.9 // a CRT shutting off: collapse to a line, the line to a dot
 
 /** How long a step takes to play out, in seconds. */
 export function stepDuration(step) {
@@ -104,6 +112,10 @@ export function stepDuration(step) {
     }
     case 'plot':
       return PLOT_SECS
+    case 'draw':
+      return DRAW_SECS
+    case 'off':
+      return OFF_SECS
     default:
       return 0.25
   }
@@ -220,6 +232,23 @@ export function buildFrame(script, index, progress, time, answers = []) {
       lines: [],
       caret: null,
       visual: { ...getTerminalVisual(activeStep.id), progress },
+    }
+  }
+  if (activeStep?.kind === 'draw') {
+    // The visual draws itself in over the step exactly as the sweep would draw
+    // it on a slide change (`draw` is the painters' existing reveal input).
+    return {
+      lines: [],
+      caret: null,
+      visual: { ...getTerminalVisual(activeStep.id), draw: progress },
+    }
+  }
+  if (activeStep?.kind === 'off') {
+    // The tube shutting off around whatever it was showing.
+    return {
+      lines: [],
+      caret: null,
+      visual: { kind: 'off', source: getTerminalVisual(activeStep.id), progress },
     }
   }
   if (activeStep?.kind === 'grill') {
@@ -350,8 +379,23 @@ export const TITLE_SCREEN = screen('talk-title')
 export const SYNTAX_SCREEN = screen('syntax')
 export const SENTRY_SCREEN = screen('sentry')
 export const QR_SCREEN = screen('qr')
+export const QR_CODE_SCREEN = screen('qr-code')
 export const ROB = screen('rob')
 export const DISCLAIMER_SCREEN = screen('disclaimer')
+
+/**
+ * THE CLOSE, performed by the machine (Scott, 2026-09-10): the title comes
+ * back on the glass as the camera pulls out into the dark room and holds
+ * there for a few seconds; then the tube shuts off — the picture collapses to
+ * a line, the line to a dot — and after a moment of real dark two words type
+ * themselves on the dead glass. `dwell` is the silence between; the slide is
+ * `autoplay`, and one press of Enter or Backspace hands it back.
+ */
+export const CLOSE = Object.freeze([
+  Object.freeze({ kind: 'visual', id: 'talk-title', dwell: 6.5 }),
+  Object.freeze({ kind: 'off', id: 'talk-title', dwell: 1.8 }),
+  Object.freeze({ kind: 'draw', id: 'thank-you' }),
+])
 /**
  * The form itself, right after the code that leads to it, asked one screen per
  * Enter. Arrival is the idle prompt (question null), so the presenter owns the
@@ -374,7 +418,8 @@ export const SURVEY_QUESTIONS = Object.freeze([
 // data, and CameraRig hides the stage swaps itself.
 export const CEILING_ACT_SCREEN = screen('act-ceiling')
 export const BOUNDARIES_ACT_SCREEN = screen('act-boundaries')
-export const CONTROL_ACT_SCREEN = screen('act-control')
+// `act-control` ("you are in control.") has no session since 2026-09-10: the
+// `boundaries` slide was cut and the talk goes from the walk to the code.
 
 /**
  * The grill, as a session: the brain lands and the first question pops on

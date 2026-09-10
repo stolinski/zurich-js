@@ -154,6 +154,20 @@ export const TERMINAL_VISUALS = Object.freeze({
     path: '/logos/qr.svg',
     detail: `${n(SURVEY.respondents)} DEVELOPERS SURVEYED · ${SURVEY.source.toUpperCase()}`,
   }),
+  // The code alone, centred, for the door out (Scott, 2026-09-10: "just the
+  // qr code"). Same asset, same scanning size; no count, no address.
+  'qr-code': Object.freeze({
+    kind: 'asset',
+    asset: 'qr',
+    label: 'ai-health.syntax.fm',
+    path: '/logos/qr.svg',
+    detail: SURVEY.source.toUpperCase(),
+  }),
+  // The last words, typed on the dead glass after the tube has shut off.
+  'thank-you': Object.freeze({
+    kind: 'title',
+    text: 'Thank you',
+  }),
   // THE FORM, asked the way a terminal asks: one question per Enter, typed
   // large behind a prompt, and nothing else on the glass — no scales, no
   // anchors, no counts (Scott, 2026-09-09). The room has just been handed the
@@ -428,6 +442,8 @@ export const TERMINAL_VISUALS = Object.freeze({
     text: 'go for a walk.',
     animated: true,
   }),
+  // No longer on a slide: `boundaries` was cut 2026-09-10 (Scott). Kept for
+  // `?visual` review like the other cut beats.
   'act-control': Object.freeze({
     kind: 'statement',
     lines: Object.freeze([

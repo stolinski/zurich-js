@@ -139,7 +139,9 @@ which fake-agent session plays. Start here.
 
 A slide declares where the camera flies, what the tube looks like, optionally a
 `session`, and optionally `lights` (the room's light level, 0–1; the close
-turns the room off and leaves the screen). Navigating tweens the camera and
+turns the room off, then shuts the tube off and types the last words on the
+dead glass; the screen's own light rig follows `screenGlow()` in
+`scene/roomLight.js`, so the desk goes dark with the tube). Navigating tweens the camera and
 damps the tube parameters and the light level toward the new slide's values,
 so a change between slides plays as a physical transition rather than a cut.
 
@@ -154,8 +156,12 @@ Everything drawn onto the glass.
   one-hue discipline are lifted from the `crt-terminal` Pack in
   `../../../properties/gfx-computer`.
 - `session.js` — the script model. A session is a list of Enter-driven steps
-  (`user`, `say`, `think`, `tool`, `note`, `gap`), and
+  (`user`, `say`, `think`, `tool`, `note`, `gap` for the transcript; `visual`,
+  `pull`, `grill`, `ask`, `plot`, `draw`, `off` for the catalog forms — a
+  visual, a slot pull, a grill flip, a typed prompt screen, a chart growing
+  under its title, a visual drawing itself in, the tube shutting off), and
   `buildFrame(script, step, progress, time)` turns one into display lines.
+  Any step may carry `dwell` seconds for an `autoplay` slide's schedule.
   Session performance state never changes the slide index. Wrapping goes
   through pretext. `COLD_OPEN` lives here.
 - `playback.js` — which session is showing and how far through, shared by the

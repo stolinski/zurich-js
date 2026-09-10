@@ -5,6 +5,7 @@ import { crtVert, crtFrag, CRT_DEFAULTS } from '../shaders/crt.js'
 import { PHOSPHOR, TERMINAL, ensureFonts } from '../terminal/theme.js'
 import { caretRect } from '../terminal/paint.js'
 import { clearWrapCache } from '../terminal/session.js'
+import { setScreenGlow } from './roomLight.js'
 import { ensureTerminalAssets } from '../terminal/assets.js'
 import { getTerminalVisual } from '../terminal/visuals.js'
 import {
@@ -555,6 +556,17 @@ export function CRTScreen({ onTexture, deskY }) {
       // while one is actually running, and the content sweep's progress.
       const step = painted.script[Math.min(painted.step, painted.script.length - 1)]
       const progress = sessionProgress(painted, elapsed.current)
+      // How much light the tube puts into the room: the picture, until a
+      // session shuts the tube off — then none, and only what the last words
+      // put back. The screen lights, the environment's screen bounce and the
+      // baked irradiance's screen share follow this (roomLight.js).
+      const offAt = painted.script.findIndex((candidate) => candidate.kind === 'off')
+      if (offAt >= 0 && painted.step >= offAt) {
+        const eased = progress * progress * (3 - 2 * progress)
+        setScreenGlow(painted.step === offAt ? 1 - eased : 0.12 * (painted.live ? eased : 1))
+      } else {
+        setScreenGlow(1)
+      }
       const spinning = painted.live && progress < 1 && step?.kind === 'think'
       const staticVisual = step?.kind === 'visual'
       // A visual that moves on the free-running clock (the walk, the grill's
@@ -563,15 +575,15 @@ export function CRTScreen({ onTexture, deskY }) {
       const liveVisual =
         (staticVisual && Boolean(getTerminalVisual(step.id).animated)) ||
         step?.kind === 'grill'
-      const animatedStep = ['user', 'say', 'think', 'tool', 'pull', 'grill', 'ask', 'plot'].includes(
-        step?.kind
-      )
+      const animatedStep = [
+        'user', 'say', 'think', 'tool', 'pull', 'grill', 'ask', 'plot', 'draw', 'off',
+      ].includes(step?.kind)
       const staticFrame = staticVisual || !animatedStep
       const identity = staticVisual ? `visual:${step.id}` : step?.kind ?? 'empty'
       const sourceSlide = slides.findIndex((candidate) => candidate.session === painted.script)
       // A spinning reel or a flipping brain moves every frame; typed text only
       // every few. Key those finely enough that the motion is not quantised.
-      const smooth = ['pull', 'grill', 'plot'].includes(step?.kind)
+      const smooth = ['pull', 'grill', 'plot', 'off'].includes(step?.kind)
       const phase = staticVisual
         ? 'static'
         : !animatedStep

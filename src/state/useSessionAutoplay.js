@@ -19,7 +19,9 @@ import { useStore } from './useStore.js'
  * silence in it — a pause after a question lands, a longer one after the answer
  * that the room is meant to actually read. Both halves come from the same
  * `stepDuration` the painters use, so the schedule can never drift from what is
- * being drawn.
+ * being drawn. A step may author its own `dwell` in seconds where the beat is
+ * the silence itself — the close holds the title for a few seconds before the
+ * tube shuts off, then holds the dark before the last words.
  *
  * ── Determinism ──
  * Every interval is authored, nothing is random, and both renderers time each
@@ -60,7 +62,8 @@ export function useSessionAutoplay() {
     if (step >= slide.session.length - 1) return undefined
 
     const current = slide.session[step]
-    const delay = (stepDuration(current) + (DWELL[current.kind] ?? DEFAULT_DWELL)) * 1000
+    const dwell = current.dwell ?? DWELL[current.kind] ?? DEFAULT_DWELL
+    const delay = (stepDuration(current) + dwell) * 1000
     const timer = setTimeout(() => useStore.getState().advanceAuto(), delay)
     return () => clearTimeout(timer)
   }, [handOff, index, step])

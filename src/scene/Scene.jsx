@@ -7,7 +7,7 @@ import { DESK_Y } from './Room.jsx'
 import { OFFICE_ENVIRONMENT_SPEC, StageDirector } from './Stages.jsx'
 import { Dust } from './Dust.jsx'
 import { makeRoomEnvironment, STAGE_LOOK_PRESETS } from './environment.js'
-import { roomLightLevel, setRoomLightLevel } from './roomLight.js'
+import { roomLightLevel, screenGlow, setRoomLightLevel } from './roomLight.js'
 import { useStore } from '../state/useStore.js'
 import { slides } from '../slides/index.js'
 import { QUALITY_AA_PROFILE } from '../qualityProfile.js'
@@ -201,8 +201,10 @@ const GLOBAL_LIGHT_VARIANTS = {
 
 // The sources that are the ROOM's light, as opposed to the screen's: these
 // follow a slide's `lights` level. The screen rectangle and its local fill are
-// the monitor itself and stay on when the room goes dark.
+// the monitor itself and stay on when the room goes dark — until the tube
+// itself shuts off, which they follow through screenGlow() (roomLight.js).
 const ROOM_LIGHT_VARIANTS = new Set(['ambient', 'doorway', 'oppositeRim', 'backWall'])
+const SCREEN_LIGHT_VARIANTS = new Set(['screen', 'localFill'])
 
 function lightVariant(name) {
   const variant = GLOBAL_LIGHT_VARIANTS[name]
@@ -211,6 +213,7 @@ function lightVariant(name) {
     presentationIntensities: variant.intensities,
     presentationCastShadows: variant.castShadows,
     presentationRoomLight: ROOM_LIGHT_VARIANTS.has(name),
+    presentationScreenLight: SCREEN_LIGHT_VARIANTS.has(name),
   }
 }
 
@@ -224,7 +227,8 @@ function stageIntensity(name, stage) {
  * render clock: the room lights scale with it, the environment keeps a
  * quarter of its bounce (the screen still lights the desk), and the baked
  * floor irradiance follows through roomLightLevel(). Identity at 1, which is
- * every slide but the close.
+ * every slide but the close. The screen's own sources scale with screenGlow()
+ * instead, so when the close shuts the tube off the desk goes dark with it.
  */
 function RoomLightRig() {
   const scene = useThree((state) => state.scene)
@@ -233,6 +237,7 @@ function RoomLightRig() {
   const from = useRef(1)
   const elapsed = useRef(0)
   const roomLights = useRef([])
+  const screenLights = useRef([])
 
   useLayoutEffect(() => {
     from.current = roomLightLevel()
@@ -254,15 +259,25 @@ function RoomLightRig() {
         if (object.userData?.presentationRoomLight && 'intensity' in object) {
           roomLights.current.push(object)
         }
+        if (object.userData?.presentationScreenLight && 'intensity' in object) {
+          screenLights.current.push(object)
+        }
       })
     }
     for (const light of roomLights.current) {
       light.intensity =
         (light.userData.presentationIntensities?.[displayStage] ?? 0) * level
     }
+    const glow = screenGlow()
+    for (const light of screenLights.current) {
+      light.intensity =
+        (light.userData.presentationIntensities?.[displayStage] ?? 0) * glow
+    }
     const look = STAGE_LOOK_PRESETS[displayStage] ?? STAGE_LOOK_PRESETS.home
+    // The quarter of the bounce that survives a dark room is the screen's;
+    // it goes with the tube.
     scene.environmentIntensity =
-      look.environment.intensity * THREE.MathUtils.lerp(0.25, 1, level)
+      look.environment.intensity * THREE.MathUtils.lerp(0.25 * glow, 1, level)
   })
 
   return null

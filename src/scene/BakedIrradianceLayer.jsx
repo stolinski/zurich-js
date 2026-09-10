@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { roomLightLevel } from './roomLight.js'
+import { roomLightLevel, screenGlow } from './roomLight.js'
 
 const vertexShader = /* glsl */ `
   varying vec3 vWorldPosition;
@@ -64,11 +64,11 @@ export function BakedIrradianceLayer({
   )
   // Baked bounce is mostly the room's light come back off the floor, so it
   // follows the room's light level — keeping a share for the screen's own
-  // spill, which stays on when the room goes dark.
+  // spill, which stays on when the room goes dark and goes when the tube does.
   useFrame(() => {
     if (!material.current) return
     material.current.uniforms.uIntensity.value =
-      intensity * THREE.MathUtils.lerp(0.35, 1, roomLightLevel())
+      intensity * THREE.MathUtils.lerp(0.35 * screenGlow(), 1, roomLightLevel())
   })
 
   const place = useCallback(

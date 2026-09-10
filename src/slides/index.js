@@ -3,10 +3,11 @@ import {
   AGENTS_STOPPING,
   BOUNDARIES_ACT_SCREEN,
   CEILING_ACT_SCREEN,
+  CLOSE,
   COLD_OPEN,
-  CONTROL_ACT_SCREEN,
   DISCLAIMER_SCREEN,
   GRILL_ME,
+  QR_CODE_SCREEN,
   QR_SCREEN,
   ROB,
   Q_AGENTS,
@@ -517,38 +518,32 @@ export const slides = defineSlides([
     focus: [0, 0, 0],
   },
   {
-    // HOW YOU'D KNOW, and WHAT WORKS — both spoken at the desk, where they
-    // apply. Sleep first, then loss of interest, exhaustion, anxiety, pulling
-    // away from people; then somatization. Then: box the loop, make stopping
-    // structural, stay the one deciding, narrow the ambition, talk to people.
-    // The glass holds one line so the screen never lectures the room.
-    id: 'boundaries',
-    stage: 'home',
-    session: CONTROL_ACT_SCREEN,
-    crt: TUBE,
-    camera: { pos: [15, 3, 46], target: [-2, -1, -2], fov: 35, smoothTime: 2.8 },
-    focus: [0, 0, -2],
-  },
-  {
-    // THE CODE AGAIN, flat and at scanning size, as the door out (Scott,
+    // THE CODE AGAIN, alone and at scanning size, as the door out (Scott,
     // 2026-09-10). The room has the whole argument now; this is where it
     // goes. Flat on purpose — the tube's curve, mask and beam are what made
     // the code hard to scan — so the glass goes back to a screen recording
-    // for it, and the close wakes the tube one last time on the way out.
+    // for it, and the close wakes the tube one last time on the way out. The
+    // walk leads straight here: `boundaries` ("you are in control." at the
+    // desk) was cut the same day, so how-you'd-know and what-works are spoken
+    // over the walk.
     id: 'outro-qr',
     stage: 'home',
-    session: QR_SCREEN,
+    session: QR_CODE_SCREEN,
     crt: FLAT,
     camera: { ...FLAT_GLASS, smoothTime: 2.4 },
   },
   {
     // The lights go off in the room and the title comes back on the glass —
     // same words as slide 1, on a screen you now know is an object, alone in
-    // the dark the way it was at 3am. Then the idle cursor. Hold it blinking
-    // and stop talking.
+    // the dark the way it was at 3am. Then, on the machine's own clock
+    // (Scott, 2026-09-10): a few seconds' hold, the tube shuts off — the
+    // picture collapses to a line, the line to a dot — a moment of real dark,
+    // and "Thank you" types itself on the dead glass. Stop talking before the
+    // tube does.
     id: 'close',
     stage: 'home',
-    session: TITLE_SCREEN,
+    session: CLOSE,
+    autoplay: true,
     crt: TUBE,
     lights: 0,
     camera: { pos: [0, 2.5, 44], target: [0, -0.5, 0], fov: 35, smoothTime: 3 },

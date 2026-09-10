@@ -917,7 +917,9 @@ function drawCornerMarks(ctx, bounds) {
  */
 function drawCodeVisual(ctx, visual) {
   const side = 1040
-  const box = { x: TERMINAL.padX, y: (TERMINAL.height - side) / 2, w: side, h: side }
+  // With a count beside it the code sits left; alone, it sits in the middle.
+  const left = visual.headline ? TERMINAL.padX : (TERMINAL.width - side) / 2
+  const box = { x: left, y: (TERMINAL.height - side) / 2, w: side, h: side }
   drawCornerMarks(ctx, { x: box.x - 30, y: box.y - 30, w: side + 60, h: side + 60 })
   const image = getTerminalAsset(visual.asset)
   if (image) {
@@ -936,6 +938,8 @@ function drawCodeVisual(ctx, visual) {
       color: PHOSPHOR.dim,
     })
   }
+
+  if (!visual.headline) return
 
   // The number, then what it counts, then where to scan — the reason to reach
   // for a phone, read from the back of the room.
@@ -1020,10 +1024,55 @@ function drawWarningVisual(ctx, visual, draw = 1) {
   ctx.shadowBlur = 0
 }
 
+/**
+ * A CRT shutting off around whatever it was showing: the picture collapses
+ * toward the centre line, brightening as it goes (the beam's energy squeezed
+ * into fewer lines), holds as one hot line, then the line contracts to a dot
+ * and dies. Nothing else is drawn — after this the glass is dark.
+ */
+function drawPowerOff(ctx, visual, time) {
+  const p = Math.min(1, Math.max(0, visual.progress ?? 1))
+  const cy = TERMINAL.height / 2
+  const collapse = easeInOut(Math.min(1, p / 0.62))
+  const squeeze = Math.max(0.004, 1 - collapse)
+  if (p < 0.62) {
+    ctx.save()
+    ctx.translate(0, cy)
+    ctx.scale(1, squeeze)
+    ctx.translate(0, -cy)
+    drawVisual(ctx, visual.source, 1, time)
+    ctx.restore()
+    // The squeezed picture drives the phosphor harder as it collapses.
+    ctx.save()
+    ctx.globalCompositeOperation = 'lighter'
+    ctx.globalAlpha = collapse * 0.55
+    ctx.fillStyle = PHOSPHOR.phosphor
+    ctx.fillRect(0, cy - 3 - 40 * squeeze, TERMINAL.width, 6 + 80 * squeeze)
+    ctx.restore()
+  }
+  // One hot line, then a dot.
+  const lineLife = 1 - THREE_SMOOTH(0.62, 1, p)
+  const width = TERMINAL.width * lineLife
+  if (width > 1) {
+    ctx.save()
+    ctx.fillStyle = PHOSPHOR.hot
+    ctx.shadowColor = PHOSPHOR.phosphor
+    ctx.shadowBlur = GLOW_RADIUS * 1.6
+    ctx.globalAlpha = 0.6 + 0.4 * lineLife
+    ctx.fillRect((TERMINAL.width - width) / 2, cy - 3, width, 6)
+    ctx.restore()
+  }
+}
+
+const THREE_SMOOTH = (edge0, edge1, x) => {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
+}
+
 function drawAssetVisual(ctx, visual) {
   // The code is not pretending to be a file in a viewer: it is the thing to
   // scan, and the harness chrome around it only made it smaller.
-  if (visual.headline) return drawCodeVisual(ctx, visual)
+  if (visual.asset === 'qr') return drawCodeVisual(ctx, visual)
 
   drawHarnessChrome(ctx, {
     section: 'AGENT HARNESS / ASSET VIEWER',
@@ -1386,6 +1435,7 @@ function drawVisual(ctx, visual, draw = 1, time = 0) {
   else if (visual.kind === 'diagram') drawDiagramVisual(ctx, visual, draw)
   else if (visual.kind === 'prompt') return drawPromptVisual(ctx, visual)
   else if (visual.kind === 'warning') drawWarningVisual(ctx, visual, draw)
+  else if (visual.kind === 'off') drawPowerOff(ctx, visual, time)
   else throw new Error(`Unknown terminal visual kind: ${visual.kind}`)
   return []
 }
@@ -1491,7 +1541,8 @@ export function paintTerminal(ctx, frame, time, { drawCaret = true, reveal = nul
   resetScreen(ctx)
 
   // Elements grow only while drawing IN; an undraw erases the finished frame.
-  const draw = reveal?.mode === 'in' ? reveal.progress : 1
+  // A `draw` step supplies the same input from its own progress.
+  const draw = Math.min(reveal?.mode === 'in' ? reveal.progress : 1, frame.visual?.draw ?? 1)
 
   if (frame.visual) {
     const drawn = drawVisual(ctx, frame.visual, draw, time)
