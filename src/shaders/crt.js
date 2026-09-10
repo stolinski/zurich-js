@@ -17,7 +17,11 @@ import { QUALITY_HANDOFF_MODE } from '../qualityProfile.js'
  *   • Interlace is dropped (it needs their deterministic 30Hz frame clock).
  *   • Added `uTube`: a master 0→1 dial. At 0 this is a bit-exact passthrough of
  *     the source texture — a flat, clean screen recording. At 1 it's a cathode
- *     ray tube. Animating that one uniform IS the reveal.
+ *     ray tube. Animating that one uniform IS the reveal. Every output goes
+ *     through three's `linearToOutputTexel`, because the passthrough draws
+ *     straight to the canvas on flat slides (the composer is off) and the
+ *     canvas wants sRGB; inside the composer's linear target the call is the
+ *     identity, so the tube path is unchanged.
  *
  * `uResolution` is the TEXTURE's pixel size, not the viewport's — so the
  * phosphor mask is fixed to the glass and magnifies as the camera approaches,
@@ -155,8 +159,19 @@ export const crtFrag = /* glsl */ `
     vec4 flatSample = compositeCaret(texture(uMap, vUv), vUv);
 
     // Uniform branch — coherent across the draw, so the cold open costs nothing.
+    //
+    // The canvas texture is tagged sRGB, so the sampler hands back LINEAR
+    // light. Inside the composer that is what the chain expects and its
+    // output pass re-encodes; on a flat slide the composer is off and this
+    // material draws straight to the canvas, so it must re-encode itself or
+    // the "bit-exact" cold open ships the linear values — every flat frame a
+    // stop darker and more saturated than the ?flat renderer (#ffd54a came out
+    // as rgb(255, 170, 17)). Three defines linearToOutputTexel per program
+    // from the current target's colour space: identity into the composer's
+    // linear target, the sRGB curve into the canvas. Found 2026-09-10 while
+    // making the QR code scan.
     if (uTube < 0.001) {
-      outColor = vec4(flatSample.rgb, flatSample.a * uHandoffOpacity);
+      outColor = linearToOutputTexel(vec4(flatSample.rgb, flatSample.a * uHandoffOpacity));
       return;
     }
 
@@ -358,10 +373,13 @@ export const crtFrag = /* glsl */ `
     col = mix(col, handoffCol, handoffMix);
 
     float aOut = clamp(aBeam * tubeA, 0.0, 1.0);
-    outColor = vec4(
+    // Identity inside the composer's linear target, where every tube frame is
+    // drawn; here for the same reason as the passthrough, so no render path
+    // can ever present linear light as sRGB.
+    outColor = linearToOutputTexel(vec4(
       max(mix(flatSample.rgb, col, rasterMix), vec3(0.0)),
       mix(flatSample.a, aOut, rasterMix) * uHandoffOpacity
-    );
+    ));
   }
 `
 

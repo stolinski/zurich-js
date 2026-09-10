@@ -129,6 +129,14 @@ export const TERMINAL_VISUALS = Object.freeze({
     path: '/logos/sentry.svg',
     detail: 'SHOW PARTNER / LOCAL ASSET',
   }),
+  // DISCLAIMER. One word under a warning triangle, flat, before the code: the
+  // sampling caveat (self-selected, not the developer population, association
+  // not cause) is spoken here, once, over a sign rather than a paragraph. The
+  // word is Scott's (2026-09-10).
+  disclaimer: Object.freeze({
+    kind: 'warning',
+    text: 'Disclaimer',
+  }),
   qr: Object.freeze({
     kind: 'asset',
     asset: 'qr',

@@ -905,7 +905,126 @@ function drawCornerMarks(ctx, bounds) {
   }
 }
 
+/**
+ * A QR code at scanning size, with crisp modules: dark modules on an amber
+ * panel (a light-on-dark code only decodes on scanners that bother to try
+ * inverted polarity), no glow (the halo softens the module edges the scanner
+ * is looking for), no smoothing (nearest-neighbour keeps every module a hard
+ * square whatever the scale), and the count and the address in a column
+ * beside it rather than under it, so the code itself can take the height of
+ * the glass. The panel is phosphor, not white: one hue, and the brightest
+ * thing on the glass is still the number.
+ */
+function drawCodeVisual(ctx, visual) {
+  const side = 1040
+  const box = { x: TERMINAL.padX, y: (TERMINAL.height - side) / 2, w: side, h: side }
+  drawCornerMarks(ctx, { x: box.x - 30, y: box.y - 30, w: side + 60, h: side + 60 })
+  const image = getTerminalAsset(visual.asset)
+  if (image) {
+    ctx.save()
+    ctx.fillStyle = PHOSPHOR.phosphor
+    ctx.beginPath()
+    ctx.roundRect(box.x, box.y, box.w, box.h, 28)
+    ctx.fill()
+    ctx.imageSmoothingEnabled = false
+    ctx.drawImage(image, box.x, box.y, box.w, box.h)
+    ctx.restore()
+  } else {
+    chromeText(ctx, 'DECODING LOCAL ASSET…', box.x + side / 2, box.y + side / 2, {
+      size: 34,
+      align: 'center',
+      color: PHOSPHOR.dim,
+    })
+  }
+
+  // The number, then what it counts, then where to scan — the reason to reach
+  // for a phone, read from the back of the room.
+  const columnX = (box.x + side + TERMINAL.width - TERMINAL.padX) / 2
+  chromeText(ctx, visual.headline, columnX, 520, {
+    size: 176,
+    weight: 700,
+    align: 'center',
+    color: PHOSPHOR.hot,
+  })
+  chromeText(ctx, visual.caption, columnX, 712, {
+    size: 46,
+    weight: 500,
+    align: 'center',
+    color: PHOSPHOR.phosphor,
+  })
+  chromeText(ctx, visual.label.toUpperCase(), columnX, 800, {
+    size: 44,
+    weight: 700,
+    align: 'center',
+    color: PHOSPHOR.hot,
+  })
+}
+
+/**
+ * DISCLAIMER. A warning triangle and one word on flat glass — the sign a room
+ * reads before it reads anything else. Drawn, not a glyph: JetBrains Mono has
+ * no ⚠, and a fallback face would be the only foreign letterform in the deck.
+ * Phosphor triangle, hot mark and word; the triangle fades up over the first
+ * half of the draw sweep and the word types on over the second, the way the
+ * title does. Everything Scott says under it is spoken, not written.
+ */
+function drawWarningVisual(ctx, visual, draw = 1) {
+  const cx = TERMINAL.width / 2
+  const cy = 540
+  const side = 400
+  const corner = 36
+  const height = (side * Math.sqrt(3)) / 2
+  const top = { x: cx, y: cy - (2 * height) / 3 }
+  const left = { x: cx - side / 2, y: cy + height / 3 }
+  const right = { x: cx + side / 2, y: cy + height / 3 }
+
+  ctx.save()
+  ctx.globalAlpha = draw >= 1 ? 1 : easeInOut(draw / 0.5)
+  ctx.lineWidth = 26
+  ctx.lineJoin = 'round'
+  ctx.strokeStyle = PHOSPHOR.phosphor
+  ctx.shadowColor = PHOSPHOR.phosphor
+  ctx.shadowBlur = GLOW_RADIUS
+  ctx.beginPath()
+  ctx.moveTo((top.x + left.x) / 2, (top.y + left.y) / 2)
+  ctx.arcTo(top.x, top.y, right.x, right.y, corner)
+  ctx.arcTo(right.x, right.y, left.x, left.y, corner)
+  ctx.arcTo(left.x, left.y, top.x, top.y, corner)
+  ctx.closePath()
+  ctx.stroke()
+
+  ctx.fillStyle = PHOSPHOR.hot
+  ctx.shadowColor = PHOSPHOR.hot
+  const barWidth = 44
+  ctx.beginPath()
+  ctx.roundRect(cx - barWidth / 2, cy - 118, barWidth, 156, barWidth / 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(cx, cy + 100, 28, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+
+  const shown =
+    draw >= 1
+      ? visual.text
+      : visual.text.slice(0, Math.ceil(visual.text.length * easeInOut((draw - 0.4) / 0.6)))
+  if (!shown) return
+  ctx.font = screenFont(132, 700)
+  ctx.fillStyle = PHOSPHOR.hot
+  ctx.shadowColor = PHOSPHOR.phosphor
+  ctx.shadowBlur = GLOW_RADIUS * 0.8
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  const fullWidth = ctx.measureText(visual.text).width
+  ctx.fillText(shown, (TERMINAL.width - fullWidth) / 2, 1000)
+  ctx.shadowBlur = 0
+}
+
 function drawAssetVisual(ctx, visual) {
+  // The code is not pretending to be a file in a viewer: it is the thing to
+  // scan, and the harness chrome around it only made it smaller.
+  if (visual.headline) return drawCodeVisual(ctx, visual)
+
   drawHarnessChrome(ctx, {
     section: 'AGENT HARNESS / ASSET VIEWER',
     detail: visual.detail,
@@ -922,10 +1041,7 @@ function drawAssetVisual(ctx, visual) {
     color: PHOSPHOR.hot,
   })
 
-  // A headline needs the bottom third of the frame, so the preview gives it up.
-  const preview = visual.headline
-    ? { x: 176, y: 290, w: TERMINAL.width - 352, h: 600 }
-    : { x: 176, y: 310, w: TERMINAL.width - 352, h: 740 }
+  const preview = { x: 176, y: 310, w: TERMINAL.width - 352, h: 740 }
   ctx.strokeStyle = PHOSPHOR.ghost
   ctx.lineWidth = 2
   ctx.strokeRect(preview.x, preview.y, preview.w, preview.h)
@@ -933,12 +1049,11 @@ function drawAssetVisual(ctx, visual) {
 
   const image = getTerminalAsset(visual.asset)
   if (image) {
-    const square = visual.asset === 'qr'
     drawImageContain(ctx, image, {
       x: preview.x + 110,
       y: preview.y + 74,
       w: preview.w - 220,
-      h: square ? preview.h - 148 : preview.h - 220,
+      h: preview.h - 220,
     })
   } else {
     chromeText(ctx, 'DECODING LOCAL ASSET…', TERMINAL.width / 2, 640, {
@@ -946,32 +1061,6 @@ function drawAssetVisual(ctx, visual) {
       align: 'center',
       color: PHOSPHOR.dim,
     })
-  }
-
-  if (visual.headline) {
-    // The number, then what it counts, then where to scan. The technical
-    // caption is dropped on this slide — it is the machine describing its own
-    // file format under the one figure that decides whether anyone reaches for
-    // a phone, and it was literally printing through the digits.
-    chromeText(ctx, visual.headline, TERMINAL.width / 2, 930, {
-      size: 128,
-      weight: 700,
-      align: 'center',
-      color: PHOSPHOR.hot,
-    })
-    chromeText(ctx, visual.caption, TERMINAL.width / 2, 1086, {
-      size: 42,
-      weight: 500,
-      align: 'center',
-      color: PHOSPHOR.phosphor,
-    })
-    chromeText(ctx, visual.label.toUpperCase(), TERMINAL.width / 2, 1152, {
-      size: 34,
-      weight: 700,
-      align: 'center',
-      color: PHOSPHOR.dim,
-    })
-    return
   }
 
   chromeText(ctx, visual.label.toUpperCase(), TERMINAL.width / 2, 1090, {
@@ -1283,6 +1372,7 @@ function drawVisual(ctx, visual, draw = 1, time = 0) {
   else if (visual.kind === 'walk') drawWalkVisual(ctx, visual, draw, time)
   else if (visual.kind === 'diagram') drawDiagramVisual(ctx, visual, draw)
   else if (visual.kind === 'prompt') return drawPromptVisual(ctx, visual)
+  else if (visual.kind === 'warning') drawWarningVisual(ctx, visual, draw)
   else throw new Error(`Unknown terminal visual kind: ${visual.kind}`)
   return []
 }

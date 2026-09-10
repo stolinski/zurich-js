@@ -329,6 +329,7 @@ export const SYNTAX_SCREEN = screen('syntax')
 export const SENTRY_SCREEN = screen('sentry')
 export const QR_SCREEN = screen('qr')
 export const ROB = screen('rob')
+export const DISCLAIMER_SCREEN = screen('disclaimer')
 /**
  * The form itself, right after the code that leads to it, asked one screen per
  * Enter. Arrival is the idle prompt (question null), so the presenter owns the

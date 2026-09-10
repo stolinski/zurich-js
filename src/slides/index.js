@@ -6,6 +6,7 @@ import {
   CEILING_ACT_SCREEN,
   COLD_OPEN,
   CONTROL_ACT_SCREEN,
+  DISCLAIMER_SCREEN,
   GRILL_ME,
   PHOSPHOR_ACT_SCREEN,
   QR_SCREEN,
@@ -169,18 +170,16 @@ export const slides = defineSlides([
     // held on or re-read without the schedule dragging him forward. Arrows are
     // untouched and still move exactly one slide.
     //
-    // THE TUBE WAKES HERE. The title and the two identity assets are the only
-    // flat frames; from the chat window on, every glass-filling beat is the
-    // same TUBE_FULL preset as the data runs, through the same post. Scott's
-    // call (2026-09-02): flat data slides read visibly darker than the tube
-    // ones, and a curved screen recording gives away nothing about the room —
-    // the pull-back still lands.
+    // Still FLAT. The tube used to wake here (Scott, 2026-09-02); since
+    // 2026-09-10 the whole open — chat window, Rob, the disclaimer and the QR
+    // — stays a screen recording and the tube wakes at `survey-questions`,
+    // because the curve, mask and beam were what made the code hard to scan.
     id: 'agent-session',
     stage: 'home',
     session: COLD_OPEN,
     autoplay: true,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 0.6 },
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 0.6 },
   },
   {
     // ROB. Scott's own confession becomes a point on a scale that ends in a
@@ -193,10 +192,20 @@ export const slides = defineSlides([
     id: 'rob',
     stage: 'home',
     session: ROB,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 0.5 },
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 0.5 },
   },
-
+  {
+    // DISCLAIMER, before the code (Scott, 2026-09-10). A warning triangle and
+    // one word; the sampling caveat — self-selected, not the developer
+    // population, association not cause — is spoken over it, once, before
+    // the room is asked to scan anything.
+    id: 'disclaimer',
+    stage: 'home',
+    session: DISCLAIMER_SCREEN,
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 0.45 },
+  },
   {
     // AFTER ROB, not before him. The QR used to sit third, among the identity
     // assets, where it asked a room that had been told nothing yet to scan a
@@ -205,29 +214,40 @@ export const slides = defineSlides([
     // the question that leaves them with. It also carries the base count now
     // (n = 3,593) — that number is what makes the link worth scanning, and it
     // was being spent as an act marker four acts later.
+    //
+    // Flat and a thousand pixels wide: on the tube it was small and soft and
+    // did not scan (Scott, 2026-09-10).
     id: 'intro-qr',
     stage: 'home',
     session: QR_SCREEN,
-    crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 0.45 },
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 0.45 },
   },
   {
     // THE FORM, before any answer to it. The room has just been handed the
     // code; this is what the code leads to — the questions, worded as
     // respondents saw them, and nothing else (no scales, no anchors, no
     // counts). Every data beat after this picks one of these lines back up.
+    //
+    // THE TUBE WAKES HERE. The title, the identity assets, the chat window,
+    // Rob, the disclaimer and the code are the flat frames; from the first
+    // survey prompt on, every glass-filling beat is the same TUBE_FULL preset
+    // as the data runs, through the same post. (Flat slides used to read
+    // visibly darker than tube ones — the flat path was presenting linear
+    // light, fixed in shaders/crt.js on 2026-09-10 — and a curved screen
+    // recording still gives away nothing about the room.)
     id: 'survey-questions',
     stage: 'home',
     session: SURVEY_QUESTIONS,
     crt: TUBE_FULL,
-    camera: { ...GLASS, smoothTime: 0.45 },
+    camera: { ...GLASS, smoothTime: 0.6 },
   },
 
   /* ═══════════════ ② HOME — THE MACHINE YOU CAN'T PUT DOWN ═══════════════
    * PILLAR 1. Why prompting is hard to stop, and what it does to sleep.
    *
    * Still the glass, still head-on: the pull-back sits after the machine, so
-   * the whole of Pillar 1 plays on the same covering tube the chat window
+   * the whole of Pillar 1 plays on the same covering tube the survey prompt
    * woke, and the room learns where that tube sits only once the data has
    * landed and the mechanism has been shown.
    *
@@ -272,12 +292,12 @@ export const slides = defineSlides([
   {
     // THE REVEAL, and it is ONE beat: the dolly back into the room.
     //
-    // The tube has been awake since the chat window, so the pull-back no
+    // The tube has been awake since the survey prompt, so the pull-back no
     // longer carries the wake — only the housing, the desk and the room
     // arriving around an image the room has already accepted. `tube-wake`
     // used to hold at the covering distance while curvature came up and only
     // then move; the wake and the move were then fused; now the wake happens
-    // at the harness and this beat is purely spatial.
+    // on the glass and this beat is purely spatial.
     //
     // After the machine, not after the QR: the glass carries the paid line
     // into the room, and the room learns where the tube sits only once the
@@ -531,6 +551,18 @@ export const slides = defineSlides([
     crt: TUBE,
     camera: { pos: [15, 3, 46], target: [-2, -1, -2], fov: 35, smoothTime: 2.8 },
     focus: [0, 0, -2],
+  },
+  {
+    // THE CODE AGAIN, flat and at scanning size, as the door out (Scott,
+    // 2026-09-10). The room has the whole argument now; this is where it
+    // goes. Flat on purpose — the tube's curve, mask and beam are what made
+    // the code hard to scan — so the glass goes back to a screen recording
+    // for it, and the close wakes the tube one last time on the way out.
+    id: 'outro-qr',
+    stage: 'home',
+    session: QR_SCREEN,
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 2.4 },
   },
   {
     // The lights go off in the room and the title comes back on the glass —

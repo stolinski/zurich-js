@@ -52,16 +52,20 @@ AI coding tools do to developers' mental health — rendered as one continuous
 camera move through four scales.
 
 It opens on a pixel-flat screen reading **“the true cost of ai coding.”** Syntax
-and Sentry load as monochrome local assets, then the tube wakes as the screen
-becomes an **AI coding agent harness**: Scott taps, a user turn types, an agent
-thinks, a tool runs, an answer streams back, a slot machine takes the pulls, and
-a vector chart plots the result. No DOM slide chrome or perspective. Then the
-camera moves for the first time and the **cathode ray tube** turns out to be in
-a room, and the room turns out to be full of them, and then you go **into the
-glass** and the phosphor triads become the material everything after is built
-from. (The tube waking at the chat window rather than at the pull-back is
-Scott's call of 2026-09-02: flat data slides read darker than tube ones, and
-the curve gives away nothing about the room.)
+and Sentry load as monochrome local assets, the screen becomes an **AI coding
+agent harness** (Scott taps, a user turn types, an agent thinks, a tool runs,
+an answer streams back), a post, a disclaimer and a QR code follow, all still
+flat — and then the tube wakes on the first survey question, a slot machine
+takes the pulls, and a vector chart plots the result. No DOM slide chrome or
+perspective. Then the camera moves for the first time and the **cathode ray
+tube** turns out to be in a room, and the room turns out to be full of them,
+and then you go **into the glass** and the phosphor triads become the material
+everything after is built from. (The tube waking on the glass rather than at
+the pull-back is Scott's call of 2026-09-02: flat data slides read darker than
+tube ones — which turned out to be the flat path presenting linear light,
+fixed 2026-09-10 — and the curve gives away nothing about the room. It moved
+from the chat window to the survey prompt on 2026-09-10 so the QR code stays
+flat and scans; the code comes back flat once more before the close.)
 
 **Read `PLAN.md`, `NARRATIVE.md`, `ART-DIRECTION.md`, `PRESENTATION-SYSTEM.md`,
 `CONTEXT.md`, then `QUALITY.md`.** PLAN protects the trick; NARRATIVE is what
@@ -173,7 +177,10 @@ Everything drawn onto the glass.
   terminal asks: a session's `ask` steps type one screen per Enter, large,
   behind a prompt marker — every question worded as respondents saw it, from
   `FORM` in `data/survey.js`, and nothing else; the painter hands back the
-  caret's rect, and both renderers blink it). The glass-filling threshold into
+  caret's rect, and both renderers blink it), and `warning` (a drawn warning
+  triangle over one word — the disclaimer). The `qr` asset is drawn a
+  thousand pixels wide with smoothing off and no glow, from a 1640 px raster,
+  on FLAT slides only: it has to scan from the back of the room. The glass-filling threshold into
   the phosphor (`phosphor-return`) carries a `statement` **act marker** that
   the held-forward rule keeps on the glass through the beats it introduces;
   the cubicle act opens straight on its data since 2026-09-09, with CameraRig
@@ -292,7 +299,14 @@ luminance knee, barrel curvature, rounded-rect tube SDF, vignette.
 
 **`uTube` is the master dial.** At 0 the shader is a bit-exact passthrough of
 the canvas — a flat screen recording. At 1 it's a cathode ray tube. Animating
-that one uniform IS the reveal.
+that one uniform IS the reveal. "Bit-exact" is literal since 2026-09-10: the
+canvas texture is sRGB, the sampler returns linear light, and on a flat slide
+the composer is OFF and the material draws straight to the canvas, so every
+output goes through three's per-target `linearToOutputTexel` (the sRGB curve
+into the canvas, identity into the composer's linear target). Before that
+every flat frame shipped its linear values — a stop darker and more saturated
+than the `?flat` renderer, which is why flat slides "read darker than tube
+ones" for weeks.
 
 **`uEmissiveGain` keeps the glass emissive under ACES.** The canvas is LDR, so
 without HDR headroom the composer's tone map rolls the screen to mid-gray and
