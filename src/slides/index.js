@@ -170,6 +170,18 @@ export const slides = defineSlides([
     camera: { ...FLAT_GLASS, smoothTime: 0.45 },
   },
   {
+    // DISCLAIMER, straight after the identity assets (Scott, 2026-09-10:
+    // "after intro"; it sat between Rob and the code until then). A warning
+    // triangle and one word; the sampling caveat — self-selected, not the
+    // developer population, association not cause — is spoken over it, once,
+    // before the machine runs and before the room is asked to scan anything.
+    id: 'disclaimer',
+    stage: 'home',
+    session: DISCLAIMER_SCREEN,
+    crt: FLAT,
+    camera: { ...FLAT_GLASS, smoothTime: 0.45 },
+  },
+  {
     // The exchange PLAYS ITSELF. This is not a demo Scott performs — it is the
     // machine working while he talks over it, and tapping Enter seven times to
     // keep a conversation moving puts his hand on a keyboard during the one
@@ -181,7 +193,7 @@ export const slides = defineSlides([
     // untouched and still move exactly one slide.
     //
     // Still FLAT. The tube used to wake here (Scott, 2026-09-02); since
-    // 2026-09-10 the whole open — chat window, Rob, the disclaimer and the QR
+    // 2026-09-10 the whole open — the disclaimer, chat window, Rob and the QR
     // — stays a screen recording and the tube wakes at `survey-questions`,
     // because the curve, mask and beam were what made the code hard to scan.
     id: 'agent-session',
@@ -204,17 +216,6 @@ export const slides = defineSlides([
     session: ROB,
     crt: FLAT,
     camera: { ...FLAT_GLASS, smoothTime: 0.5 },
-  },
-  {
-    // DISCLAIMER, before the code (Scott, 2026-09-10). A warning triangle and
-    // one word; the sampling caveat — self-selected, not the developer
-    // population, association not cause — is spoken over it, once, before
-    // the room is asked to scan anything.
-    id: 'disclaimer',
-    stage: 'home',
-    session: DISCLAIMER_SCREEN,
-    crt: FLAT,
-    camera: { ...FLAT_GLASS, smoothTime: 0.45 },
   },
   {
     // AFTER ROB, not before him. The QR used to sit third, among the identity

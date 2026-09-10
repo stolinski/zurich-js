@@ -52,10 +52,10 @@ AI coding tools do to developers' mental health — rendered as one continuous
 camera move through four scales.
 
 It opens on a pixel-flat screen reading **“the true cost of ai coding.”** Syntax
-and Sentry load as monochrome local assets, the screen becomes an **AI coding
-agent harness** (Scott taps, a user turn types, an agent thinks, a tool runs,
-an answer streams back), a post, a disclaimer and a QR code follow, all still
-flat — and then the tube wakes on the first survey question, a slot machine
+and Sentry load as monochrome local assets, a disclaimer follows, the screen
+becomes an **AI coding agent harness** (Scott taps, a user turn types, an agent
+thinks, a tool runs, an answer streams back), a post and a QR code follow, all
+still flat — and then the tube wakes on the first survey question, a slot machine
 takes the pulls, and a vector chart plots the result. No DOM slide chrome or
 perspective. Then the camera moves for the first time and the **cathode ray
 tube** turns out to be in a room, and the room turns out to be full of them,
