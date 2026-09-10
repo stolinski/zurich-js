@@ -395,7 +395,17 @@ export const TERMINAL_VISUALS = Object.freeze({
   }),
   'q-enjoyment': scaleVisual(QUESTIONS.enjoyment, DISTRIBUTIONS.enjoyment),
   // QUOTE SLIDES (Scott, 2026-09-10): one respondent's words, large and alone
-  // on the glass, after the finding they speak to. The words are verbatim.
+  // on the glass, after the beat they speak to. The words are verbatim.
+  // After the grill, before the agent data: what running the machine feels
+  // like from the inside.
+  'quote-doomscroll': Object.freeze({
+    kind: 'quote',
+    text: 'it feels like having doomscrolled for hours.',
+  }),
+  'quote-tired': Object.freeze({
+    kind: 'quote',
+    text: "I feel(!) like I'm more productive but have never felt so tired.",
+  }),
   'quote-puzzle': Object.freeze({
     kind: 'quote',
     text: "It's like solving a puzzle. You don't get any reward when another person solves the puzzle because you know that it was actually not you who solved it.",

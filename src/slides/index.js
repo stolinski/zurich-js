@@ -9,7 +9,9 @@ import {
   GRILL_ME,
   QR_CODE_SCREEN,
   QR_SCREEN,
+  QUOTE_DOOMSCROLL,
   QUOTE_PUZZLE,
+  QUOTE_TIRED,
   ROB,
   Q_AGENTS,
   Q_ENJOYMENT,
@@ -360,6 +362,23 @@ export const slides = defineSlides([
     id: 'what-gets-pruned',
     stage: 'wall',
     session: GRILL_ME,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // TWO QUOTES after the grill (Scott, 2026-09-10): what running the machine
+    // feels like from the inside, in respondents' own words, before the data
+    // on how many machines they run.
+    id: 'quote-doomscroll',
+    stage: 'wall',
+    session: QUOTE_DOOMSCROLL,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    id: 'quote-tired',
+    stage: 'wall',
+    session: QUOTE_TIRED,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 1.2 },
   },
