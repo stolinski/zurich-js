@@ -90,6 +90,103 @@ canvas {
     color: #ad8c2c;
 }
 
+/* ?index — the deck as a grid of cards, one per slide, each a link. Presenter
+   tooling: it escapes the 16:9 stage box and scrolls on its own, on the same
+   glass background and phosphor ladder as the screen. */
+.slide-index {
+    position: fixed;
+    inset: 0;
+    overflow: auto;
+    padding: 48px;
+    background: #0b0a06;
+    color: #ffd54a;
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.slide-index h1 {
+    margin: 0 0 32px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #ad8c2c;
+}
+
+.slide-index ol {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.slide-index li {
+    position: relative;
+    display: flex;
+    border: 1px solid #4a3f16;
+}
+
+.slide-index li:hover {
+    border-color: #ad8c2c;
+}
+
+.slide-index li > a:first-child {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.slide-index strong {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff2cd;
+}
+
+.slide-index__number {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    font-variant-numeric: tabular-nums;
+    color: #ad8c2c;
+}
+
+.slide-index__tags {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #ad8c2c;
+}
+
+.slide-index p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #ffd54a;
+}
+
+.slide-index__flat {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #4a3f16;
+    text-decoration: none;
+}
+
+.slide-index__flat:hover {
+    color: #ffd54a;
+}
+
 /* Presenter readout — slide id and step within a session. Opt in with ?hud;
    never on for an audience. Bottom-right, under the counter's corner, inside
    the stage box so it lands in the picture, not in a letterbox bar. */

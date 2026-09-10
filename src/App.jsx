@@ -7,14 +7,20 @@ import { Effects } from './scene/Effects.jsx'
 import { FrameCap } from './scene/FrameCap.jsx'
 import { FlatScreen } from './ui/FlatScreen.jsx'
 import { Overlay } from './ui/Overlay.jsx'
+import { SlideIndex } from './ui/SlideIndex.jsx'
 import { useKeyboardNav } from './state/useKeyboardNav.js'
 import { useSessionAutoplay } from './state/useSessionAutoplay.js'
 import { FLAT } from './flat.js'
+import { INDEX } from './slideIndex.js'
 import { QUALITY_AA_PROFILE } from './qualityProfile.js'
 
 export default function App() {
   useKeyboardNav()
   useSessionAutoplay()
+
+  // `?index` — the deck as a list of cards linking to every slide. Presenter
+  // tooling, not the talk: no canvas, no chrome. See slideIndex.js.
+  if (INDEX) return <SlideIndex />
 
   return (
     <>

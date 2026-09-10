@@ -454,7 +454,12 @@ the tube can't drift apart.
 the start survives a reload so the `?flat` fallback keeps counting) and the
 slide counter in the top-right (`n / N`, always on since 2026-09-10 by Scott's
 call). The fuller readout — slide id and session step — stays behind `?hud`,
-bottom-right. `src/index.css` is small for the same reason.
+bottom-right. `?index` (`src/ui/SlideIndex.jsx`) replaces the deck with a grid
+of cards, one per slide — number, id, the kind of glass (chart, quote,
+harness…), set, flat/tube/room, Enter count, a line of what the glass says —
+each linking to `?slide=` and `?flat&slide=`; it is built from the slide list
+and the catalog at render time, so it cannot fall behind the deck.
+`src/index.css` is small for the same reason.
 
 ## Conventions & gotchas
 
