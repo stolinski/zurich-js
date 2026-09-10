@@ -1353,10 +1353,189 @@ function drawBattery(ctx, panel, time) {
   ctx.restore()
 }
 
+/**
+ * A day on a clock, and the reminders that go unheeded: the hands sweep twelve
+ * hours in one cycle; at noon and at six a "stop and eat" popup rises under
+ * the clock, waits, and is dismissed with a hot ×, and the hands keep going.
+ */
+function drawPopups(ctx, panel, time) {
+  const cycle = 12
+  const t = time % cycle
+  const cx = panel.x + panel.w / 2
+  const cy = panel.y + 300
+  const r = 170
+  ctx.save()
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+  // The face.
+  ctx.lineWidth = 5
+  ctx.strokeStyle = PHOSPHOR.dim
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.lineWidth = 4
+  for (let hour = 0; hour < 12; hour++) {
+    const angle = (hour / 12) * Math.PI * 2 - Math.PI / 2
+    const inner = hour % 3 === 0 ? r - 30 : r - 16
+    ctx.beginPath()
+    ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner)
+    ctx.lineTo(cx + Math.cos(angle) * (r - 6), cy + Math.sin(angle) * (r - 6))
+    ctx.stroke()
+  }
+  // Hands: one revolution of the hour hand per cycle, twelve of the minute hand.
+  const hourAngle = (t / cycle) * Math.PI * 2 - Math.PI / 2
+  const minuteAngle = ((t * 12) / cycle) * Math.PI * 2 - Math.PI / 2
+  ctx.strokeStyle = PHOSPHOR.phosphor
+  ctx.lineWidth = 8
+  ctx.beginPath()
+  ctx.moveTo(cx, cy)
+  ctx.lineTo(cx + Math.cos(hourAngle) * r * 0.55, cy + Math.sin(hourAngle) * r * 0.55)
+  ctx.stroke()
+  ctx.lineWidth = 5
+  ctx.beginPath()
+  ctx.moveTo(cx, cy)
+  ctx.lineTo(cx + Math.cos(minuteAngle) * r * 0.82, cy + Math.sin(minuteAngle) * r * 0.82)
+  ctx.stroke()
+  ctx.fillStyle = PHOSPHOR.hot
+  ctx.beginPath()
+  ctx.arc(cx, cy, 9, 0, Math.PI * 2)
+  ctx.fill()
+
+  // The reminders: one at noon, one at six, each up for a while, then dismissed.
+  const card = { w: 400, h: 170 }
+  const cardX = cx - card.w / 2
+  const restY = cy + r + 110
+  for (const [at, label] of [
+    [0.3, 'LUNCH'],
+    [6.3, 'DINNER'],
+  ]) {
+    const life = t - at
+    if (life < 0 || life > 2.4) continue
+    const rise = smoothRamp(0, 0.45, life)
+    const dismiss = smoothRamp(1.9, 2.4, life)
+    const y = restY + (1 - rise) * 120 + dismiss * 60
+    ctx.globalAlpha = rise * (1 - dismiss)
+    ctx.lineWidth = 4
+    ctx.strokeStyle = PHOSPHOR.phosphor
+    ctx.beginPath()
+    ctx.roundRect(cardX, y, card.w, card.h, 22)
+    ctx.stroke()
+    // A bell, a line of text, the label.
+    ctx.fillStyle = PHOSPHOR.phosphor
+    ctx.beginPath()
+    ctx.arc(cardX + 52, y + 56, 18, Math.PI, 0)
+    ctx.lineTo(cardX + 74, y + 74)
+    ctx.lineTo(cardX + 30, y + 74)
+    ctx.closePath()
+    ctx.fill()
+    ctx.fillStyle = PHOSPHOR.dim
+    ctx.fillRect(cardX + 96, y + 44, 190, 10)
+    ctx.fillRect(cardX + 96, y + 66, 120, 8)
+    chromeText(ctx, `STOP FOR ${label}`, cardX + 96, y + 108, {
+      size: 26,
+      weight: 700,
+      color: PHOSPHOR.phosphor,
+    })
+    // The ×, hot as it is hit.
+    const hit = life > 1.75
+    ctx.strokeStyle = hit ? PHOSPHOR.hot : PHOSPHOR.dim
+    ctx.lineWidth = hit ? 6 : 4
+    ctx.beginPath()
+    ctx.moveTo(cardX + card.w - 54, y + 34)
+    ctx.lineTo(cardX + card.w - 30, y + 58)
+    ctx.moveTo(cardX + card.w - 30, y + 34)
+    ctx.lineTo(cardX + card.w - 54, y + 58)
+    ctx.stroke()
+    ctx.globalAlpha = 1
+  }
+  ctx.restore()
+}
+
+/**
+ * A break, forbidden: a mug with steam rising on its own slow clock, and a
+ * "no" sign — the circle, then the bar — stroking itself on around it, hot,
+ * holding, and letting go before it starts again.
+ */
+function drawForbiddenBreak(ctx, panel, time) {
+  const cycle = 6.5
+  const t = time % cycle
+  const cx = panel.x + panel.w / 2
+  const cy = panel.y + panel.h / 2 + 30
+  ctx.save()
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+
+  // The mug.
+  const mug = { w: 250, h: 230 }
+  const mx = cx - mug.w / 2 - 30
+  const my = cy - mug.h / 2 + 40
+  ctx.lineWidth = 6
+  ctx.strokeStyle = PHOSPHOR.phosphor
+  ctx.beginPath()
+  ctx.roundRect(mx, my, mug.w, mug.h, [14, 14, 44, 44])
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.arc(mx + mug.w + 8, my + 100, 62, -Math.PI / 2, Math.PI / 2)
+  ctx.stroke()
+  ctx.lineWidth = 4
+  ctx.strokeStyle = PHOSPHOR.dim
+  ctx.beginPath()
+  ctx.moveTo(mx + 18, my + 44)
+  ctx.lineTo(mx + mug.w - 18, my + 44)
+  ctx.stroke()
+  // Steam: three wisps, each a slow sine that rises and fades.
+  for (let wisp = 0; wisp < 3; wisp++) {
+    const x0 = mx + 55 + wisp * 70
+    const phase = time * 0.9 + wisp * 2.1
+    ctx.strokeStyle = PHOSPHOR.dim
+    ctx.lineWidth = 4
+    ctx.beginPath()
+    for (let step = 0; step <= 24; step++) {
+      const f = step / 24
+      const x = x0 + Math.sin(phase + f * 5.5) * 14 * (0.4 + f)
+      const y = my - 20 - f * 150
+      if (step === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.globalAlpha = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(phase * 0.7))
+    ctx.stroke()
+    ctx.globalAlpha = 1
+  }
+
+  // The sign: the circle draws on, then the bar, then it holds, then it goes.
+  const radius = 300
+  const circleOn = smoothRamp(0.6, 1.7, t)
+  const barOn = smoothRamp(1.6, 2.2, t)
+  const fade = 1 - smoothRamp(5.2, 6.1, t)
+  ctx.globalAlpha = fade
+  ctx.strokeStyle = PHOSPHOR.hot
+  ctx.shadowColor = PHOSPHOR.phosphor
+  ctx.shadowBlur = GLOW_RADIUS * 1.2
+  ctx.lineWidth = 16
+  if (circleOn > 0) {
+    ctx.beginPath()
+    ctx.arc(cx, cy, radius, -Math.PI * 0.75, -Math.PI * 0.75 + Math.PI * 2 * circleOn)
+    ctx.stroke()
+  }
+  if (barOn > 0) {
+    const ax = cx - Math.cos(Math.PI / 4) * radius
+    const ay = cy - Math.sin(Math.PI / 4) * radius
+    const bx = cx + Math.cos(Math.PI / 4) * radius
+    const by = cy + Math.sin(Math.PI / 4) * radius
+    ctx.beginPath()
+    ctx.moveTo(ax, ay)
+    ctx.lineTo(ax + (bx - ax) * barOn, ay + (by - ay) * barOn)
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
 const QUOTE_ILLUSTRATIONS = Object.freeze({
   doomscroll: drawDoomscroll,
   puzzle: drawPuzzle,
   battery: drawBattery,
+  popups: drawPopups,
+  break: drawForbiddenBreak,
 })
 
 /**

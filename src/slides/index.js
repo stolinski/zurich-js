@@ -9,7 +9,9 @@ import {
   GRILL_ME,
   QR_CODE_SCREEN,
   QR_SCREEN,
+  QUOTE_BREAKS,
   QUOTE_DOOMSCROLL,
+  QUOTE_LUNCH,
   QUOTE_PUZZLE,
   QUOTE_TIRED,
   ROB,
@@ -264,6 +266,16 @@ export const slides = defineSlides([
     camera: { ...GLASS, smoothTime: 1.2 },
   },
   {
+    // A QUOTE (Scott, 2026-09-10): the overrun in one respondent's words —
+    // reminders they built for themselves and ignore — beside a clock whose
+    // popups go unheeded.
+    id: 'quote-lunch',
+    stage: 'home',
+    session: QUOTE_LUNCH,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
     // The strongest relationship in the survey, ρ = 0.41.
     //
     // The counterweight (a third report no sleep change at all) and the
@@ -331,12 +343,22 @@ export const slides = defineSlides([
     camera: { ...GLASS, smoothTime: 2.0 },
   },
   {
+    // A QUOTE (Scott, 2026-09-10): the pressure in one respondent's words —
+    // a break feels like theft — beside a mug of coffee with a "no" sign
+    // stroking itself on around it.
+    id: 'quote-breaks',
+    stage: 'cubicle',
+    session: QUOTE_BREAKS,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
     // Enough width to reveal neighboring pools of agent activity over the
     // partitions, while the original monitor remains the anchor. Spoken: saved
     // effort returns as decisions and supervision, never as rest. After the
     // data, not before it (Scott, 2026-09-02): the office is the pull-back
     // that closes the act, the way the desk closes Pillar 1. No session, so
-    // the pressure chart stays on the monitor through the move.
+    // the breaks quote stays on the monitor through the move.
     id: 'cubicle-wide',
     stage: 'cubicle',
     crt: TUBE,

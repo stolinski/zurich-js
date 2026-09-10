@@ -420,6 +420,20 @@ export const TERMINAL_VISUALS = Object.freeze({
     illustration: 'puzzle',
     animated: true,
   }),
+  // After the overrun question: the reminders that went unheeded, on a clock.
+  'quote-lunch': Object.freeze({
+    kind: 'quote',
+    text: "Months ago, I made the AI prompt me to stop for lunch and dinner. I still ignore those popups as well... it's addictive.",
+    illustration: 'popups',
+    animated: true,
+  }),
+  // After the pressure question: a break, forbidden.
+  'quote-breaks': Object.freeze({
+    kind: 'quote',
+    text: 'Writing code by hand feels like taking a break, as in stealing company time, and actual breaks feel borderline illegal.',
+    illustration: 'break',
+    animated: true,
+  }),
   'skills-enjoyment': cohortVisual(
     'Perceived skill and enjoyment',
     COHORTS.skillsToEnjoyment
