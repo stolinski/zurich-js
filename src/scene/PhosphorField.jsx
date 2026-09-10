@@ -6,7 +6,7 @@ import { useStore } from '../state/useStore.js'
 import { slides } from '../slides/index.js'
 import { SCREEN_BULGE, SCREEN_SIZE } from './CRTScreen.jsx'
 import { CRT_DEFAULTS, CRT_HANDOFF } from '../shaders/crt.js'
-import { qualityDiagnosticsEnabled } from '../state/presentationRuntime.js'
+import { cueProgress, qualityDiagnosticsEnabled } from '../state/presentationRuntime.js'
 import { QUALITY_HANDOFF_MODE } from '../qualityProfile.js'
 
 // The handoff slides widen the shader grille to 32 source texels. The CRT
@@ -25,7 +25,6 @@ const fieldVert = /* glsl */ `
   attribute vec3 aRestPosition;
   attribute vec3 aSynapsePosition;
   attribute vec3 aSynapseInfo;
-  attribute vec3 aOrientation;
   attribute vec2 aGrainScale;
   attribute float aRestFade;
   attribute float aSeed;
@@ -46,23 +45,11 @@ const fieldVert = /* glsl */ `
   varying float vEdgeT;
   varying float vPulsePhase;
 
-  mat3 rotationX(float angle) {
-    float c = cos(angle);
-    float s = sin(angle);
-    return mat3(1.0, 0.0, 0.0, 0.0, c, s, 0.0, -s, c);
-  }
-
-  mat3 rotationY(float angle) {
-    float c = cos(angle);
-    float s = sin(angle);
-    return mat3(c, 0.0, -s, 0.0, 1.0, 0.0, s, 0.0, c);
-  }
-
-  mat3 rotationZ(float angle) {
-    float c = cos(angle);
-    float s = sin(angle);
-    return mat3(c, s, 0.0, -s, c, 0.0, 0.0, 0.0, 1.0);
-  }
+  // A released mote's disc, in object units before its grain scale: between
+  // the faceplate grain's width and its height, so the round mote carries
+  // about the visual weight the tall capsule did and the cloud stays as
+  // sparse as it was authored.
+  const float MOTE_SIDE = ${(SCREEN_SIZE.w / COLUMNS + (SCREEN_SIZE.h / ROWS - SCREEN_SIZE.w / COLUMNS) * 0.55).toFixed(6)};
 
   void main() {
     vCellUv = uv;
@@ -80,9 +67,6 @@ const fieldVert = /* glsl */ `
 
     vec3 scaledLocal = mat3(instanceMatrix)
       * vec3(position.xy * aGrainScale, 0.0);
-    mat3 orientation = rotationZ(aOrientation.z * vRestMix)
-      * rotationY(aOrientation.y * vRestMix)
-      * rotationX(aOrientation.x * vRestMix);
     // Dream → synapse: each dot streams to its network position on its own
     // seeded delay, so the formation reads as motes finding their places, not
     // one synchronized lerp.
@@ -101,9 +85,12 @@ const fieldVert = /* glsl */ `
     // path — two incommensurate seeded frequencies per axis — so the cloud
     // reads as a swarm of live things rather than a drifting texture (a still
     // field of dots is a texture; the volume is the whole point of being
-    // inside it). The wander damps to NOTHING as the synapse forms: the same
-    // motes settle into their network positions and stay put, because a
-    // topology whose nodes wander is not a topology.
+    // inside it). The wander damps to NOTHING as the synapse forms for the
+    // nodes and threads — a topology whose nodes wander is not a topology —
+    // but the STRAYS, the free population that never joins the network, keep
+    // drifting once it has formed (Scott, 2026-09-10: "some movement on the
+    // stray dots"): the thoughts that did not connect are still moving.
+    float stray = 1.0 - step(0.25, aSynapseInfo.x);
     float driftPhase = aSeed * 6.2831853;
     float wanderA = 0.35 + 0.45 * fract(aSeed * 13.7);
     float wanderB = 0.21 + 0.3 * fract(aSeed * 29.3);
@@ -112,10 +99,10 @@ const fieldVert = /* glsl */ `
       sin(uTime * wanderA * 0.83 + driftPhase * 1.7) + 0.5 * cos(uTime * wanderB + driftPhase),
       cos(uTime * wanderA * 0.67 + driftPhase * 0.6) + 0.5 * sin(uTime * wanderB * 1.3 + driftPhase * 3.1)
     );
-    vec3 drift = wander * (0.12 + 0.28 * fract(aSeed * 5.1)) * vRestMix * (1.0 - vFormMix);
+    vec3 drift = wander * (0.12 + 0.28 * fract(aSeed * 5.1)) * vRestMix
+      * mix(1.0 - vFormMix, 0.6, stray);
 
     vec3 center = mix(instanceCenter.xyz, restTarget, vRestMix) + drift;
-    vec3 local = mix(scaledLocal, orientation * scaledLocal, vRestMix);
 
     vec4 centerView = viewMatrix * modelMatrix * vec4(center, 1.0);
     float viewDepth = max(0.001, -centerView.z);
@@ -125,9 +112,17 @@ const fieldVert = /* glsl */ `
     float bokehDim = 1.0 / (sizeScale * sizeScale);
     vDefocus = clamp(coc * 0.55, 0.0, 1.0) * vRestMix;
 
-    vec3 objectPosition = center + local * sizeScale;
-    vec4 world = modelMatrix * vec4(objectPosition, 1.0);
-    vec4 viewPosition = viewMatrix * world;
+    // Surface state: the grain stays a plane-aligned capsule on the faceplate.
+    // Released state: a camera-facing square of one size. Released motes used
+    // to be the same quads spun by a seeded orientation — right for a grain on
+    // a curved faceplate, wrong for a point of light seen from inside a
+    // volume, where an oblique quad reads as a skewed ellipse (Scott,
+    // 2026-09-10: "the dots look skewed"). A mote is a round disc from every
+    // angle, so its quad is built in view space.
+    vec4 surfaceView = viewMatrix * modelMatrix * vec4(center + scaledLocal * sizeScale, 1.0);
+    float moteSide = MOTE_SIDE * aGrainScale.y * sizeScale;
+    vec4 moteView = centerView + vec4((uv - 0.5) * moteSide, 0.0, 0.0);
+    vec4 viewPosition = mix(surfaceView, moteView, vRestMix);
     float farFade = 1.0 - smoothstep(12.5, 16.0, viewDepth);
     vDepthFade = mix(1.0, aRestFade * farFade * bokehDim, vRestMix);
     gl_Position = projectionMatrix * viewPosition;
@@ -188,8 +183,10 @@ const fieldFrag = /* glsl */ `
     float qq = dot(q, q);
     float tight = exp(-qq * 15.0);
     float halo = exp(-qq * 2.4);
-    float glow = mix(tight + halo * 0.22, halo * 0.66, vDefocus);
-    float shapeAlpha = mix(coverage, min(1.0, glow * 1.9) * 0.72, vRestMix);
+    // Halo up from 0.22 / 0.66 (Scott, 2026-09-10: "maybe if they glowed
+    // more") — the core still reads as a point, the disc around it is warmer.
+    float glow = mix(tight + halo * 0.4, halo * 0.8, vDefocus);
+    float shapeAlpha = mix(coverage, min(1.0, glow * 2.0) * 0.8, vRestMix);
     float profile = mix(core, glow * 1.5, vRestMix);
 
     vec3 sampled = texture2D(uMap, vSampleUv).rgb;
@@ -201,9 +198,9 @@ const fieldFrag = /* glsl */ `
     // ── DREAM: sparse hot sparks over a soft luminous population. Most motes
     // sit near-invisible (the sparseness gate below) so the visible ones
     // float in real darkness — scattered, not a wall of light. ──
-    float dream = 0.18
-      + 0.5 * smoothstep(0.45, 0.9, vSeed)
-      + 0.9 * smoothstep(0.9, 0.99, vSeed);
+    float dream = 0.24
+      + 0.6 * smoothstep(0.45, 0.9, vSeed)
+      + 1.05 * smoothstep(0.9, 0.99, vSeed);
     // Fireflies blink: each visible mote pulses on its own seeded rhythm —
     // mostly dim, with a brief bright flash — until the synapse forms and the
     // network's steady drive takes over.
@@ -458,7 +455,6 @@ function makeFieldGeometry() {
   const synapsePositions = new Float32Array(COUNT * 3)
   // (role: 0 floater · 0.5 edge · 1 node, position along edge, pulse phase)
   const synapseInfos = new Float32Array(COUNT * 3)
-  const orientations = new Float32Array(COUNT * 3)
   const grainScales = new Float32Array(COUNT * 2)
   const restFades = new Float32Array(COUNT)
   const seeds = new Float32Array(COUNT)
@@ -540,9 +536,12 @@ function makeFieldGeometry() {
         synapseInfos[i * 3 + 2] = grainRand()
       }
 
-      orientations[i * 3] = (grainRand() - 0.5) * 0.3
-      orientations[i * 3 + 1] = (grainRand() - 0.5) * 0.34
-      orientations[i * 3 + 2] = (grainRand() - 0.5) * 0.2
+      // Three draws that used to seed a per-mote orientation. Released motes
+      // face the camera now, but the draws stay so every later seed — sizes,
+      // fades, blink phases — is the same field Scott has been looking at.
+      grainRand()
+      grainRand()
+      grainRand()
       const motesSize = 0.85 + grainRand() * 1.15
       grainScales[i * 2] = motesSize
       grainScales[i * 2 + 1] = motesSize * (0.92 + grainRand() * 0.16)
@@ -574,10 +573,6 @@ function makeFieldGeometry() {
     new THREE.InstancedBufferAttribute(synapseInfos, 3)
   )
   geometry.setAttribute(
-    'aOrientation',
-    new THREE.InstancedBufferAttribute(orientations, 3)
-  )
-  geometry.setAttribute(
     'aGrainScale',
     new THREE.InstancedBufferAttribute(grainScales, 2)
   )
@@ -590,6 +585,8 @@ export function PhosphorField({ texture }) {
   const material = useRef()
   const transitionElapsed = useRef(0)
   const transitionFrom = useRef(null)
+  // The slide whose cues already ran on an occlude leg (see cueProgress).
+  const occludedFor = useRef(null)
   const index = useStore((state) => state.index)
   const authoredTarget = slides[index]?.phosphor ?? {
     opacity: 0,
@@ -666,6 +663,7 @@ export function PhosphorField({ texture }) {
           focus: crtTarget.focus,
         }
     transitionElapsed.current = 0
+    occludedFor.current = null
   }, [
     index,
     target.depth,
@@ -683,7 +681,10 @@ export function PhosphorField({ texture }) {
     // The signal beads ride a free-running clock, like the caret blink.
     u.uTime.value += dt
     const duration = Math.max(0.001, slides[index]?.camera?.smoothTime ?? 1)
-    const progress = Math.min(1, transitionElapsed.current / duration)
+    // Over the slide's own duration — or over the camera's occlude leg when a
+    // stage swap is pending, so the motes have faded and the picture is back
+    // on the glass exactly when it covers the frame (cueProgress).
+    const progress = cueProgress(index, transitionElapsed.current, duration, occludedFor)
     const eased = progress * progress * (3 - 2 * progress)
     const from = transitionFrom.current ?? target
     u.uOpacity.value =

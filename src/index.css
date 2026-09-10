@@ -76,12 +76,26 @@ canvas {
     color: #ad8c2c;
 }
 
-/* Presenter readout — slide id, position, and step within a session. Opt in
-   with ?hud; never on for an audience. Positioned inside the stage box so it
-   lands in the picture's corner, not in a letterbox bar. */
-.hud {
+/* Slide counter — always on, `n / N` in the top-right corner, the clock's
+   twin (Scott, 2026-09-10). */
+.counter {
     position: absolute;
     top: 28px;
+    right: 36px;
+    z-index: 10;
+    pointer-events: none;
+    font: 13px "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.12em;
+    font-variant-numeric: tabular-nums;
+    color: #ad8c2c;
+}
+
+/* Presenter readout — slide id and step within a session. Opt in with ?hud;
+   never on for an audience. Bottom-right, under the counter's corner, inside
+   the stage box so it lands in the picture, not in a letterbox bar. */
+.hud {
+    position: absolute;
+    bottom: 28px;
     right: 36px;
     z-index: 10;
     pointer-events: none;

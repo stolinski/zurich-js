@@ -482,24 +482,6 @@ export const slides = defineSlides([
     focus: [-0.4, 1.0, -8.6],
   },
 
-  /* ═══════════════ ⑥ THE TURN ═══════════════ */
-  {
-    // OUT THROUGH THE FACEPLATE. The deposits fade and the glass reforms over
-    // this one flight, which is also the occlusion that carries the phosphor
-    // stage out: the next slide is a cubicle room shot, and a set swap needs
-    // the glass covering the frame with a picture on it — the phosphor cues
-    // ease over this slide's smoothTime, so without it the cubicle would show
-    // through a half-formed glass. No session, so the glass reforms around
-    // the last chart the room left on it. The grill used to be this beat's
-    // arrival; it moved after the agent count (Scott, 2026-09-10).
-    id: 'phosphor-exit',
-    stage: 'phosphor',
-    crt: { tube: 1, maskMode: 2, maskStrength: 0.72 },
-    phosphor: { opacity: 0, screenOpacity: 1, depth: 1, form: 1, decay: 1 },
-    camera: { ...GLASS, smoothTime: 3.2 },
-    focus: [0, 0, 0],
-  },
-
   /* ═══════════════ ⑦ THE RETURN — THE FIX IS A STACK ═══════════════
    * Out the way we came in, each level holding one layer of the answer. The
    * form has to invert or it has no resolution, and the autonomy caveat needs
@@ -510,11 +492,19 @@ export const slides = defineSlides([
     // 15-minute timer will not save you. Healthy prompting cannot be carried
     // by personal discipline alone. The line stays on the monitor for the
     // whole beat — it used to be written on a glass slide of its own.
+    //
+    // ONE PULL-BACK from inside the decayed synapse to this desk (Scott,
+    // 2026-09-10: "all the way, not stopping in between"). CameraRig flies
+    // the occlude leg and the reveal on one shared curve; the phosphor fades
+    // and the picture reforms over the occlude leg, so the glass is opaque
+    // exactly when it covers the frame, StageDirector swaps the set behind
+    // it, and the camera carries on out into the office without a pause.
+    // The framing is tight enough to read the line on the monitor.
     id: 'return-cubicle',
     stage: 'cubicle',
     session: CEILING_ACT_SCREEN,
     crt: TUBE,
-    camera: { pos: [-20, 3.5, 76], target: [6, -1.5, -26], fov: 35, smoothTime: 2.8 },
+    camera: { pos: [-10, 2.4, 42], target: [3, -1.4, -12], fov: 35, smoothTime: 3.6 },
     focus: [0, -1, -4],
   },
   {

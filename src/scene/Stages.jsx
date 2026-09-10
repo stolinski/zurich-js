@@ -332,7 +332,10 @@ export function StageDirector({ screenTexture }) {
   const projected = useMemo(() => new THREE.Vector3(), [])
 
   useFrame(() => {
-    if (!usePresentationRuntime.getState().pendingStage) return
+    const { pendingStage, glassFormed } = usePresentationRuntime.getState()
+    // Covered is not enough: the glass must also carry its picture, or the
+    // set swaps behind a half-formed pane on the way out of the phosphor.
+    if (!pendingStage || !glassFormed) return
 
     camera.getWorldDirection(forward)
     const facing = forward.dot(screenNormal)

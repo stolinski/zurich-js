@@ -31,6 +31,13 @@ export const usePresentationRuntime = create(() => ({
   declaredStage: initialStage,
   displayStage: initialStage,
   pendingStage: null,
+  // Whether the hero glass currently carries its picture (the CRT's handoff
+  // opacity at one). A stage swap is hidden only behind a glass that both
+  // covers the frame AND is opaque: coming out of the phosphor the picture is
+  // still reforming while the camera reaches the cover point, and a set
+  // swapped behind a half-formed glass shows through it. CRTScreen publishes
+  // it; StageDirector requires it.
+  glassFormed: true,
   stageRevision: 0,
   stageEvents: [
     {
@@ -129,6 +136,32 @@ const unsubscribeNavigation = useStore.subscribe((state, previous) => {
 
 if (import.meta.hot) {
   import.meta.hot.dispose(unsubscribeNavigation)
+}
+
+/**
+ * How far a slide's screen/phosphor cues have eased, 0→1.
+ *
+ * Normally that is elapsed time over the slide's own smoothTime. While the
+ * camera is on an OCCLUDE leg toward the cover point (an adjacent stage
+ * change), the cues follow that leg instead, so the picture is back on the
+ * glass exactly when it covers the frame and the set swaps behind it; once the
+ * leg has run they hold at their targets for the rest of the visit — `memo`
+ * (a ref) remembers the slide it happened on, so the reveal leg's fresh
+ * progress cannot pull them back.
+ */
+export function cueProgress(index, elapsed, duration, memo) {
+  const { transition } = usePresentationRuntime.getState()
+  if (transition.index === index && transition.phase === 'occlude') {
+    memo.current = index
+    return Math.min(1, transition.progress)
+  }
+  if (memo.current === index) return 1
+  return Math.min(1, elapsed / duration)
+}
+
+export function setGlassFormed(formed) {
+  if (usePresentationRuntime.getState().glassFormed === formed) return
+  usePresentationRuntime.setState({ glassFormed: formed })
 }
 
 export function commitPendingStage(

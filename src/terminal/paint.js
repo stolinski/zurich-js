@@ -1249,7 +1249,10 @@ function drawTweetVisual(ctx, visual, draw = 1) {
  * byproduct of drawing — only the painter knows where the typed text ends —
  * and handed back for the renderer to blink, exactly like the transcript's.
  */
-const PROMPT_TYPE = Object.freeze({ size: 64, lineHeight: 1.4, gap: 0.7, top: 540, marker: '❯' })
+// 80 px, up from 64 (Scott, 2026-09-10: "make font larger"): the longest
+// question still wraps to three lines at 43 characters, and the two-prompt
+// last screen still sits inside the title-safe area from `top`.
+const PROMPT_TYPE = Object.freeze({ size: 80, lineHeight: 1.36, gap: 0.6, top: 470, marker: '❯' })
 
 function drawPromptVisual(ctx, visual) {
   const { size } = PROMPT_TYPE

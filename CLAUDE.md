@@ -183,11 +183,13 @@ Everything drawn onto the glass.
   on FLAT slides only: it has to scan from the back of the room. No act marker sits on a
   threshold any more (`act-cubicle` cut 2026-09-09, `phosphor-return`'s
   "losing our skills." cut 2026-09-10): each act opens on its data, and
-  CameraRig hides an adjacent stage swap behind the covering glass. The one
-  glass-filling beat that exists purely for occlusion is `phosphor-exit`,
-  a session-less hold after `synapse-decay`: the phosphor cues ease over its
-  smoothTime, so without it the cubicle would show through a half-formed
-  glass. Numbers come only from
+  CameraRig hides an adjacent stage swap behind the covering glass — as ONE
+  move: the occlude leg and the reveal after the commit share a single
+  smoothstep over the whole path, the screen and phosphor cues ease over the
+  occlude leg (so the picture is back on the glass exactly when it covers),
+  and StageDirector swaps only behind a glass that is both covering and
+  opaque (`glassFormed`). That is how `synapse-decay` → `return-cubicle`
+  pulls back from inside the cloud to the desk without a stop. Numbers come only from
   `data/survey.js` (single source of truth, n = 3,593 from the Aug 28 export;
   the video's older ~1,300-response figures must never be quoted on stage).
 - `hover.js` — which chart row the pointer is over, shared by both renderers so
@@ -435,12 +437,12 @@ the tube can't drift apart.
 
 ### UI
 
-`src/ui/Overlay.jsx` is presenter chrome only. The slide counter is **hidden
-unless you pass `?hud`** — a counter in the corner during the cold open tells
-the room they're watching a deck. The one thing always on is the clock in the
-top-left (`TalkTimer.jsx`): it counts up from 0:00 when the deck loads, a
-click resets it, and the start survives a reload so the `?flat` fallback keeps
-counting. `src/index.css` is small for the same reason.
+`src/ui/Overlay.jsx` is presenter chrome only: the clock in the top-left
+(`TalkTimer.jsx`: counts up from 0:00 when the deck loads, a click resets it,
+the start survives a reload so the `?flat` fallback keeps counting) and the
+slide counter in the top-right (`n / N`, always on since 2026-09-10 by Scott's
+call). The fuller readout — slide id and session step — stays behind `?hud`,
+bottom-right. `src/index.css` is small for the same reason.
 
 ## Conventions & gotchas
 

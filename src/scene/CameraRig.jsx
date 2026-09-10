@@ -80,6 +80,10 @@ function screenContentDistance(fovDeg, aspect) {
  * Clearing the action bindings instead leaves the rig fully able to drive
  * itself while making mouse and touch inert.
  */
+const smoothstep = (t) => t * t * (3 - 2 * t)
+/** The t at which smoothstep reaches `s` — closed form, no iteration. */
+const inverseSmoothstep = (s) => 0.5 - Math.sin(Math.asin(1 - 2 * s) / 3)
+
 function setInputLocked(controls, locked) {
   const { ACTION } = controls.constructor
   const none = ACTION.NONE
@@ -114,6 +118,9 @@ export function CameraRig() {
   const lastIndex = useRef(null)
   const lastPendingStage = useRef(null)
   const flight = useRef(null)
+  // The shared easing schedule of a flight split in two by a stage swap: set
+  // when the occlude leg starts, consumed when the reveal leg picks it up.
+  const splitSchedule = useRef(null)
   const position = useRef(new THREE.Vector3())
   const target = useRef(new THREE.Vector3())
   const viewport = useRef({ width: 0, height: 0 })
@@ -208,7 +215,8 @@ export function CameraRig() {
       lookAt,
       duration,
       phase,
-      fov = destinationFov
+      fov = destinationFov,
+      curve = smoothstep
     ) => {
       const startPosition = camera.position.clone()
       const startTarget = activeControls.getTarget(new THREE.Vector3())
@@ -224,6 +232,7 @@ export function CameraRig() {
         destinationPosition: destination,
         destinationTarget: lookAt,
         destinationFov: fov,
+        curve,
       }
       beginCameraTransition({
         index,
@@ -265,18 +274,12 @@ export function CameraRig() {
     }
 
     if (pendingStage) {
+      splitSchedule.current = null
       const alreadyOccluded = isCoveredEndpoint(
         camera.position,
         activeControls.getTarget(target.current),
         camera.fov
       )
-      // If the presenter advances while the authored threshold flight is in
-      // progress, preserve that flight's remaining render-clock time. Repeated
-      // early presses retarget the eventual reveal but do not bypass or restart
-      // the occlusion gate from scratch.
-      const remainingActiveDuration = activeFlight
-        ? Math.max(0, activeFlight.duration - activeFlight.elapsed)
-        : null
       if (alreadyOccluded) {
         // Threshold slides are already at the exact solved cover point. Commit
         // synchronously with navigation instead of waiting 2–3 render frames
@@ -286,15 +289,68 @@ export function CameraRig() {
         })
         return
       }
-      const microDuration =
-        remainingActiveDuration ?? Math.min(1, Math.max(0.8, authoredDuration * 0.3))
-      startFlight(occlusionPosition, occlusionTarget, microDuration, 'occlude')
+      if (activeFlight) {
+        // The presenter advanced while a flight was in progress: preserve that
+        // flight's remaining render-clock time for the occlusion leg. Repeated
+        // early presses retarget the eventual reveal but do not bypass or
+        // restart the occlusion gate from scratch.
+        const remaining = Math.max(0, activeFlight.duration - activeFlight.elapsed)
+        startFlight(occlusionPosition, occlusionTarget, remaining, 'occlude')
+        return
+      }
+      // ONE MOVE through the glass. The occlude leg and the reveal that follows
+      // the commit used to be two independently eased flights, so the camera
+      // came to rest on the cover point, the set swapped, and it set off again
+      // — a visible stop halfway through what the room reads as a single
+      // pull-back (Scott, 2026-09-10: from the decayed synapse to the cubicle
+      // desk "not stopping in between"). Now both legs share one smoothstep
+      // over the whole path: the occlude leg runs the curve up to the cover
+      // point's share of the distance, the reveal leg picks it up where it left
+      // off, and velocity is continuous across the commit. A destination that
+      // IS the glass (a room shot into a data beat) gets the whole authored
+      // duration for its push-in, which is what its smoothTime always meant.
+      const legOne = camera.position.distanceTo(occlusionPosition)
+      const legTwo = occlusionPosition.distanceTo(destinationPosition)
+      const junctionShare = Math.min(1, legOne / Math.max(1e-6, legOne + legTwo))
+      const junctionTime = inverseSmoothstep(junctionShare)
+      splitSchedule.current = { junctionShare, junctionTime, total: authoredDuration }
+      startFlight(
+        occlusionPosition,
+        occlusionTarget,
+        authoredDuration * junctionTime,
+        'occlude',
+        destinationFov,
+        (t) => smoothstep(t * junctionTime) / Math.max(junctionShare, 1e-6)
+      )
       return
     }
 
     // StageDirector has just committed displayStage while the glass covers the
-    // frame. Only now may the destination reveal begin. Ordinary same-stage and
-    // nonlocal navigation also use this exact authored-duration flight.
+    // frame. Only now may the destination reveal begin — on the second half of
+    // the shared curve if this flight was split, otherwise (same-stage and
+    // nonlocal navigation) as the usual authored-duration flight.
+    const schedule = splitSchedule.current
+    splitSchedule.current = null
+    if (stageJustCommitted && schedule && schedule.junctionShare < 1 - 1e-4) {
+      const { junctionShare, junctionTime, total } = schedule
+      startFlight(
+        destinationPosition,
+        destinationTarget,
+        total * (1 - junctionTime),
+        'reveal',
+        destinationFov,
+        (t) =>
+          (smoothstep(junctionTime + t * (1 - junctionTime)) - junctionShare) /
+          (1 - junctionShare)
+      )
+      return
+    }
+    if (stageJustCommitted && schedule) {
+      // The destination was the glass itself: the occlude leg already flew the
+      // whole way, so the reveal is exact.
+      startFlight(destinationPosition, destinationTarget, 0, 'reveal')
+      return
+    }
     startFlight(destinationPosition, destinationTarget, authoredDuration, 'reveal')
   }
 
@@ -330,8 +386,10 @@ export function CameraRig() {
     // Cubic smoothstep leaves both endpoints at zero velocity while producing
     // visible motion on the first rendered frame. The previous quintic curve's
     // near-zero opening acceleration made a healthy transition look delayed for
-    // 50–60ms even though frames were being delivered on time.
-    const eased = progress * progress * (3 - 2 * progress)
+    // 50–60ms even though frames were being delivered on time. A flight split
+    // by a stage swap carries its share of one curve instead (see
+    // configureFlight), so the two legs read as a single move.
+    const eased = Math.min(1, Math.max(0, current.curve(progress)))
     position.current.lerpVectors(
       current.startPosition,
       current.destinationPosition,

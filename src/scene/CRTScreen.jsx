@@ -27,7 +27,9 @@ import {
   QUALITY_HANDOFF_MODE,
 } from '../qualityProfile.js'
 import {
+  cueProgress,
   qualityDiagnosticsEnabled,
+  setGlassFormed,
   usePresentationRuntime,
 } from '../state/presentationRuntime.js'
 
@@ -341,6 +343,8 @@ export function CRTScreen({ onTexture, deskY }) {
   // free-running clock the caret blink and spinners read.
   const elapsed = useRef(0)
   const time = useRef(0)
+  // The slide whose cues already ran on an occlude leg (see cueProgress).
+  const occludedFor = useRef(null)
   const transitionElapsed = useRef(0)
   const transitionFrom = useRef(null)
   const lastSlide = useRef('')
@@ -523,6 +527,7 @@ export function CRTScreen({ onTexture, deskY }) {
       : initialCrt
     elapsed.current = 0
     transitionElapsed.current = 0
+    occludedFor.current = null
     lastSlide.current = key
   }, [index, initialCrt, step])
 
@@ -654,7 +659,10 @@ export function CRTScreen({ onTexture, deskY }) {
     const u = mat.current?.uniforms
     if (u && !uniforms.hold) {
       const duration = Math.max(0.001, slide?.camera?.smoothTime ?? 1)
-      const progress = Math.min(1, transitionElapsed.current / duration)
+      // Over the slide's own duration — or over the camera's occlude leg when
+      // a stage swap is pending, so the picture is back on the glass exactly
+      // when it covers the frame (cueProgress).
+      const progress = cueProgress(index, transitionElapsed.current, duration, occludedFor)
       const eased = progress * progress * (3 - 2 * progress)
       const from = transitionFrom.current ?? target
       const ease = (key, to) =>
@@ -671,6 +679,9 @@ export function CRTScreen({ onTexture, deskY }) {
       u.uHandoffOpacity.value = ease('handoffOpacity', target.handoffOpacity)
       u.uHandoffDepth.value = ease('handoffDepth', target.handoffDepth)
       u.uEmissiveGain.value = ease('emissiveGain', target.emissiveGain)
+      // StageDirector may only swap a set behind a glass that carries its
+      // picture; coming out of the phosphor that is the last thing to arrive.
+      setGlassFormed(u.uHandoffOpacity.value >= 0.985)
       // Mask pattern is a discrete choice, not a blend — snap it.
       u.uMaskMode.value = target.maskMode
 
