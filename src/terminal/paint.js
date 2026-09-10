@@ -1761,6 +1761,340 @@ function drawApart(ctx, panel, time) {
   ctx.restore()
 }
 
+/**
+ * Fewer things at once: five tracks, each with a bead darting back and forth
+ * on its own rhythm, fold down into one line with one bead that drifts — and
+ * hold there — before the churn comes back and folds again.
+ */
+function drawCalmer(ctx, panel, time) {
+  const cycle = 12
+  const t = time % cycle
+  const x0 = panel.x + 60
+  const x1 = panel.x + panel.w - 60
+  const cy = panel.y + panel.h / 2
+  const lanes = 5
+  const pitch = 110
+  const fold = smoothRamp(4.2, 6.6, t)
+  const fade = 1 - smoothRamp(cycle - 0.8, cycle - 0.1, t)
+  ctx.save()
+  ctx.lineCap = 'round'
+  for (let lane = 0; lane < lanes; lane++) {
+    const restY = cy + (lane - (lanes - 1) / 2) * pitch
+    const y = restY + (cy - restY) * fold
+    const alpha = lane === 2 ? 1 : 1 - fold
+    if (alpha <= 0.01) continue
+    ctx.globalAlpha = fade * alpha
+    ctx.strokeStyle = PHOSPHOR.dim
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.moveTo(x0, y)
+    ctx.lineTo(x1, y)
+    ctx.stroke()
+    // The bead: its own quick rhythm while the lanes are apart, one slow
+    // drift once they have folded.
+    const wild = Math.sin(time * (1.7 + lane * 0.55) + lane * 1.9)
+    const calm = Math.sin(time * 0.35)
+    const u = 0.5 + 0.42 * (wild * (1 - fold) + calm * fold)
+    ctx.fillStyle = fold > 0.9 ? PHOSPHOR.hot : PHOSPHOR.phosphor
+    ctx.shadowColor = PHOSPHOR.phosphor
+    ctx.shadowBlur = GLOW_RADIUS * (0.5 + fold)
+    ctx.beginPath()
+    ctx.arc(x0 + (x1 - x0) * u, y, 11, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.shadowBlur = 0
+  }
+  ctx.restore()
+}
+
+/**
+ * One project at a time, planned: the goal is drawn first — a ring, then the
+ * dot — then one frame under it, then three sessions light up inside the
+ * frame and each runs a line up to the goal. The frames outside it fade.
+ */
+function drawOneProject(ctx, panel, time) {
+  const cycle = 11
+  const t = time % cycle
+  const cx = panel.x + panel.w / 2
+  const goal = { x: cx, y: panel.y + 200, r: 46 }
+  const frame = { x: cx - 260, y: panel.y + 400, w: 520, h: 400 }
+  const fade = 1 - smoothRamp(cycle - 0.9, cycle - 0.1, t)
+  const goalOn = smoothRamp(0.3, 1.4, t)
+  const frameOn = smoothRamp(1.3, 2.2, t)
+  const strays = 1 - smoothRamp(1.8, 3.0, t)
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  // The other projects, going.
+  if (strays > 0) {
+    ctx.globalAlpha = fade * strays * 0.8
+    ctx.strokeStyle = PHOSPHOR.ghost
+    ctx.lineWidth = 4
+    ctx.setLineDash([12, 12])
+    for (const x of [panel.x + 30, panel.x + panel.w - 230]) {
+      ctx.beginPath()
+      ctx.roundRect(x, frame.y + frame.h + 50, 200, 130, 16)
+      ctx.stroke()
+    }
+    ctx.setLineDash([])
+  }
+  // The goal.
+  if (goalOn > 0) {
+    ctx.globalAlpha = fade
+    ctx.strokeStyle = PHOSPHOR.hot
+    ctx.lineWidth = 7
+    ctx.shadowColor = PHOSPHOR.phosphor
+    ctx.shadowBlur = GLOW_RADIUS
+    ctx.beginPath()
+    ctx.arc(goal.x, goal.y, goal.r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * goalOn)
+    ctx.stroke()
+    if (goalOn >= 1) {
+      ctx.fillStyle = PHOSPHOR.hot
+      ctx.beginPath()
+      ctx.arc(goal.x, goal.y, 12, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    ctx.shadowBlur = 0
+  }
+  // The one frame.
+  if (frameOn > 0) {
+    ctx.globalAlpha = fade * frameOn
+    ctx.strokeStyle = PHOSPHOR.phosphor
+    ctx.lineWidth = 5
+    ctx.beginPath()
+    ctx.roundRect(frame.x, frame.y, frame.w, frame.h, 24)
+    ctx.stroke()
+  }
+  // The sessions inside it, each wired up to the goal as it lights.
+  const nodeY = frame.y + frame.h * 0.66
+  for (let session = 0; session < 3; session++) {
+    const on = smoothRamp(2.6 + session * 0.9, 3.2 + session * 0.9, t)
+    if (on <= 0) continue
+    const x = cx + (session - 1) * 150
+    ctx.globalAlpha = fade * on
+    ctx.fillStyle = PHOSPHOR.phosphor
+    ctx.beginPath()
+    ctx.roundRect(x - 44, nodeY - 34, 88, 68, 12)
+    ctx.fill()
+    // The line runs from the session to the frame's top edge, then on to the
+    // goal, drawing upward as the session comes on.
+    const wire = smoothRamp(3.0 + session * 0.9, 3.9 + session * 0.9, t)
+    if (wire > 0) {
+      const top = { x: goal.x, y: goal.y + goal.r + 10 }
+      const start = { x, y: nodeY - 34 }
+      const corner = { x, y: frame.y - 60 }
+      const total = start.y - corner.y + Math.hypot(top.x - corner.x, top.y - corner.y)
+      let remaining = total * wire
+      ctx.strokeStyle = PHOSPHOR.dim
+      ctx.lineWidth = 4
+      ctx.beginPath()
+      ctx.moveTo(start.x, start.y)
+      const leg = Math.min(remaining, start.y - corner.y)
+      ctx.lineTo(start.x, start.y - leg)
+      remaining -= leg
+      if (remaining > 0) {
+        const span = Math.hypot(top.x - corner.x, top.y - corner.y)
+        const f = Math.min(1, remaining / span)
+        ctx.lineTo(corner.x + (top.x - corner.x) * f, corner.y + (top.y - corner.y) * f)
+      }
+      ctx.stroke()
+    }
+  }
+  ctx.restore()
+}
+
+/**
+ * Outside: the walk, in the panel — the horizon, the path converging on it,
+ * a sun, and the bare line trees coming past at walking pace on the
+ * free-running clock, the way the full-frame walk did.
+ */
+function drawOutside(ctx, panel, time) {
+  const cx = panel.x + panel.w / 2
+  const horizon = panel.y + panel.h * 0.46
+  const focal = 300
+  const project = (x, y, z) => ({
+    x: cx + (x / z) * focal,
+    y: horizon + ((WALK.eyeHeight - y) / z) * focal,
+  })
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(panel.x, panel.y, panel.w, panel.h)
+  ctx.clip()
+  rule(ctx, panel.x, horizon, panel.x + panel.w, horizon, PHOSPHOR.ghost, 2)
+  ctx.strokeStyle = PHOSPHOR.dim
+  ctx.lineWidth = 4
+  ctx.beginPath()
+  ctx.arc(cx + 210, horizon - 190, 44, 0, Math.PI * 2)
+  ctx.stroke()
+  for (const side of [-1, 1]) {
+    const near = project(side * WALK.pathHalf, 0, WALK.near)
+    rule(ctx, near.x, near.y, cx, horizon, PHOSPHOR.dim, 3)
+  }
+  const count = Math.floor(WALK.depth / WALK.spacing)
+  const trees = []
+  for (const side of [-1, 1]) {
+    for (let index = 0; index < count; index++) {
+      const seed = (((index * 97 + (side > 0 ? 41 : 0)) * 2654435761) % 1000) / 1000
+      const travel = (index * WALK.spacing - time * WALK.speed) % WALK.depth
+      const z = ((travel % WALK.depth) + WALK.depth) % WALK.depth + WALK.near
+      // Closer to the path than the full-frame walk keeps them, so the near
+      // trees stay inside the panel instead of being cut at its edge.
+      trees.push({ z, x: side * (2.6 + seed * 1.2), height: 3.0 + seed * 2.4 })
+    }
+  }
+  trees.sort((a, b) => b.z - a.z)
+  for (const tree of trees) {
+    const base = project(tree.x, 0, tree.z)
+    const top = project(tree.x, tree.height, tree.z)
+    const distanceFade = 1 - smoothRange(tree.z, WALK.depth * 0.35, WALK.depth)
+    const nearFade = smoothRange(tree.z, WALK.near, WALK.near + 2.4)
+    drawTree(ctx, base.x, base.y, base.y - top.y, WALK.near / tree.z, PHOSPHOR.phosphor, distanceFade * nearFade)
+  }
+  ctx.globalAlpha = 1
+  ctx.restore()
+}
+
+/**
+ * Not checking: a hammock slung between two of the walk's trees, swaying,
+ * with a head at one end and feet at the other; the phone lies face down on
+ * the ground below it, buzzes now and then, and stays where it is.
+ */
+function drawHammock(ctx, panel, time) {
+  const groundY = panel.y + panel.h - 160
+  const left = panel.x + 90
+  const right = panel.x + panel.w - 90
+  const sway = Math.sin(time * 0.9) * 12
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  rule(ctx, panel.x + 20, groundY, panel.x + panel.w - 20, groundY, PHOSPHOR.ghost, 3)
+  drawTree(ctx, left, groundY, 560, 1, PHOSPHOR.phosphor, 1)
+  drawTree(ctx, right, groundY, 600, 1, PHOSPHOR.phosphor, 1)
+  ctx.globalAlpha = 1
+  // The hammock: a sagging curve between the trunks, a head, two feet.
+  const tieY = groundY - 300
+  const sagX = (left + right) / 2 + sway
+  const sagY = groundY - 150
+  ctx.strokeStyle = PHOSPHOR.phosphor
+  ctx.lineWidth = 6
+  ctx.beginPath()
+  ctx.moveTo(left, tieY)
+  ctx.quadraticCurveTo(sagX, sagY + 60, right, tieY)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.arc(sagX - 150, sagY - 62 + sway * 0.2, 26, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.moveTo(sagX + 130, sagY - 50 + sway * 0.2)
+  ctx.lineTo(sagX + 175, sagY - 78 + sway * 0.2)
+  ctx.moveTo(sagX + 150, sagY - 44 + sway * 0.2)
+  ctx.lineTo(sagX + 195, sagY - 70 + sway * 0.2)
+  ctx.stroke()
+  // The phone, face down on the ground, seen from above: a back with a lens.
+  const phone = { x: left + 90, y: groundY - 100, w: 74, h: 140 }
+  ctx.strokeStyle = PHOSPHOR.dim
+  ctx.lineWidth = 4
+  ctx.beginPath()
+  ctx.roundRect(phone.x, phone.y, phone.w, phone.h, 14)
+  ctx.stroke()
+  ctx.beginPath()
+  ctx.arc(phone.x + 20, phone.y + 22, 8, 0, Math.PI * 2)
+  ctx.stroke()
+  // The buzz: three quick arcs off each side, three times a cycle.
+  const cycle = 9
+  const t = time % cycle
+  const buzz = t < 6.5 && t % 2.6 < 0.5 ? 1 - (t % 2.6) / 0.5 : 0
+  if (buzz > 0) {
+    ctx.globalAlpha = buzz
+    ctx.strokeStyle = PHOSPHOR.hot
+    ctx.lineWidth = 4
+    const jitter = Math.sin(time * 60) * 3
+    for (let ring = 0; ring < 3; ring++) {
+      const offset = 22 + ring * 14
+      ctx.beginPath()
+      ctx.arc(phone.x - 6 + jitter, phone.y + phone.h / 2, offset, Math.PI * 0.7, Math.PI * 1.3)
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(phone.x + phone.w + 6 + jitter, phone.y + phone.h / 2, offset, -Math.PI * 0.3, Math.PI * 0.3)
+      ctx.stroke()
+    }
+    ctx.globalAlpha = 1
+  }
+  ctx.restore()
+}
+
+/**
+ * Nine to five: a clock hand sweeps from nine to five over the cycle,
+ * lighting the arc it has covered, and stops there. The hours past five stay
+ * dark and the centre goes out.
+ */
+function drawNineToFive(ctx, panel, time) {
+  const cycle = 10
+  const t = time % cycle
+  const cx = panel.x + panel.w / 2
+  const cy = panel.y + panel.h / 2
+  const r = 250
+  const fade = 1 - smoothRamp(cycle - 0.8, cycle - 0.1, t)
+  const sweep = smoothRamp(0.6, 7.4, t)
+  const done = smoothRamp(7.6, 8.2, t)
+  const from = Math.PI
+  const to = from + (Math.PI * 4) / 3
+  const hand = from + (to - from) * sweep
+  ctx.save()
+  ctx.lineCap = 'round'
+  ctx.globalAlpha = fade
+  ctx.strokeStyle = PHOSPHOR.dim
+  ctx.lineWidth = 5
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.lineWidth = 4
+  for (let hour = 0; hour < 12; hour++) {
+    const angle = (hour / 12) * Math.PI * 2 - Math.PI / 2
+    const inner = hour % 3 === 0 ? r - 34 : r - 18
+    ctx.beginPath()
+    ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner)
+    ctx.lineTo(cx + Math.cos(angle) * (r - 6), cy + Math.sin(angle) * (r - 6))
+    ctx.stroke()
+  }
+  for (const [hour, label] of [
+    [9, '9'],
+    [5, '5'],
+  ]) {
+    const angle = (hour / 12) * Math.PI * 2 - Math.PI / 2
+    chromeText(ctx, label, cx + Math.cos(angle) * (r + 64), cy + Math.sin(angle) * (r + 64), {
+      size: 44,
+      weight: 700,
+      align: 'center',
+      baseline: 'middle',
+      color: PHOSPHOR.phosphor,
+    })
+  }
+  // The hours covered, lit on the rim.
+  if (sweep > 0) {
+    ctx.strokeStyle = PHOSPHOR.phosphor
+    ctx.lineWidth = 16
+    ctx.shadowColor = PHOSPHOR.phosphor
+    ctx.shadowBlur = GLOW_RADIUS * 0.8
+    ctx.beginPath()
+    ctx.arc(cx, cy, r + 26, from, hand)
+    ctx.stroke()
+    ctx.shadowBlur = 0
+  }
+  // The hand, hot while it moves, dim once it has stopped.
+  ctx.strokeStyle = done > 0.5 ? PHOSPHOR.dim : PHOSPHOR.hot
+  ctx.lineWidth = 9
+  ctx.beginPath()
+  ctx.moveTo(cx, cy)
+  ctx.lineTo(cx + Math.cos(hand) * r * 0.72, cy + Math.sin(hand) * r * 0.72)
+  ctx.stroke()
+  ctx.globalAlpha = fade * (1 - done)
+  ctx.fillStyle = PHOSPHOR.hot
+  ctx.beginPath()
+  ctx.arc(cx, cy, 10, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+}
+
 const QUOTE_ILLUSTRATIONS = Object.freeze({
   doomscroll: drawDoomscroll,
   puzzle: drawPuzzle,
@@ -1770,6 +2104,11 @@ const QUOTE_ILLUSTRATIONS = Object.freeze({
   starts: drawStarts,
   ninety: drawNinety,
   apart: drawApart,
+  calmer: drawCalmer,
+  'one-project': drawOneProject,
+  outside: drawOutside,
+  hammock: drawHammock,
+  'nine-to-five': drawNineToFive,
 })
 
 /**

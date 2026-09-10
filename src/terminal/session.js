@@ -417,9 +417,10 @@ export const SURVEY_QUESTIONS = Object.freeze([
 // ("losing our skills.", 2026-09-10) have no sessions: both acts open on their
 // data, and CameraRig hides the stage swaps itself.
 export const CEILING_ACT_SCREEN = screen('act-ceiling')
-export const BOUNDARIES_ACT_SCREEN = screen('act-boundaries')
-// `act-control` ("you are in control.") has no session since 2026-09-10: the
-// `boundaries` slide was cut and the talk goes from the walk to the code.
+// `act-boundaries` ("go for a walk.") and `act-control` ("you are in
+// control.") have no sessions since 2026-09-10: the `boundaries` slide was
+// cut, and the walk became the GO OUTSIDE quote; the answers to "what do we
+// do" are respondents' own words, quoted, and lead straight to the code.
 
 /**
  * The grill, as a session: the brain lands and the first question pops on
@@ -473,4 +474,9 @@ export const QUOTE_LUNCH = screen('quote-lunch')
 export const QUOTE_BREAKS = screen('quote-breaks')
 export const QUOTE_STARTS = screen('quote-starts')
 export const QUOTE_NINETY = screen('quote-ninety')
+export const QUOTE_CALMER = screen('quote-calmer')
+export const QUOTE_ONE_PROJECT = screen('quote-one-project')
+export const QUOTE_OUTSIDE = screen('quote-outside')
+export const QUOTE_PHONE = screen('quote-phone')
+export const QUOTE_NINE_TO_FIVE = screen('quote-nine-to-five')
 export const QUOTE_APART = screen('quote-apart')

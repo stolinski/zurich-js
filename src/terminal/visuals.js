@@ -448,7 +448,39 @@ export const TERMINAL_VISUALS = Object.freeze({
     illustration: 'ninety',
     animated: true,
   }),
-  // After the walk: two people, drifting.
+  // ── What do we do — the answers, in respondents' words ──
+  'quote-calmer': Object.freeze({
+    kind: 'quote',
+    text: 'Less parallelization makes for a calmer mind. Just watching the agent rather than doing another task in parallel is definitely easier on me.',
+    illustration: 'calmer',
+    animated: true,
+  }),
+  'quote-one-project': Object.freeze({
+    kind: 'quote',
+    text: 'no more than one project at a time (yes, 2-3 agentic sessions, but related to the same project); mandatory planning (no starting without a deterministic goal to reach).',
+    illustration: 'one-project',
+    animated: true,
+  }),
+  // The walk, as a quote: same path, same trees.
+  'quote-outside': Object.freeze({
+    kind: 'quote',
+    text: 'GO OUTSIDE! Seriously, feeling off, go outside. Feeling cray, go outside. Feeling stuck, go outside. Nature heals AI psychosis, go touch grass.',
+    illustration: 'outside',
+    animated: true,
+  }),
+  'quote-phone': Object.freeze({
+    kind: 'quote',
+    text: "I could be checking Claude progress on my phone now and a month ago I would have. Instead I'm relaxing",
+    illustration: 'hammock',
+    animated: true,
+  }),
+  'quote-nine-to-five': Object.freeze({
+    kind: 'quote',
+    text: "My approach to cope with this is to just 9-5 it. I will do as much work as I think I reasonably can in a reasonable day and that's it.",
+    illustration: 'nine-to-five',
+    animated: true,
+  }),
+  // The last word before the code: two people, drifting.
   'quote-apart': Object.freeze({
     kind: 'quote',
     text: 'We are moving apart from each other as humans.',
@@ -495,8 +527,10 @@ export const TERMINAL_VISUALS = Object.freeze({
     lines: Object.freeze([Object.freeze({ text: 'what do we do', role: 'hot' })]),
   }),
   // GO FOR A WALK. One line, over a perspective line drawing of a path
-  // through simple line trees that the room walks along — the only visual in
-  // the catalog that moves on its own clock, and it moves at walking pace.
+  // through simple line trees that the room walks along, at walking pace.
+  // No longer on a slide: the walk became the GO OUTSIDE quote (Scott,
+  // 2026-09-10), which carries the same path and trees as its drawing. Kept
+  // for `?visual` review like the other cut beats.
   'act-boundaries': Object.freeze({
     kind: 'walk',
     text: 'go for a walk.',

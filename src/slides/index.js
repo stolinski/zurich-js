@@ -1,7 +1,6 @@
 import { defineSlides } from '../presentation/defineSlides.js'
 import {
   AGENTS_STOPPING,
-  BOUNDARIES_ACT_SCREEN,
   CEILING_ACT_SCREEN,
   CLOSE,
   COLD_OPEN,
@@ -11,9 +10,14 @@ import {
   QR_SCREEN,
   QUOTE_APART,
   QUOTE_BREAKS,
+  QUOTE_CALMER,
   QUOTE_DOOMSCROLL,
   QUOTE_LUNCH,
+  QUOTE_NINE_TO_FIVE,
   QUOTE_NINETY,
+  QUOTE_ONE_PROJECT,
+  QUOTE_OUTSIDE,
+  QUOTE_PHONE,
   QUOTE_PUZZLE,
   QUOTE_STARTS,
   QUOTE_TIRED,
@@ -563,10 +567,10 @@ export const slides = defineSlides([
   {
     // THE QUESTION. Back at the desk with the whole argument behind us, the
     // monitor asks "what do we do" (Scott, 2026-09-10; it read "you have to
-    // be allowed to stop." before that), and the answer is spoken over the
-    // pull-back and the walk: against a quota, or a manager who treats the
-    // tool as a magic bullet, a 15-minute timer will not save you. The line
-    // stays on the monitor for the whole beat.
+    // be allowed to stop." before that), and the answers follow in
+    // respondents' own words on the glass. Spoken here: against a quota, or a
+    // manager who treats the tool as a magic bullet, a 15-minute timer will
+    // not save you. The line stays on the monitor for the whole beat.
     //
     // ONE PULL-BACK from inside the decayed synapse to this desk (Scott,
     // 2026-09-10: "all the way, not stopping in between"). CameraRig flies
@@ -583,16 +587,55 @@ export const slides = defineSlides([
     focus: [0, -1, -4],
   },
   {
-    // GO FOR A WALK, over a path through line trees that the room walks along.
-    id: 'act-boundaries',
+    // THE ANSWERS, in respondents' words (Scott, 2026-09-10), back into the
+    // glass from the room shot. First: fewer things at once — five darting
+    // beads fold into one slow one.
+    id: 'quote-calmer',
     stage: 'cubicle',
-    session: BOUNDARIES_ACT_SCREEN,
+    session: QUOTE_CALMER,
     crt: TUBE_FULL,
     camera: { ...GLASS, smoothTime: 2.4 },
-    focus: [0, 0, 0],
   },
   {
-    // A QUOTE after the walk (Scott, 2026-09-10): two line figures start
+    // One project, planned: the goal drawn first, one frame, three sessions
+    // wired up to it, the other frames fading.
+    id: 'quote-one-project',
+    stage: 'cubicle',
+    session: QUOTE_ONE_PROJECT,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // GO OUTSIDE. This was the walk ("go for a walk." over the path through
+    // line trees); it became a quote the same day, and the path and trees
+    // stay on as its drawing, still moving at walking pace.
+    id: 'quote-outside',
+    stage: 'cubicle',
+    session: QUOTE_OUTSIDE,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // Not checking: a hammock between two of the trees, the phone face down
+    // on the ground, buzzing now and then.
+    id: 'quote-phone',
+    stage: 'cubicle',
+    session: QUOTE_PHONE,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // Nine to five: the hand sweeps from nine to five, lights the arc it has
+    // covered, and stops.
+    id: 'quote-nine-to-five',
+    stage: 'cubicle',
+    session: QUOTE_NINE_TO_FIVE,
+    crt: TUBE_FULL,
+    camera: { ...GLASS, smoothTime: 1.2 },
+  },
+  {
+    // THE LAST WORD before the code (Scott, 2026-09-10; it followed the walk
+    // directly before the answers were added): two line figures start
     // shoulder to shoulder and walk away from each other, the thread between
     // them thinning and going out.
     id: 'quote-apart',
@@ -607,9 +650,9 @@ export const slides = defineSlides([
     // goes. Flat on purpose — the tube's curve, mask and beam are what made
     // the code hard to scan — so the glass goes back to a screen recording
     // for it, and the close wakes the tube one last time on the way out. The
-    // walk leads straight here: `boundaries` ("you are in control." at the
-    // desk) was cut the same day, so how-you'd-know and what-works are spoken
-    // over the walk.
+    // quoted answers lead straight here: `boundaries` ("you are in control."
+    // at the desk) was cut the same day, and the walk became the GO OUTSIDE
+    // quote.
     id: 'outro-qr',
     stage: 'home',
     session: QR_CODE_SCREEN,
